@@ -1,0 +1,12 @@
+name: quiz_buzzer
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+    - Flask==2.3.3
+    - Flask-SocketIO==5.3.6
+    - python-socketio==5.8.0
+    - eventlet==0.33.3 

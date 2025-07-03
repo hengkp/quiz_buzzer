@@ -1,0 +1,37 @@
+# Required Arduino Libraries
+
+## Core Libraries for XIAO nRF52840 Quiz Buzzer
+
+### Essential Libraries
+- **Adafruit ILI9341** - TFT display driver
+- **Adafruit GFX Library** - Graphics primitives
+
+### Board Support
+- **Seeed nRF52 Boards** - Board definitions for XIAO nRF52840
+
+## Installation Instructions
+
+### Via Arduino Library Manager
+1. Open Arduino IDE
+2. Go to Sketch → Include Library → Manage Libraries
+3. Search for each library name
+4. Click Install for each
+
+### Board Support Installation
+1. File → Preferences
+2. Additional Boards Manager URLs: 
+   ```
+   https://files.seeedstudio.com/arduino/package_seeedstudio_index.json
+   ```
+3. Tools → Board → Boards Manager
+4. Search "Seeed nRF52840"
+5. Install "Seeed nRF52 Boards"
+
+### Library Versions (Tested)
+- Adafruit ILI9341: v1.6.0 or later
+- Adafruit GFX Library: v1.11.0 or later
+- Seeed nRF52 Boards: v1.1.8 or later
+
+## Optional Libraries
+- **Adafruit TouchScreen** - If implementing touch (not used in basic version)
+- **ArduinoJson** - For advanced serial protocols (not needed for basic version) 
