@@ -1,138 +1,129 @@
-#include <Adafruit_ILI9341.h>
-#include <Adafruit_GFX.h>
+/*
+ * LIGHTNING FAST Quiz Buzzer System for ESP32-C Node32s
+ * 
+ * - 6 buzz-in inputs (GPIO 0, 1, 4, 5, 6, 7)
+ * - 6 MOSFET enable outputs (A0–A5, active LOW)
+ * - 6 status LEDs (GPIO 10–15)
+ * - 2 reset buttons (yellow & blue)
+ * - 1 ms polling, 10 ms debounce
+ * - Cat-6 cable system with RJ45 connectors
+ */
 
-// Pin definitions (XIAO nRF52840 pins)
-const int BUZZER_PIN[6] = {0, 1, 4, 5, 6, 7};     // D0, D1, D4, D5, D6, D7 - Signal inputs
-const int ENABLE_PIN[6] = {A0, A1, A2, A3, A4, A5}; // A0-A5 - MOSFET enable outputs (active LOW)
-const int RESET_BTN_PIN = 9;                        // D9 for reset button
+// === BUZZER & POWER PINS ===
+const int BUZZER_PIN[6]  = {0, 1, 4, 5, 6, 7};       // Active-low switch inputs
+const int ENABLE_PIN[6]  = {A0, A1, A2, A3, A4, A5}; // MOSFET gates (LOW=on)
 
-// TFT pins
-#define TFT_CS   2    // D2 -> TFT CS
-#define TFT_DC   3    // D3 -> TFT D/C
-#define TFT_RST  -1   // TFT RST not connected to MCU (using -1 to indicate no pin)
+// === STATUS LEDs ===
+// Wire each 5 mm LED anode to its MOSFET DRAIN (3.3 V when enabled),
+// and cathode to these pins (with a 220 Ω resistor in series).
+const int STATUS_LED_PIN[6] = {10, 11, 12, 13, 14, 15};
 
-// Create TFT display object (using hardware SPI)
-Adafruit_ILI9341 tft(TFT_CS, TFT_DC, TFT_RST);
+// === RESET BUTTONS ===
+// One yellow, one blue; both wired between pin → GND, using INPUT_PULLUP
+const int YELLOW_BTN_PIN = 8;
+const int BLUE_BTN_PIN   = 9;
 
+// State
 volatile bool buzzLocked = false;
-volatile int winner = -1;
+volatile int  winner     = -1;
 
 void setup() {
-  // Initialize serial communication (USB CDC) for debug and PC interface
+  // Serial for Web UI
   Serial.begin(115200);
-  while (!Serial) { 
-    delay(10); // wait for serial port to be ready
-  }
+  while (!Serial) delay(10);
 
-  // Initialize the TFT display
-  tft.begin();
-  tft.setRotation(1);  // optional: rotate if needed (0-3). Depends on mounting.
-  tft.fillScreen(ILI9341_BLACK);
-  tft.setTextColor(ILI9341_WHITE);
-  tft.setTextSize(2);
-  tft.setCursor(40, 120);
-  tft.print("Quiz Buzzer Ready!");
-
-  // Configure buzzer input pins (signal lines from RJ45 Pin 1)
-  for (int i = 0; i < 6; ++i) {
+  // 6 buzzer inputs
+  for (int i=0; i<6; i++) {
     pinMode(BUZZER_PIN[i], INPUT_PULLUP);
   }
-  
-  // Configure enable output pins (MOSFET gate control - active LOW)
-  for (int i = 0; i < 6; ++i) {
-    pinMode(ENABLE_PIN[i], OUTPUT);
-    digitalWrite(ENABLE_PIN[i], HIGH);  // Start with all MOSFETs OFF (no power to boxes)
-  }
-  
-  // Configure reset button input
-  pinMode(RESET_BTN_PIN, INPUT_PULLUP);
 
-  // Indicate readiness
-  Serial.println("READY");  // we can send an initial ready signal to the PC app
+  // 6 MOSFET enables (active LOW)
+  for (int i=0; i<6; i++) {
+    pinMode(ENABLE_PIN[i], OUTPUT);
+    digitalWrite(ENABLE_PIN[i], HIGH);
+  }
+
+  // 6 status LEDs
+  for (int i=0; i<6; i++) {
+    pinMode(STATUS_LED_PIN[i], OUTPUT);
+    digitalWrite(STATUS_LED_PIN[i], HIGH); // off (anode=power, cathode pin HIGH)
+  }
+
+  // 2 reset buttons
+  pinMode(YELLOW_BTN_PIN, INPUT_PULLUP);
+  pinMode(BLUE_BTN_PIN,   INPUT_PULLUP);
+
+  Serial.println("READY");
 }
 
 void lockInWinner(int team) {
   buzzLocked = true;
-  winner = team;
-  
-  // POWER CONTROL: Turn off all buzzers, then power only the winner
-  for (int i = 0; i < 6; i++) {
-    digitalWrite(ENABLE_PIN[i], HIGH);  // Turn all MOSFETs OFF (no power)
+  winner     = team;
+
+  // Power-control
+  for (int i=0; i<6; i++) {
+    digitalWrite(ENABLE_PIN[i], HIGH);         // all OFF
+    digitalWrite(STATUS_LED_PIN[i], HIGH);     // all LEDs off
   }
-  digitalWrite(ENABLE_PIN[winner-1], LOW);  // Turn winner's MOSFET ON (power winner's box)
-  
-  // Display winner on TFT
-  tft.fillScreen(ILI9341_BLACK);
-  tft.setTextSize(5);
-  tft.setTextColor(ILI9341_YELLOW);
-  tft.setCursor(20, 100);
-  tft.print("Winner: ");
-  tft.print(team);
-  
-  // Send winner to serial (for web app)
+  digitalWrite(ENABLE_PIN[team-1], LOW);       // enable winner
+  digitalWrite(STATUS_LED_PIN[team-1], LOW);   // light its LED
+
+  // Notify web UI
   Serial.print("WINNER:");
   Serial.println(team);
 }
 
 void resetGame() {
   buzzLocked = false;
-  winner = -1;
-  
-  // POWER CONTROL: Turn off all buzzer power (reset state)
-  for (int i = 0; i < 6; i++) {
-    digitalWrite(ENABLE_PIN[i], HIGH);  // Turn all MOSFETs OFF (no power to any box)
+  winner     = -1;
+
+  // Turn every box OFF & LEDs off
+  for (int i=0; i<6; i++) {
+    digitalWrite(ENABLE_PIN[i], HIGH);
+    digitalWrite(STATUS_LED_PIN[i], HIGH);
   }
-  
-  // Clear display
-  tft.fillScreen(ILI9341_BLACK);
-  tft.setTextSize(2);
-  tft.setTextColor(ILI9341_WHITE);
-  tft.setCursor(30, 120);
-  tft.print("Ready for next question");
-  
-  // Notify serial
+
   Serial.println("RESET");
 }
 
 void loop() {
-  // Check if a winner is already locked
+  // 1 ms loop for speed
+  static uint32_t lastTick = millis();
+  if (millis() - lastTick < 1) return;
+  lastTick = millis();
+
+  // 1) Detect buzz-in
   if (!buzzLocked) {
-    // Scan all buzzers for a press
-    for (int i = 0; i < 6; ++i) {
-      if (digitalRead(BUZZER_PIN[i]) == LOW) {  // button pressed (active low)
-        // Debounce: simple delay to confirm, and check still pressed
-        delay(20);
+    for (int i=0; i<6; i++) {
+      if (digitalRead(BUZZER_PIN[i]) == LOW) {
+        delay(10);
         if (digitalRead(BUZZER_PIN[i]) == LOW) {
-          lockInWinner(i + 1);  // store winner as 1-indexed team number
+          lockInWinner(i+1);
         }
-        break;  // exit loop once a winner is found
+        break;
       }
     }
   }
 
-  // Check hardware reset button
-  if (digitalRead(RESET_BTN_PIN) == LOW) {
-    // Debounce reset button
+  // 2) Physical Reset (yellow or blue)
+  if (digitalRead(YELLOW_BTN_PIN) == LOW ||
+      digitalRead(BLUE_BTN_PIN)   == LOW) {
     delay(20);
-    if (digitalRead(RESET_BTN_PIN) == LOW) {
+    if (digitalRead(YELLOW_BTN_PIN) == LOW ||
+        digitalRead(BLUE_BTN_PIN)   == LOW) {
       resetGame();
-      // Wait until button is released to avoid rapid-fire resets
-      while (digitalRead(RESET_BTN_PIN) == LOW) {
+      // wait for release
+      while (digitalRead(YELLOW_BTN_PIN) == LOW ||
+             digitalRead(BLUE_BTN_PIN)   == LOW) {
         delay(10);
       }
     }
   }
 
-  // Check for serial commands from the web app
+  // 3) Web reset
   if (Serial.available()) {
     String cmd = Serial.readStringUntil('\n');
     cmd.trim();
-    if (cmd == "RESET") {
-      resetGame();
-    }
-    // (You could extend protocol for name updates, etc., if needed)
+    if (cmd == "RESET") resetGame();
   }
-
-  // Small delay to avoid busy-wait hammering (and allow USB tasks)
-  delay(5);
-} 
+}

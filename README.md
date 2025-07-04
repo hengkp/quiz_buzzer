@@ -1,135 +1,157 @@
-# DIY 6-Player Quiz Buzzer System
+# DIY 6-Player Quiz Buzzer System with Cat-6 Infrastructure
 
 ## Overview
 
-Build a fastest-finger buzzer system for 6 teams using a **Seeed Studio XIAO nRF52840** microcontroller, six buzzer buttons, and a 2.4" TFT LCD. The system detects which team's buzzer is pressed first and displays the winning buzz-in number on both a small touchscreen and a large web interface.
+This project creates a professional-grade 6-player quiz buzzer system using an **ESP32-C "Node32s"** development board and standard Cat-6 cables for infrastructure. Each buzzer box connects via Cat-6 cable carrying signal, power, and control lines back to a central controller. The system detects the first button press, gates 3.3V to that team's box (lighting its LED and sounding its buzzer), and notifies a Mac-based web interface via USB-serial.
 
-**🚀 Quick Start**: Test the UI immediately using the included development server - no hardware required!
+**Key Features:**
+- ⚡ **Microsecond-level detection** of first button press
+- 🌐 **Professional Cat-6 infrastructure** with RJ45 connectors
+- 🔌 **Centralized power control** using P-channel MOSFETs
+- 🖥️ **Web interface** for audience display and control
+- 🔄 **Multiple reset options** (physical buttons + web interface)
+- 📏 **Long-distance capability** (tested up to 5m cable runs)
 
 ![Quiz Buzzer System](https://img.shields.io/badge/Status-Ready%20to%20Build-green)
 ![Development Server](https://img.shields.io/badge/Dev%20Server-Ready-blue)
-![Testing](https://img.shields.io/badge/Keyboard%20Testing-1--6%20%26%20R-orange)
 
 ## Quick Navigation
 
-- [🚀 **Quick Start**](#development--testing) - Test immediately without hardware
-- [📦 **Setup**](#software-setup) - Environment and dependencies
-- [🔧 **Hardware**](#hardware-setup) - Arduino and wiring instructions
+- [📦 **Parts List**](#parts-list) - Complete component requirements
+- [🔧 **Wiring**](#wiring-overview) - Cat-6 cable and MOSFET setup
+- [💻 **Software Setup**](#software-setup) - Arduino and web interface
 - [🎮 **Usage**](#usage-instructions) - Operating the system
 - [🛠️ **Troubleshooting**](#troubleshooting) - Common issues and solutions
-- [⚡ **Advanced**](#advanced-features) - Development tools and enhancements
 
-## Features
-
-- ⚡ **Fast Response**: Microsecond-level detection of first button press
-- 🖥️ **Dual Display**: Local TFT screen + web browser interface  
-- 🎯 **6 Player Support**: Handle up to 6 teams simultaneously
-- 🌐 **Web Interface**: Large, clear display for audience visibility
-- 🔄 **Multiple Reset Options**: Physical button + web button + touchscreen
-- 🏷️ **Custom Team Names**: Configurable team names via web interface
-- 💾 **Name Persistence**: Team names saved in browser localStorage
-- 🧪 **Development Server**: Test UI without hardware using simulated buzzer events
-- ⌨️ **Keyboard Testing**: Use keys 1-6 for buzzer simulation and R for reset (all modes)
-- 📦 **Easy Setup**: Conda environment for quick dependency management
-- 📏 **Enhanced Visibility**: Large circle and prominent team names for clear display
-
-## Project Structure
+## System Architecture
 
 ```
-quiz_buzzer/
-├── arduino/
-│   └── quiz_buzzer.ino       # XIAO nRF52840 firmware
-├── web/
-│   ├── buzzer.html           # Web interface
-│   ├── dev_server.py         # Development server for testing
-│   └── requirements.txt      # Python dependencies
-├── docs/
-│   ├── wiring_diagram.md     # Detailed wiring instructions
-│   └── troubleshooting.md    # Common issues and solutions
-├── environment.yml           # Conda environment configuration
-└── README.md                 # Complete project documentation (all-in-one)
+    Mac/PC ────USB───► ESP32-C Node32s ────Cat-6 Cables───► 6x Buzzer Boxes
+                            │
+                      Breadboard with:
+                      • 6x BS250 MOSFETs
+                      • 6x Status LEDs  
+                      • 2x Reset Buttons
+                      • Power distribution
 ```
 
-## Parts Required
+## Parts List (6 Channels)
 
 ### Core Components
-- **Seeed Studio XIAO nRF52840** - 1 piece (main controller)
-- **2.4" TFT LCD with resistive touchscreen** (Adafruit 2478 or equivalent) - 1 piece
-- **Buzzer Buttons** - 6 pieces (quiz buzzer boxes with big red buttons)
-- **Reset Push-button** - 1 piece (momentary pushbutton)
-- **Breadboard** - 1 piece (half-size or larger)
+| Component | Qty | Notes |
+|-----------|-----|-------|
+| **ESP32-C Node32s (USB-C dev board)** | 1 | Main MCU |
+| **BS250 P-channel MOSFET (TO-92)** | 6 | High-side switch for 3.3V |
 
-### Cables & Hardware
-- **Jumper Wires** - Multiple pieces
-- **Long Cables** - ~3 meters per buzzer (recommend twisted pair/Ethernet cable)
-- **USB Cable** - USB-C for XIAO programming/power
-- **330Ω Resistors** - 6 pieces (optional, for buzzer LEDs)
-- **NPN Transistors** - Optional (if buzzers need more current)
+### Resistors (0.25W metal-film)
+| Value | Qty | Purpose |
+|-------|-----|---------|
+| **10Ω (1%)** | 6 | Gate drive limiter |
+| **100kΩ (1%)** | 6 | Gate pull-up |
+| **220Ω (1%)** | 6 | LED current limit |
 
-### Tools
-- Soldering iron and solder
-- Wire strippers
-- Multimeter (for testing)
-- Small screwdriver set
+### Passive Components
+| Component | Qty | Purpose |
+|-----------|-----|---------|
+| **Ceramic capacitors, 0.1µF** | 6 | Signal-line decoupling at MCU inputs |
+| **5mm Green LEDs** | 6 | In-box "powered" indicator |
 
-## Hardware Setup
+### Buttons & Switches
+| Component | Qty | Purpose |
+|-----------|-----|---------|
+| **12mm momentary push-buttons (yellow/blue)** | 2 | Breadboard reset buttons |
 
-### Pin Mapping (XIAO nRF52840)
+### Infrastructure
+| Component | Qty | Purpose |
+|-----------|-----|---------|
+| **RJ45 Keystone Jacks (8-pin)** | 6 | Mount in each buzzer box |
+| **RJ45 Bent-Pin Breakouts** | 6 | Breadboard-side Cat-6 termination |
+| **Cat-6 patch cable, 5m, RJ45–RJ45** | 6 | Carry Signal, GND, Power, Enable |
+| **Cat-6 jumper, 10cm** | 6 | Inside box: jack → switch & LED/buzzer wiring |
 
-| Function | XIAO Pin | Notes |
-|----------|----------|-------|
-| Buzzer 1 | D0 (A0) | Input with pull-up |
-| Buzzer 2 | D1 (A1) | Input with pull-up |
-| Buzzer 3 | D4 (SDA) | Input with pull-up |
-| Buzzer 4 | D5 (SCL) | Input with pull-up |
-| Buzzer 5 | D6 (TX) | Input with pull-up |
-| Buzzer 6 | D7 (RX) | Input with pull-up |
-| TFT CS | D2 | SPI Chip Select |
-| TFT DC | D3 | Data/Command Select |
-| TFT SCK | D8 | SPI Clock |
-| TFT MOSI | D10 | SPI Data Out |
-| Reset Button | D9 | Input with pull-up |
+### Hardware
+| Component | Qty | Purpose |
+|-----------|-----|---------|
+| **Solderless breadboards (830-pt)** | 2 | One for MCU & MOSFET bank, one spare |
+| **Male–male jumper wires, 20cm (40-pack)** | 1 | Hook up all pins and rails |
 
-### Power & Ground
-- **Power**: XIAO powered via USB (5V from USB → 3.3V regulated)
-- **Logic Level**: 3.3V (compatible with TFT breakout)
-- **Common Ground**: Connect all buzzer switches and TFT GND to XIAO GND
+## Wiring Overview
 
-### TFT Display Wiring (SPI Mode)
+### 1. Cat-6 Cable & RJ45 Pin Mapping (per box)
 
-**Important**: Configure TFT for SPI mode by soldering IM1, IM2, IM3 jumpers to 3.3V on the back of the breakout board.
+| RJ45 Pin | Cat-6 Color | Function | Controller Side | Box Side |
+|----------|-------------|----------|-----------------|----------|
+| 1 | White/Orange | BUZZER_SIGNAL | → ESP32 input (INPUT_PULLUP) | → one leg of push-button |
+| 2 | Solid Orange | GND | → GND rail | → other leg of push-button & LED/buzzer "–" |
+| 3 | White/Green | 3.3V POWER | → MOSFET drain | → LED/buzzer "+" |
+| 4 | Solid Green | ENABLE (gate ctrl) | → MOSFET gate via 10Ω & 100kΩ | → unconnected (in-box) |
+| 5–8 | *unused* | | | |
 
-| TFT Pin | XIAO Pin | Description |
-|---------|----------|-------------|
-| VCC | 3V3 | Power (3.3V) |
-| GND | GND | Ground |
-| SCK | D8 | SPI Clock |
-| MOSI (DIN) | D10 | SPI Data |
-| CS | D2 | Chip Select |
-| DC (D/C) | D3 | Data/Command |
-| RST | 3V3* | Reset (tie to 3.3V) |
+### 2. Buzzer Box Internal Wiring
+- **Push-button** between Pin 1 and Pin 2
+- **5mm Green LED** (optional) from Pin 3 → Pin 2 with 220Ω series resistor
+- **Buzzer or in-box light** also from Pin 3 → Pin 2
 
-*RST can be tied to 3.3V via 10kΩ resistor instead of MCU control to save pins.
+### 3. Breadboard Power-Gate Bank (×6)
 
-### Buzzer Wiring
+For each channel, build this MOSFET circuit:
 
-Each buzzer connects as a simple switch:
-1. **Common Ground**: One terminal of each buzzer switch → GND
-2. **Signal Wires**: Other terminal → designated XIAO input pin
-3. **Pull-ups**: Internal pull-ups enabled in software (HIGH when not pressed, LOW when pressed)
+```
+   +3.3V rail
+       │
+     Source
+  ┌───┴───┐
+  │ BS250 │
+  └───┬───┘
+Drain ──► RJ45 Pin 3 → box V+
+       │
+Gate ──┼─[10Ω]─► ESP32 GPIO (active LOW to enable)
+       │
+     [100kΩ]
+       │
+   +3.3V rail
+```
 
-For 3-meter cable runs:
-- Use twisted pair cables (like Ethernet cable) for noise immunity
-- One twisted pair per buzzer: signal + ground return
-- Shield cables if experiencing interference
+- **MOSFET Source** → +3.3V
+- **Drain** → RJ45 Pin 3 (power out)
+- **Gate** → ESP32 "enable" pin through 10Ω; pulled up to 3.3V by 100kΩ
+
+### 4. ESP32-C Pin Assignments
+
+| Signal | Example Pin | Mode | Notes |
+|--------|-------------|------|-------|
+| **Buzz-in inputs (6x)** | GPIO 0,1,4,5,6,7 | INPUT_PULLUP | Active LOW detection |
+| **MOSFET enables (6x)** | GPIO A0–A5 | OUTPUT | HIGH=off, LOW=on |
+| **Status LEDs (6x)** | GPIO 10–15 | OUTPUT | HIGH=off, LOW=on |
+| **Yellow Reset button** | GPIO 8 | INPUT_PULLUP | Active LOW |
+| **Blue Reset button** | GPIO 9 | INPUT_PULLUP | Active LOW |
+
+### 5. Reset Buttons
+- Wire each button between its GPIO and GND
+- Use INPUT_PULLUP; detect LOW to trigger resetGame()
+
+## Power Control Logic
+
+**Normal State (Ready for Questions):**
+- All Enable pins (A0-A5) = HIGH
+- All MOSFETs OFF → No power to any buzzer box
+- Teams can press buttons (signal detection still works)
+
+**Winner Locked State:**
+- All Enable pins = HIGH (turn everything OFF)
+- Winner's Enable pin = LOW (power only the winner's box)
+- Winner's LED/buzzer can light up/sound
+
+**Reset State:**
+- All Enable pins = HIGH 
+- All MOSFETs OFF → No power to any buzzer box
+- System ready for next question
 
 ## Software Setup
 
 ### Environment Setup
 
 #### Option 1: Conda Environment (Recommended)
-
-If you have Anaconda or Miniconda installed, you can create a dedicated environment for this project:
 
 ```bash
 # Create the environment from the provided YAML file
@@ -143,18 +165,11 @@ cd web
 python dev_server.py
 ```
 
-The conda environment includes all necessary Python dependencies for the development server.
-
 #### Option 2: Python Virtual Environment
-
-If you prefer using pip and virtual environments:
 
 ```bash
 # Create virtual environment
 python -m venv quiz_buzzer_env
-
-# Activate environment (Windows)
-quiz_buzzer_env\Scripts\activate
 
 # Activate environment (macOS/Linux)
 source quiz_buzzer_env/bin/activate
@@ -171,289 +186,172 @@ python dev_server.py
 
 1. **Install Board Support**:
    - Open Arduino IDE
+   - Go to File → Preferences
+   - Add to Additional Boards Manager URLs:
+     ```
+     https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+     ```
    - Go to Tools → Board → Boards Manager
-   - Search for "Seeed nRF52840"
-   - Install the Seeed nRF52840 Boards package
+   - Search for "ESP32" and install "esp32 by Espressif Systems"
 
-2. **Install Required Libraries**:
-   ```
-   Adafruit ILI9341
-   Adafruit GFX Library
-   ```
+2. **Board Selection**:
+   - Select Board: "ESP32C3 Dev Module" (or similar ESP32-C variant)
+   - Select correct COM port
+   - Set upload speed to 921600
 
 3. **Upload Firmware**:
    - Open `arduino/quiz_buzzer.ino`
-   - Select Board: "Seeed XIAO nRF52840"
-   - Select correct COM port
-   - Upload code
+   - Upload code to ESP32-C board
 
 ### Web Interface Setup
 
-1. **Browser Requirements**:
-   - Chrome or Edge (Web Serial API support required)
-   - Firefox and Safari do NOT support Web Serial API
+**Browser Requirements**: Chrome or Edge (Web Serial API support required)
 
-2. **Running the Interface**:
-
-   **Option A: Development Server (Recommended for Testing)**:
-   ```bash
-   # Using conda environment
-   conda activate quiz_buzzer
-   cd web
-   python dev_server.py
-   
-   # Access the interface at:
-   # Main UI: http://localhost:8000
-   # Admin Panel: http://localhost:8000/admin
-   ```
-   
-   **Option B: Direct File Access**:
-   - Open `web/buzzer.html` in Chrome/Edge
-   - For local file access, may need to start Chrome with: `--allow-file-access-from-files`
-   
-   **Option C: Simple HTTP Server**:
-   ```bash
-   # Python 3
-   cd web
-   python -m http.server 8000
-   
-   # Node.js (if you have http-server installed)
-   npx http-server
-   ```
-
-## Development & Testing
-
-### Development Server (Hardware-Free Testing)
-
-The included development server allows you to test the buzzer UI without needing the actual Arduino hardware. It simulates the buzzer system using WebSockets instead of Serial communication.
-
-#### Features
-- 🎮 **Full UI Testing**: Test all buzzer functionality without hardware
-- 🔧 **Admin Panel**: Trigger buzzer events manually
-- 📊 **Real-time Logging**: See all events in real-time
-- 🌐 **WebSocket Communication**: Replaces Serial API for development
-- 🎯 **Multiple Clients**: Support multiple browser windows/tabs
-- ⌨️ **Keyboard Controls**: Use keys 1-6 for buzzer simulation, R for reset
-
-#### Quick Start with Development Server
-
+**Option A: Development Server (Recommended for Testing)**:
 ```bash
-# Using conda environment (recommended)
 conda activate quiz_buzzer
 cd web
 python dev_server.py
 
-# Access the interfaces:
+# Access interfaces:
 # Main UI: http://localhost:8000
 # Admin Panel: http://localhost:8000/admin
 ```
 
-#### Testing the Interface
-
-**Main Buzzer UI (http://localhost:8000)**:
-1. Click the connection button (top-left)
-2. Click "Connect" in the modal - automatically connects to dev server
-3. Connection status should turn green
-4. **Keyboard shortcuts**: Press keys `1-6` to simulate team buzzer presses, `R` to reset
-5. **OR use admin panel** to trigger events manually
-6. Test team name editing in settings (top-right gear icon)
-
-**Admin Test Panel (http://localhost:8000/admin)**:
-- **Buzzer Simulation**: Click any team button to simulate buzzer press
-- **Reset System**: Clear current winner and prepare for next round
-- **Random Buzzer**: Simulate random team buzzer press
-- **Event Log**: Real-time events and debugging information
-
-#### Testing Scenarios
-
-**Basic Functionality**:
-1. Open main UI and admin panel in separate browser tabs
-2. Connect the main UI to the dev server
-3. Use admin panel to simulate Team 1 buzzer press
-4. Verify Team 1 appears as winner in main UI
-5. Click reset button in main UI or admin panel
-6. Verify system resets to waiting state
-
-**Team Names**:
-1. Open settings in main UI (gear icon top-right)
-2. Change team names (e.g., "Team 1" → "Lightning Bolts")
-3. Close settings modal
-4. Use admin panel to simulate that team's buzzer
-5. Verify custom name appears in main UI
-
-**Keyboard Shortcuts**:
-1. Open main UI and ensure it has focus
-2. Press keys `1`, `2`, `3`, `4`, `5`, or `6` to simulate team buzzer presses
-3. Press `R` to reset the system (works in all modes)
-4. Test that shortcuts are disabled when settings/connection modals are open
-5. Notice the enhanced larger circle and team names for better visibility
-
-**Multiple Clients**:
-1. Open main UI in multiple browser tabs/windows
-2. Connect all clients
-3. Simulate buzzer press from admin panel
-4. Verify all clients show the same winner
-
-#### Switching to Production
-
-When ready to use real Arduino hardware:
-1. Stop the development server
-2. Open `buzzer.html` directly in browser (or use simple HTTP server)
-3. The original Serial API functionality will work with Arduino
-
-The development server automatically modifies the HTML to use WebSockets instead of Serial API, so no code changes are needed.
+**Option B: Direct File Access**:
+- Open `web/buzzer.html` in Chrome/Edge
+- Connect directly to ESP32-C via Web Serial API
 
 ## Usage Instructions
 
 ### Initial Setup
 1. **Hardware Connection**:
-   - Connect XIAO to computer via USB
-   - Verify TFT displays "Quiz Buzzer Ready!"
-   - Test each buzzer by shorting pin to ground
+   - Connect ESP32-C to computer via USB
+   - Verify all 6 status LEDs are OFF (system ready)
+   - Test each buzzer by pressing buttons
 
 2. **Web Interface**:
    - Open `buzzer.html` in Chrome/Edge
    - Click "Connect to Device"
-   - Select XIAO serial port from list
+   - Select ESP32-C serial port from list
    - Status should show "Connected ✔️"
 
 ### Operating the System
 
 1. **Configure Team Names** (Optional):
-   - Enter custom names in the 6 text fields
+   - Click settings gear icon
+   - Enter custom names for each team
    - Names are automatically saved in browser
 
 2. **Quiz Operation**:
    - Ask question to teams
    - First team to press buzzer wins
-   - Winner displays on both TFT and web interface
+   - Winner's LED lights up and displays on web interface
    - System locks out other teams until reset
 
 3. **Reset for Next Question**:
-   - Press physical reset button on breadboard, OR
+   - Press either physical reset button (yellow or blue) on breadboard, OR
    - Click "Reset" button in web interface, OR
-   - Press "R" key on keyboard (works in all modes)
-   - Both displays clear and system unlocks
+   - Send "RESET" command via serial
+   - All status LEDs turn OFF and system unlocks
 
-4. **Testing/Development**:
-   - Use keyboard keys 1-6 to simulate buzzer presses
-   - Use "R" key for quick reset
-   - Enhanced large circle and team names for better visibility
+### Development & Testing
 
-### Serial Protocol
+**Development Server Features**:
+- 🎮 **Hardware-Free Testing**: Test UI without ESP32-C hardware
+- 🔧 **Admin Panel**: Simulate buzzer events manually
+- ⌨️ **Keyboard Controls**: Use keys 1-6 for buzzer simulation, R for reset
 
-The XIAO communicates via USB Serial (115200 baud):
-
-**Commands from XIAO**:
-- `READY` - System startup
-- `WINNER:X` - Team X (1-6) won
-- `RESET` - System reset complete
-
-**Commands to XIAO**:
-- `RESET\n` - Reset the system
+**Testing the Interface**:
+1. Start development server: `python dev_server.py`
+2. Open Main UI: http://localhost:8000
+3. Open Admin Panel: http://localhost:8000/admin
+4. Use admin panel to simulate buzzer presses
+5. Test keyboard shortcuts (1-6 for teams, R for reset)
 
 ## Troubleshooting
 
-### Common Issues
+### Hardware Issues
 
-**TFT Display Not Working**:
-- Check SPI mode jumpers (IM1,IM2,IM3 to 3.3V)
-- Verify wiring connections
-- Ensure 3.3V power supply adequate
+**MOSFET Not Switching**:
+- Check BS250 pinout (different from N-channel!)
+- Verify Source connects to +3.3V, Drain to load
+- Ensure 10Ω gate resistor and 100kΩ pull-up present
+- Test with multimeter: Gate should be ~3.3V when OFF, ~0V when ON
 
 **Buzzer False Triggers**:
-- Check for loose connections
-- Add 0.1µF capacitor across input and ground
-- Use shielded cables for long runs
-- Verify common ground connection
+- Add 0.1µF capacitor across buzzer input and ground
+- Check for loose Cat-6 connections
+- Verify solid ground reference (RJ45 Pin 2)
+- Use shielded Cat-6 for noisy environments
 
-**Web Interface Connection Issues**:
-- Use Chrome or Edge browser only
-- Check USB cable connection
-- Verify correct serial port selected
-- Try refreshing page and reconnecting
+**Status LEDs Always On/Off**:
+- Check LED polarity and current-limiting resistors
+- Verify GPIO pin assignments match code
+- Test LED control with simple digitalWrite() test
+
+### Software Issues
 
 **No Serial Port Visible**:
-- Install Seeed XIAO nRF52840 drivers
-- Check Device Manager (Windows) for COM port
+- Install ESP32 USB drivers if needed
+- Check Device Manager (Windows) / System Information (Mac)
 - Try different USB cable/port
+- Press and hold BOOT button while connecting (some ESP32-C boards)
 
-**Development Server Issues**:
-- Ensure dev server is running on port 8000
-- Check that no firewall is blocking the connection
-- Try refreshing the browser page
-- If port 8000 is in use:
-  ```bash
-  # Kill any existing process on port 8000
-  lsof -ti:8000 | xargs kill -9
-  # Then restart the dev server
-  python dev_server.py
-  ```
-- For dependency issues:
-  ```bash
-  # Reinstall dependencies
-  pip install --upgrade -r requirements.txt
-  ```
+**Web Interface Connection Problems**:
+- Use Chrome or Edge browsers only (Web Serial API support)
+- Check that ESP32-C is sending "READY" message on startup
+- Verify baud rate (115200)
+- Try refreshing page and reconnecting
 
-### Testing Procedures
+### Cable Testing
 
-1. **Individual Buzzer Test**:
-   ```
-   - Connect only one buzzer
-   - Press button, should see "WINNER:X" in serial monitor
-   - TFT should display "Winner: X"
-   ```
+**Cat-6 Continuity Test**:
+```
+Use multimeter to verify each RJ45 pin:
+Pin 1 (White/Orange) → Buzzer switch terminal
+Pin 2 (Solid Orange) → Ground reference  
+Pin 3 (White/Green) → Power output from MOSFET
+Pin 4 (Solid Green) → Gate control (unused in box)
+```
 
-2. **Timing Test**:
-   ```
-   - Have two people press different buzzers simultaneously
-   - Verify only one winner is registered
-   - Test multiple times to ensure consistency
-   ```
+**Signal Quality**:
+- Cat-6 cables tested up to 5 meters successfully
+- For longer runs, consider Cat-6A (better shielding)
+- Avoid running parallel to AC power lines
 
-3. **Reset Test**:
-   ```
-   - Trigger a winner
-   - Press reset button → should clear displays
-   - Send "RESET" via serial monitor → should clear displays
-   ```
+## Serial Protocol
 
-## Advanced Features
+The ESP32-C communicates via USB Serial (115200 baud):
 
-### Development Tools
-- **Hardware-Free Testing**: Use the development server to test UI functionality without physical hardware
-- **Admin Panel**: Built-in admin interface at `/admin` for simulating buzzer events during testing
-- **Real-time Logging**: Monitor all events and debugging information in the development environment
-- **Environment Management**: Pre-configured conda environment for consistent setup across different systems
-- **Keyboard Testing**: Use keys 1-6 for instant buzzer simulation, R for reset (works in all modes)
+**Commands from ESP32-C**:
+- `READY` - System startup complete
+- `WINNER:X` - Team X (1-6) buzzed in first
+- `RESET` - System reset complete
 
-#### Development Tips
-- **Modifying the UI**: Edit `buzzer.html` directly, refresh browser to see changes
-- **Adding Features**: Modify `dev_server.py` to add new simulation capabilities
-- **WebSocket Events**: Add new WebSocket events for additional functionality
-- **Debugging**: Check browser console for client-side logs, server logs appear in terminal
-- **Testing**: Admin panel shows real-time event log for comprehensive debugging
+**Commands to ESP32-C**:
+- `RESET\n` - Reset the system
 
-### Optional Enhancements
-- **Buzzer LED Control**: Use 330Ω resistors + transistors to light winner's buzzer
+## Advanced Features & Enhancements
+
+### Optional Improvements
 - **Sound Effects**: Add Web Audio API sounds to web interface
-- **Question Timer**: Add countdown timer functionality
-- **Score Tracking**: Extend web interface to track points
-- **Wireless Buzzers**: Use XIAO's BLE capability for wireless operation
+- **Question Timer**: Implement countdown timer functionality
+- **Score Tracking**: Extend web interface to track points per team
+- **Multiple Instances**: Run multiple buzzer systems simultaneously
 
-### Customization
-- **Team Colors**: Modify CSS in `buzzer.html` for color coding
-- **Display Themes**: Add dark/light mode toggle
-- **Font Sizes**: Adjust TFT text size for different viewing distances
-- **Animation Effects**: Add more visual feedback in web interface
+### Scaling the System
+- **8-12 Player Support**: Add more MOSFETs and GPIO pins
+- **Wireless Buzzers**: Use ESP32's WiFi capability for wireless boxes
+- **Tournament Mode**: Software enhancements for competition management
 
-## Safety Notes
+## Safety & Best Practices
 
-- Use appropriate wire gauge for 3-meter runs
-- Secure all connections to prevent intermittent contact
-- Test thoroughly before live use
-- Have backup physical reset button accessible to quizmaster
-- Ensure stable power supply (avoid overloading USB port)
+- Use appropriate wire gauge for 5-meter Cat-6 runs
+- Secure all RJ45 connections to prevent intermittent contact
+- Test thoroughly before live quiz events
+- Keep backup physical reset button accessible to quizmaster
+- Label all cables clearly for quick setup/teardown
 
 ## License
 
@@ -462,14 +360,14 @@ This project is open source. Feel free to modify and distribute.
 ## Contributing
 
 Submit issues and pull requests to improve the system. Areas for contribution:
-- Additional buzzer support (8, 10, 12 players)
+- Additional player support (8, 10, 12 players)
 - Mobile-responsive web interface
 - Advanced timing features
-- BLE wireless implementation
+- Tournament management software
 
 ---
 
-**Ready to build?** Start with the hardware setup and work through each section systematically. The system should be operational within a few hours of assembly time.
+**Ready to build?** Start with the parts list and work through the wiring instructions systematically. The Cat-6 infrastructure provides a professional, reliable foundation for your quiz events.
 
 
 

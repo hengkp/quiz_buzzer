@@ -1,72 +1,73 @@
-# Detailed Wiring Diagram
+# Detailed Wiring Diagram - ESP32-C Node32s Quiz Buzzer System
 
 ## Component Layout Overview
 
 ```
                     ┌─────────────────┐
-                    │   MacBook USB   │
+                    │   Mac/PC USB    │
                     └─────────┬───────┘
                               │ USB-C Cable
                     ┌─────────▼───────┐
-                    │  XIAO nRF52840  │
+                    │ ESP32-C Node32s │
                     │                 │
-                    │  D0  D1  D2  D3 │◄─── TFT Control + Buzzers 1-2
-                    │  D4  D5  D6  D7 │◄─── Buzzers 3-6
-                    │  D8  D9  D10    │◄─── TFT SPI + Reset
-                    │  A0  A1  A2  A3 │◄─── MOSFET Enable 1-4
-                    │  A4  A5         │◄─── MOSFET Enable 5-6
+                    │  GPIO 0,1,4,5,6,7│◄─── Buzzer Inputs (6x)
+                    │  GPIO A0–A5     │◄─── MOSFET Enable (6x)
+                    │  GPIO 10–15     │◄─── Status LEDs (6x)
+                    │  GPIO 8,9       │◄─── Reset Buttons (Yellow/Blue)
                     │  3V3 GND        │
                     └─────────────────┘
                               │
                     ┌─────────▼───────┐
-                    │ 2.4" TFT Display│
-                    │   240x320 LCD   │
+                    │   Web Interface │
+                    │  (Chrome/Edge)  │
                     └─────────────────┘
 
-    Power-Gate Bank (6x P-Channel MOSFETs on breadboard):
+    Power-Gate Bank (6x BS250 P-Channel MOSFETs on breadboard):
     ┌─────────────────────────────────────────────────┐
-    │ +3.3V ─── P-MOS ─── RJ45 Pin3 ───► Team 1 Power │
+    │ +3.3V ─── BS250 ─── RJ45 Pin3 ───► Team 1 Power │
     │           Gate ◄─── A0 (Enable 1)               │
     │                                                 │
-    │ +3.3V ─── P-MOS ─── RJ45 Pin3 ───► Team 2 Power │
+    │ +3.3V ─── BS250 ─── RJ45 Pin3 ───► Team 2 Power │
     │           Gate ◄─── A1 (Enable 2)               │
     │                                                 │
     │         ... (repeat for Teams 3-6) ...         │
     └─────────────────────────────────────────────────┘
 
-    Team Connections (4-wire Cat6 cables):
-    Team 1 ────3m cable───► Signal:D0, GND:GND, Power:MOS1, Enable:A0
-    Team 2 ────3m cable───► Signal:D1, GND:GND, Power:MOS2, Enable:A1  
-    Team 3 ────3m cable───► Signal:D4, GND:GND, Power:MOS3, Enable:A2
-    Team 4 ────3m cable───► Signal:D5, GND:GND, Power:MOS4, Enable:A3
-    Team 5 ────3m cable───► Signal:D6, GND:GND, Power:MOS5, Enable:A4
-    Team 6 ────3m cable───► Signal:D7, GND:GND, Power:MOS6, Enable:A5
+    Team Connections (Cat-6 cables with RJ45 connectors):
+    Team 1 ────5m Cat-6───► Signal:GPIO0, GND:GND, Power:BS250-1, Enable:A0
+    Team 2 ────5m Cat-6───► Signal:GPIO1, GND:GND, Power:BS250-2, Enable:A1  
+    Team 3 ────5m Cat-6───► Signal:GPIO4, GND:GND, Power:BS250-3, Enable:A2
+    Team 4 ────5m Cat-6───► Signal:GPIO5, GND:GND, Power:BS250-4, Enable:A3
+    Team 5 ────5m Cat-6───► Signal:GPIO6, GND:GND, Power:BS250-5, Enable:A4
+    Team 6 ────5m Cat-6───► Signal:GPIO7, GND:GND, Power:BS250-6, Enable:A5
     
-    Reset Btn ──────────────► D9
+    Reset Buttons:
+    Yellow ────────────► GPIO 8
+    Blue   ────────────► GPIO 9
 ```
 
-## New 4-Wire Cable Pinout
+## Cat-6 Cable & RJ45 Pin Mapping
 
-Each buzzer now uses **4 conductors** from Cat-6 cable:
+Each buzzer box uses **4 conductors** from Cat-6 cable with standard color coding:
 
-| RJ45 Pin | Wire Color | Function | Direction | Connection |
-|----------|------------|----------|-----------|------------|
-| 1 | White/Orange | BUZZER_SIGNAL | Input | MCU pin (with pull-up) |
-| 2 | Solid Orange | GND | Ground | Common ground |
-| 3 | White/Green | POWER | Output | MOSFET drain → box V+ |
-| 4 | Solid Green | ENABLE | Output | MOSFET gate control (active LOW) |
-| 5-8 | *Unused* | - | - | - |
+| RJ45 Pin | Wire Color | Function | Direction | ESP32-C Side | Box Side |
+|----------|------------|----------|-----------|--------------|----------|
+| 1 | White/Orange | BUZZER_SIGNAL | Input | GPIO pin (INPUT_PULLUP) | One leg of push-button |
+| 2 | Solid Orange | GND | Ground | Common ground rail | Other leg of button & LED "–" |
+| 3 | White/Green | POWER | Output | BS250 MOSFET drain | LED/buzzer "+" |
+| 4 | Solid Green | ENABLE | Control | MOSFET gate (via resistors) | Unused (gate control) |
+| 5-8 | *Unused* | - | - | - | - |
 
 ## Step-by-Step Wiring Instructions
 
 ### Step 1: Prepare the Breadboard
 
-1. Place XIAO nRF52840 on breadboard
+1. Place ESP32-C Node32s on breadboard
 2. Connect power rails:
-   - XIAO 3V3 → breadboard positive rail (red)
-   - XIAO GND → breadboard negative rail (black/blue)
+   - ESP32-C 3V3 → breadboard positive rail (red)
+   - ESP32-C GND → breadboard negative rail (black/blue)
 
-### Step 2: Build Power-Gate Bank (6x P-Channel MOSFETs)
+### Step 2: Build Power-Gate Bank (6x BS250 P-Channel MOSFETs)
 
 For each of the 6 teams, build this circuit on the breadboard:
 
@@ -74,24 +75,36 @@ For each of the 6 teams, build this circuit on the breadboard:
        +3.3V rail
            │
          ┌─┴─┐ Source
-         │P-│  P-Channel MOSFET (AO3401 or similar)
-         │MOS│
-         │FET│
+         │BS │  BS250 P-Channel MOSFET (TO-92 package)
+         │250│
+         │   │
          └─┬─┘ Drain ──► RJ45 Pin 3 (POWER) out to buzzer box
  Gate ──10Ω┤    
            │
       100kΩ│ (pull-up resistor)
            └──┬───► to +3.3V rail
              
- XIAO Pin AX ─► Gate control (Enable signal, active LOW)
+ ESP32 Pin AX ─► Gate control (Enable signal, active LOW)
 ```
 
 **Component Requirements per MOSFET:**
-- 1x P-Channel MOSFET (AO3401, IRLML6401, or similar)  
-- 1x 10Ω resistor (gate drive)
-- 1x 100kΩ resistor (pull-up)
+- 1x BS250 P-Channel MOSFET (TO-92 package)  
+- 1x 10Ω resistor (gate drive limiter)
+- 1x 100kΩ resistor (pull-up to 3.3V)
 
-**MOSFET Pin Assignments:**
+**BS250 Pinout (TO-92, flat side facing you):**
+```
+     ┌─────┐
+     │ BS  │ Flat side
+     │ 250 │
+     └──┬──┘
+   Gate │ │ Source (+3.3V)
+        │ │
+        │ └─── Drain (to load)
+        └───── Gate
+```
+
+**MOSFET Assignments:**
 - Team 1: Enable → A0, Power out → RJ45-1 Pin 3
 - Team 2: Enable → A1, Power out → RJ45-2 Pin 3  
 - Team 3: Enable → A2, Power out → RJ45-3 Pin 3
@@ -99,171 +112,164 @@ For each of the 6 teams, build this circuit on the breadboard:
 - Team 5: Enable → A4, Power out → RJ45-5 Pin 3
 - Team 6: Enable → A5, Power out → RJ45-6 Pin 3
 
-### Step 3: TFT Display Connections
+### Step 3: Status LEDs (6x on Breadboard)
 
-**CRITICAL**: Before wiring, configure TFT for SPI mode:
-- Solder IM1, IM2, IM3 jumpers to HIGH position on back of TFT board
-- Leave IM0 unconnected
+Each status LED shows which team's power is active:
 
-| TFT Pin | Wire Color | XIAO Pin | Function |
-|---------|------------|----------|----------|
-| VCC | Red | 3V3 | Power |
-| GND | Black | GND | Ground |
-| SCK | Yellow | D8 | SPI Clock |
-| MOSI (DIN) | Orange | D10 | SPI Data Out |
-| CS | Blue | D2 | Chip Select |
-| DC (D/C) | Green | D3 | Data/Command |
-| RST | White | 3V3 via 10kΩ | Reset (tied high) |
+| Team | ESP32-C Pin | LED Connection |
+|------|-------------|----------------|
+| 1 | GPIO 10 | LED anode → MOSFET drain, cathode → GPIO 10 via 220Ω |
+| 2 | GPIO 11 | LED anode → MOSFET drain, cathode → GPIO 11 via 220Ω |
+| 3 | GPIO 12 | LED anode → MOSFET drain, cathode → GPIO 12 via 220Ω |
+| 4 | GPIO 13 | LED anode → MOSFET drain, cathode → GPIO 13 via 220Ω |
+| 5 | GPIO 14 | LED anode → MOSFET drain, cathode → GPIO 14 via 220Ω |
+| 6 | GPIO 15 | LED anode → MOSFET drain, cathode → GPIO 15 via 220Ω |
+
+**LED Control Logic:**
+- GPIO pin HIGH = LED OFF (cathode pulled up)
+- GPIO pin LOW = LED ON (current flows through 220Ω resistor)
 
 ### Step 4: Buzzer Box Connections (Simplified)
 
-Each buzzer box now contains **only**:
+Each buzzer box contains **only**:
 1. RJ45 Keystone Jack
-2. Momentary switch 
-3. LED and/or buzzer for feedback
+2. Momentary push-button switch 
+3. 5mm Green LED (optional) for "powered" indicator
+4. Buzzer or light for audio/visual feedback
 
 **Inside each buzzer box**:
 ```
 RJ45 Keystone Jack          Components
 ┌─────────────────┐        ┌─────────────┐
-│ Pin 1 (Signal)  │────────│ Switch Term │
-│ Pin 2 (Ground)  │────┬───│ Switch Term │
+│ Pin 1 (Signal)  │────────│ Button Leg 1│
+│ Pin 2 (Ground)  │────┬───│ Button Leg 2│
 │ Pin 3 (Power)   │────┼───│ LED/Buzz +  │
 │ Pin 4 (Enable)  │    └───│ LED/Buzz -  │
 │ Pins 5-8 (NC)   │        └─────────────┘
 └─────────────────┘
 ```
 
-**No more internal MOSFETs or resistors needed in the boxes!**
+**No internal MOSFETs or complex circuits needed in the boxes!**
 
-### Step 5: Reset Button
+### Step 5: Reset Buttons (Yellow & Blue)
 
-Simple momentary pushbutton:
-- One terminal → D9 (XIAO)
-- Other terminal → GND (XIAO)
-- Internal pull-up resistor used in software
+Two simple momentary pushbuttons on the main breadboard:
+
+| Button Color | ESP32-C Pin | Wiring |
+|--------------|-------------|--------|
+| Yellow | GPIO 8 | One terminal → GPIO 8, other → GND |
+| Blue | GPIO 9 | One terminal → GPIO 9, other → GND |
+
+Both use INPUT_PULLUP mode in software (normally HIGH, LOW when pressed).
 
 ### Step 6: Power Connection
 
-- Connect XIAO to MacBook via USB-C cable
-- This provides both power and serial communication
+- Connect ESP32-C to Mac/PC via USB-C cable
+- This provides both power (5V → 3.3V regulated) and serial communication
 - No external power supply needed
 
 ## Complete Pin Usage Table
 
-| XIAO Pin | Function | Connection | Pull-up | Notes |
-|----------|----------|------------|---------|-------|
-| D0 | Buzzer 1 Signal | RJ45-1 Pin 1 | Internal | Active LOW |
-| D1 | Buzzer 2 Signal | RJ45-2 Pin 1 | Internal | Active LOW |
-| D2 | TFT CS | Direct | - | SPI control |
-| D3 | TFT DC | Direct | - | SPI control |
-| D4 | Buzzer 3 Signal | RJ45-3 Pin 1 | Internal | Active LOW |
-| D5 | Buzzer 4 Signal | RJ45-4 Pin 1 | Internal | Active LOW |
-| D6 | Buzzer 5 Signal | RJ45-5 Pin 1 | Internal | Active LOW |
-| D7 | Buzzer 6 Signal | RJ45-6 Pin 1 | Internal | Active LOW |
-| D8 | TFT SCK | Direct | - | SPI clock |
-| D9 | Reset Btn | Signal wire | Internal | Active LOW |
-| D10 | TFT MOSI | Direct | - | SPI data |
-| A0 | Enable 1 | MOSFET Gate 1 | - | Active LOW |
-| A1 | Enable 2 | MOSFET Gate 2 | - | Active LOW |
-| A2 | Enable 3 | MOSFET Gate 3 | - | Active LOW |
-| A3 | Enable 4 | MOSFET Gate 4 | - | Active LOW |
-| A4 | Enable 5 | MOSFET Gate 5 | - | Active LOW |
-| A5 | Enable 6 | MOSFET Gate 6 | - | Active LOW |
-| 3V3 | Power | TFT VCC + MOSFET Source | - | 3.3V supply |
+| ESP32-C Pin | Function | Connection | Pull-up | Notes |
+|-------------|----------|------------|---------|-------|
+| GPIO 0 | Buzzer 1 Signal | RJ45-1 Pin 1 | Internal | Active LOW |
+| GPIO 1 | Buzzer 2 Signal | RJ45-2 Pin 1 | Internal | Active LOW |
+| GPIO 4 | Buzzer 3 Signal | RJ45-3 Pin 1 | Internal | Active LOW |
+| GPIO 5 | Buzzer 4 Signal | RJ45-4 Pin 1 | Internal | Active LOW |
+| GPIO 6 | Buzzer 5 Signal | RJ45-5 Pin 1 | Internal | Active LOW |
+| GPIO 7 | Buzzer 6 Signal | RJ45-6 Pin 1 | Internal | Active LOW |
+| GPIO 8 | Yellow Reset Btn | Button to GND | Internal | Active LOW |
+| GPIO 9 | Blue Reset Btn | Button to GND | Internal | Active LOW |
+| GPIO 10 | Status LED 1 | LED cathode via 220Ω | - | Active LOW |
+| GPIO 11 | Status LED 2 | LED cathode via 220Ω | - | Active LOW |
+| GPIO 12 | Status LED 3 | LED cathode via 220Ω | - | Active LOW |
+| GPIO 13 | Status LED 4 | LED cathode via 220Ω | - | Active LOW |
+| GPIO 14 | Status LED 5 | LED cathode via 220Ω | - | Active LOW |
+| GPIO 15 | Status LED 6 | LED cathode via 220Ω | - | Active LOW |
+| A0 | Enable 1 | BS250 Gate 1 via 10Ω | - | Active LOW |
+| A1 | Enable 2 | BS250 Gate 2 via 10Ω | - | Active LOW |
+| A2 | Enable 3 | BS250 Gate 3 via 10Ω | - | Active LOW |
+| A3 | Enable 4 | BS250 Gate 4 via 10Ω | - | Active LOW |
+| A4 | Enable 5 | BS250 Gate 5 via 10Ω | - | Active LOW |
+| A5 | Enable 6 | BS250 Gate 6 via 10Ω | - | Active LOW |
+| 3V3 | Power | BS250 Sources + breadboard rail | - | 3.3V supply |
 | GND | Ground | Common + RJ45 Pin 2 | - | All grounds |
 
 ## Power Control Logic
 
 **Normal State (Ready for Questions):**
 - All Enable pins (A0-A5) = HIGH
-- All MOSFETs OFF → No power to any buzzer box
+- All BS250 MOSFETs OFF → No power to any buzzer box
 - Teams can press buttons (signal detection still works)
+- All status LEDs OFF
 
 **Winner Locked State:**
-- All Enable pins = HIGH (turn everything OFF)
+- All Enable pins = HIGH (turn everything OFF first)
 - Winner's Enable pin = LOW (power only the winner's box)
-- Winner's LED/buzzer can light up/sound
+- Winner's status LED ON, others OFF
+- Winner's box LED/buzzer can light up/sound
 
 **Reset State:**
 - All Enable pins = HIGH 
-- All MOSFETs OFF → No power to any buzzer box
+- All BS250 MOSFETs OFF → No power to any buzzer box
+- All status LEDs OFF
 - System ready for next question
 
-## Cable Management Tips
+## Cable Management & Testing
 
-### For 4-Wire Cat-6 Runs (3 meters)
+### Cat-6 Cable Assignments
 
-1. **Wire Assignment per Cable**:
-   ```
-   Cat-6 Pair 1: Pin 1 (White/Orange) + Pin 2 (Orange)
-   Cat-6 Pair 2: Pin 3 (White/Green) + Pin 4 (Green)  
-   Cat-6 Pair 3: Unused
-   Cat-6 Pair 4: Unused
-   ```
-
-2. **Multiple Teams per Cable**:
-   - One Cat-6 cable can support 2 teams (using all 4 pairs)
-   - Use 3 cables total for 6 teams
-   - Label clearly which pairs go to which team
-
-3. **Strain Relief**:
-   - Secure cables at both ends
-   - Use cable ties every 50cm
-   - Avoid sharp bends near RJ45 connectors
-
-4. **Testing**:
-   - Verify continuity on all 4 conductors per team
-   - Check for shorts between conductors
-   - Test MOSFET switching with multimeter
-
-### Breadboard Layout Suggestion
-
+**Standard Cat-6 Color Coding:**
 ```
-Row 1:  3V3 ──────────────────── 3V3 Rail (Red)
-Row 2:  GND ──────────────────── GND Rail (Black)
-
-Row 5:  XIAO D0-D3  ┌─────────┐
-Row 6:  XIAO D4-D7  │  XIAO   │  TFT Connections
-Row 7:  XIAO D8-D10 │ nRF52840│  ├─ CS (D2)
-Row 8:  XIAO A0-A3  │         │  ├─ DC (D3)  
-Row 9:  XIAO A4-A5  │         │  ├─ SCK (D8)
-Row 10: XIAO 3V3,GND└─────────┘  └─ MOSI (D10)
-
-Row 12: Reset Button ──────── D9
-
-Row 15-20: Power-Gate Bank (6x P-Channel MOSFETs)
-  MOS1  MOS2  MOS3  MOS4  MOS5  MOS6
-   │     │     │     │     │     │
-   A0    A1    A2    A3    A4    A5
-
-Buzzer Terminal Block (RJ45 Breakouts):
-Pin1 Pin2 Pin3 Pin4  (x6 teams)
-┌──┬──┬──┬──┐
-│D0│GD│M1│A0│  ◄─ Team 1 Cat-6 cable
-├──┼──┼──┼──┤
-│D1│GD│M2│A1│  ◄─ Team 2 Cat-6 cable  
-├──┼──┼──┼──┤
-│..│..│..│..│  ◄─ Teams 3-6...
-└──┴──┴──┴──┘
+Pair 1: White/Orange (Pin 1) + Solid Orange (Pin 2)
+Pair 2: White/Green (Pin 3) + Solid Green (Pin 4)  
+Pair 3: White/Blue + Solid Blue (unused)
+Pair 4: White/Brown + Solid Brown (unused)
 ```
+
+**Cable Labeling:**
+- Label each 5m Cat-6 cable clearly: "TEAM 1", "TEAM 2", etc.
+- Use cable ties every 50cm for strain relief
+- Secure connections at both RJ45 ends
+
+### Testing Procedures
+
+**Individual Channel Test:**
+1. Connect one Cat-6 cable between controller and buzzer box
+2. Press buzzer button
+3. Verify signal detection (check serial monitor for "WINNER:X")
+4. Verify power control (status LED should light up)
+5. Test reset functionality
+
+**MOSFET Testing:**
+1. Use multimeter to verify:
+   - Source pin = +3.3V
+   - Gate pin = +3.3V when OFF (Enable pin HIGH)
+   - Gate pin = ~0V when ON (Enable pin LOW)
+   - Drain pin = +3.3V when ON, floating when OFF
+
+**Signal Integrity Test:**
+1. Test all 6 channels simultaneously
+2. Have multiple people press buttons at same time
+3. Verify only first press is registered
+4. Check for false triggers or missed presses
 
 ## Troubleshooting Wiring Issues
 
-### Power Control Problems
+### MOSFET Problems
 ```
 Symptom: LED/buzzer always on
 Check:
-- MOSFET polarity (P-channel: Source to +3.3V)
-- Enable pin driven HIGH when should be OFF
-- Pull-up resistor present (100kΩ Gate→Source)
+- BS250 pinout (Source to +3.3V, not Drain!)
+- Enable pin going HIGH when should be OFF
+- 100kΩ pull-up resistor present (Gate→Source)
 
 Symptom: LED/buzzer never lights
 Check:
-- MOSFET connections (Source, Drain, Gate)
+- BS250 connections (Source, Drain, Gate)
 - Enable pin going LOW when winner selected
-- Power reaching buzzer box via Pin 3
 - 10Ω gate drive resistor present
+- Power reaching buzzer box via Pin 3
 ```
 
 ### Signal Detection Problems
@@ -271,25 +277,24 @@ Check:
 Symptom: False triggers
 Check:
 - Solid ground connections (RJ45 Pin 2)
-- Switch bounce (add 0.1µF cap if needed)
+- 0.1µF capacitor across input and ground
 - Cable shielding for long runs
 
 Symptom: No button response
 Check:
-- Continuity RJ45 Pin 1 to XIAO input
-- Switch actually closing in buzzer box
-- Pull-up enabled in software (INPUT_PULLUP)
+- Continuity RJ45 Pin 1 to ESP32-C input
+- Switch closing properly in buzzer box
+- INPUT_PULLUP enabled in software
 ```
 
-### MOSFET Selection
+### Status LED Issues
 ```
-Recommended P-Channel MOSFETs:
-- AO3401: SOT-23 package, 4A, 30V
-- IRLML6401: SOT-23 package, 3.7A, 12V  
-- BSS84: SOT-23 package, 170mA, 50V (for LED-only)
-
-Gate Threshold: Must turn on with 3.3V drive
-Package: SOT-23 preferred for breadboard use
+Symptom: LEDs always on/off
+Check:
+- LED polarity (anode to MOSFET drain)
+- 220Ω current limiting resistor
+- GPIO pin control (HIGH=off, LOW=on)
+- Common ground connections
 ```
 
-This completes the updated wiring instructions for the centralized power control design. The buzzer boxes are now much simpler plug-and-play units, while all the intelligence lives on the main breadboard. 
+This completes the updated wiring instructions for the ESP32-C Node32s system with Cat-6 infrastructure and centralized BS250 MOSFET power control. 

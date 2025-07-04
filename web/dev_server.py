@@ -35,11 +35,8 @@ def index():
         with open('buzzer.html', 'r') as f:
             html_content = f.read()
         
-        # Modify the HTML to connect to our WebSocket instead of Serial
-        modified_html = html_content.replace(
-            'await navigator.serial.requestPort()',
-            'connectToDevServer()'
-        )
+        # Use the HTML content as-is, our WebSocket code will override the functions
+        modified_html = html_content
         
         # Inject our WebSocket client code
         websocket_code = """
@@ -74,24 +71,43 @@ def index():
         return Promise.resolve(); // Simulate successful connection
       }
       
-      // Override the serial writer
-      const originalSendReset = sendReset;
-      async function sendReset() {
-        if (!devServerConnected) {
-          alert('Dev server not connected');
-          return;
+      // Override the sendReset function to work with dev server
+      window.sendReset = async function() {
+        // Check if we're in dev server mode
+        if (typeof socket !== 'undefined' && socket && socket.connected) {
+          try {
+            socket.emit('reset_buzzers');
+            console.log('Reset sent to dev server');
+          } catch (error) {
+            console.error('Dev server reset error:', error);
+          }
+        } else if (isConnected && serialWriter) {
+          // Real hardware mode
+          try {
+            await serialWriter.write('RESET\\n');
+            console.log('Reset sent to hardware');
+          } catch (error) {
+            console.error('Hardware reset error:', error);
+          }
+        } else {
+          // Standalone mode (no connection)
+          if (currentWinner !== null) {
+            resetDisplay();
+            console.log('Reset performed (standalone mode)');
+          }
         }
-        
-        try {
-          socket.emit('reset_buzzers');
-          console.log('Reset sent to dev server');
-        } catch (error) {
-          console.error('Reset error:', error);
-        }
-      }
+      };
       
-      // Replace the original sendReset function
-      window.sendReset = sendReset;
+      // Override the connectSerial function to use dev server
+      window.connectSerial = async function() {
+        return connectToDevServer();
+      };
+      
+      // Auto-connect to dev server when page loads
+      window.addEventListener('load', function() {
+        console.log('🚀 Dev server mode enabled - connecting automatically...');
+        connectToDevServer();
+      });
     </script>
     """
         

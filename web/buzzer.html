@@ -12,7 +12,7 @@
     }
     
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
       min-height: 100vh;
       color: #1d1d1f;
@@ -100,56 +100,200 @@
     
     /* Team Name Display */
     .team-name {
-      font-size: 42px;
-      font-weight: 600;
+      font-size: 72px;
+      font-weight: 700;
       color: #1d1d1f;
-      margin-bottom: 40px;
+      margin-bottom: 50px;
       opacity: 0;
-      transform: translateY(20px);
-      transition: all 0.4s ease;
+      transform: translateY(30px);
+      transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
       text-align: center;
-      min-height: 50px;
-      letter-spacing: 0.5px;
+      min-height: 80px;
+      letter-spacing: 1px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     }
     
     .team-name.visible {
       opacity: 1;
       transform: translateY(0);
+      animation: teamNameSlideIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+    
+    /* Bouncing Team System */
+    .bouncing-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    
+    .team-bouncer {
+      position: absolute;
+      width: 170px;
+      height: 170px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      opacity: 1;
+      z-index: 10;
+      border: 3px solid rgba(255, 255, 255, 0.6);
+    }
+    
+    .team-bouncer.winner-entering {
+      transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      transform: scale(0.6);
+      z-index: 15;
+    }
+    
+    .team-bouncer.winner-positioned {
+      transform: scale(0.8);
+      z-index: 5; /* Lower than main circle content but visible inside */
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+      border: 3px solid rgba(255, 255, 255, 0.6);
+    }
+    
+
+    
+
+    
+    .team-bouncer.winner-celebrating {
+      animation: winnerCelebration 0.3s ease-out;
+      z-index: 16;
+    }
+    
+    @keyframes winnerCelebration {
+      0% { 
+        transform: scale(1); 
+      }
+      50% { 
+        transform: scale(1.3) rotate(5deg); 
+        box-shadow: 0 10px 40px rgba(0, 122, 255, 0.6);
+      }
+      100% { 
+        transform: scale(1.1); 
+        box-shadow: 0 8px 35px rgba(0, 122, 255, 0.4);
+      }
+    }
+    
+    .team-bouncer.winner-exiting {
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 15;
+    }
+    
+    .team-bouncer.winner-launching {
+      animation: winnerLaunch 0.2s ease-out;
+      z-index: 16;
+    }
+    
+    @keyframes winnerLaunch {
+      0% { 
+        transform: scale(0.3); 
+      }
+      60% { 
+        transform: scale(0.5) rotate(-3deg); 
+        box-shadow: 0 8px 30px rgba(0, 122, 255, 0.5);
+      }
+      100% { 
+        transform: scale(0.4); 
+      }
+    }
+    
+    .team-bouncer.hidden {
+      opacity: 0;
+      transform: scale(0.3);
+      pointer-events: none;
+    }
+    
+    .team-bouncer-number {
+      font-size: 56px;
+      font-weight: 700;
+      color: white;
+      text-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+      line-height: 1;
+      margin-bottom: 6px;
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    }
+    
+    .team-bouncer-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: white;
+      text-shadow: 0 3px 8px rgba(0, 0, 0, 0.8);
+      text-align: center;
+      max-width: 160px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.1;
+      padding: 0 12px;
+      letter-spacing: 0.5px;
+      font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    }
+    
+    /* Center Exclusion Zone */
+    .center-zone {
+      position: absolute;
+      width: 1200px;
+      height: 1200px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 5;
     }
     
     /* Main Circle */
     .main-circle {
-      width: 380px;
-      height: 380px;
+      width: 480px;
+      height: 480px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(20px);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
       display: flex;
       align-items: center;
       justify-content: center;
       position: relative;
-      transition: all 0.4s ease;
-      margin-bottom: 50px;
+      transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      margin-bottom: 60px;
+      z-index: 10; /* Above positioned winner team */
     }
     
     .main-circle.winner {
-      background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
-      transform: scale(1.1);
-      box-shadow: 0 16px 48px rgba(0, 122, 255, 0.3);
+      background: linear-gradient(135deg, #007aff 0%, #5856d6 50%, #af52de 100%);
+      transform: scale(1.15);
+      box-shadow: 0 20px 60px rgba(0, 122, 255, 0.4), 0 0 0 4px rgba(255, 255, 255, 0.3);
+      animation: winnerPulse 1.5s ease-in-out infinite alternate;
     }
     
     .circle-content {
-      font-size: 140px;
+      font-size: 220px;
       font-weight: 700;
       color: #8e8e93;
-      transition: all 0.4s ease;
+      transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
       line-height: 1;
+      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      position: relative;
+      z-index: 15; /* Above everything including positioned winner */
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     }
     
     .circle-content.winner-number {
       color: white;
-      font-size: 180px;
+      font-size: 280px;
+      text-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      animation: numberBounce 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     }
     
     .circle-content.waiting {
@@ -159,6 +303,62 @@
     @keyframes breathe {
       0%, 100% { opacity: 0.6; }
       50% { opacity: 1; }
+    }
+    
+    @keyframes winnerPulse {
+      0% { 
+        box-shadow: 0 20px 60px rgba(0, 122, 255, 0.4), 0 0 0 4px rgba(255, 255, 255, 0.3);
+      }
+      100% { 
+        box-shadow: 0 25px 80px rgba(0, 122, 255, 0.6), 0 0 0 8px rgba(255, 255, 255, 0.5);
+      }
+    }
+    
+    @keyframes numberBounce {
+      0% { 
+        transform: scale(0.3) rotate(-10deg); 
+        opacity: 0; 
+      }
+      50% { 
+        transform: scale(1.1) rotate(2deg); 
+      }
+      70% { 
+        transform: scale(0.95) rotate(-1deg); 
+      }
+      100% { 
+        transform: scale(1) rotate(0deg); 
+        opacity: 1; 
+      }
+    }
+    
+    @keyframes celebrationBurst {
+      0% { 
+        transform: scale(0) rotate(0deg); 
+        opacity: 1; 
+      }
+      50% { 
+        transform: scale(1.5) rotate(180deg); 
+        opacity: 0.8; 
+      }
+      100% { 
+        transform: scale(3) rotate(360deg); 
+        opacity: 0; 
+      }
+    }
+    
+    @keyframes teamNameSlideIn {
+      0% { 
+        transform: translateY(50px) scale(0.8); 
+        opacity: 0; 
+      }
+      60% { 
+        transform: translateY(-10px) scale(1.05); 
+        opacity: 1; 
+      }
+      100% { 
+        transform: translateY(0) scale(1); 
+        opacity: 1; 
+      }
     }
     
     /* Reset Button */
@@ -242,9 +442,10 @@
     }
     
     .settings-title {
-      font-size: 24px;
+      font-size: 32px;
       font-weight: 600;
       color: #1d1d1f;
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     }
     
     .close-button {
@@ -273,26 +474,99 @@
     
     .team-label {
       display: block;
-      font-size: 14px;
+      font-size: 18px;
       font-weight: 500;
       color: #1d1d1f;
       margin-bottom: 8px;
+      font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    }
+    
+    .team-input-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .team-color-picker {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: 2px solid #e5e5ea;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+      background: #f2f2f7;
+      overflow: hidden;
+    }
+    
+    .team-color-picker:hover {
+      transform: scale(1.05);
+      border-color: #007aff;
+    }
+    
+    .team-color-picker input[type="color"] {
+      width: 100%;
+      height: 100%;
+      border: none;
+      cursor: pointer;
+      background: transparent;
     }
     
     .team-input {
-      width: 100%;
+      flex: 1;
       padding: 12px 16px;
       border: 2px solid #e5e5ea;
       border-radius: 12px;
-      font-size: 16px;
+      font-size: 20px;
       background: white;
       transition: all 0.2s ease;
+      font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     }
     
     .team-input:focus {
       outline: none;
       border-color: #007aff;
       box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+    }
+    
+    /* Settings Actions */
+    .settings-actions {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e5ea;
+      display: flex;
+      gap: 12px;
+    }
+    
+    .settings-button {
+      flex: 1;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    }
+    
+    .settings-button.primary {
+      background: #007aff;
+      color: white;
+    }
+    
+    .settings-button.primary:hover {
+      background: #0056cc;
+    }
+    
+    .settings-button.secondary {
+      background: #f2f2f7;
+      color: #8e8e93;
+    }
+    
+    .settings-button.secondary:hover {
+      background: #e5e5ea;
+      color: #1d1d1f;
     }
     
     /* Connection Modal */
@@ -319,16 +593,18 @@
     }
     
     .connection-modal h3 {
-      font-size: 20px;
+      font-size: 26px;
       font-weight: 600;
       margin-bottom: 12px;
       color: #1d1d1f;
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     }
     
     .connection-modal p {
-      font-size: 16px;
+      font-size: 20px;
       color: #8e8e93;
       margin-bottom: 20px;
+      font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     }
     
     .connect-button {
@@ -336,12 +612,13 @@
       color: white;
       border: none;
       border-radius: 12px;
-      padding: 12px 24px;
-      font-size: 16px;
+      padding: 14px 28px;
+      font-size: 20px;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s ease;
       margin-right: 12px;
+      font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     }
     
     .connect-button:hover {
@@ -353,53 +630,158 @@
       color: #1d1d1f;
       border: none;
       border-radius: 12px;
-      padding: 12px 24px;
-      font-size: 16px;
+      padding: 14px 28px;
+      font-size: 20px;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s ease;
+      font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     }
     
     .cancel-button:hover {
       background: #e5e5ea;
     }
     
+    /* Celebration Effects */
+    .celebration-particle {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0;
+    }
+    
+    .celebration-particle.burst {
+      animation: celebrationBurst 1.2s ease-out forwards;
+    }
+    
+    .confetti {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: linear-gradient(45deg, #FFD700, #FFA500);
+      transform: rotate(45deg);
+      pointer-events: none;
+      opacity: 0;
+    }
+    
+    .confetti.fall {
+      animation: confettiFall 2s ease-out forwards;
+    }
+    
+    @keyframes confettiFall {
+      0% { 
+        transform: translateY(-50px) rotate(0deg) scale(0); 
+        opacity: 1; 
+      }
+      50% { 
+        transform: translateY(200px) rotate(180deg) scale(1); 
+        opacity: 0.8; 
+      }
+      100% { 
+        transform: translateY(400px) rotate(360deg) scale(0.5); 
+        opacity: 0; 
+      }
+    }
+    
+    /* Screen Flash Effect */
+    .screen-flash {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%);
+      pointer-events: none;
+      opacity: 0;
+      z-index: 50;
+    }
+    
+    .screen-flash.active {
+      animation: screenFlash 0.6s ease-out;
+    }
+    
+    @keyframes screenFlash {
+      0% { opacity: 0; }
+      30% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    
     /* Responsive */
     @media (max-width: 768px) {
+      .center-zone {
+        width: 500px;
+        height: 500px;
+      }
+      
+      .team-bouncer {
+        width: 140px;
+        height: 140px;
+      }
+      
+      .team-bouncer-number {
+        font-size: 48px;
+      }
+      
+      .team-bouncer-name {
+        font-size: 20px;
+        max-width: 130px;
+      }
+      
       .main-circle {
-        width: 300px;
-        height: 300px;
+        width: 380px;
+        height: 380px;
       }
       
       .circle-content {
-        font-size: 110px;
+        font-size: 170px;
       }
       
       .circle-content.winner-number {
-        font-size: 140px;
+        font-size: 220px;
       }
       
       .team-name {
-        font-size: 32px;
+        font-size: 56px;
       }
     }
     
     @media (max-width: 480px) {
+      .center-zone {
+        width: 400px;
+        height: 400px;
+      }
+      
+      .team-bouncer {
+        width: 120px;
+        height: 120px;
+      }
+      
+      .team-bouncer-number {
+        font-size: 40px;
+      }
+      
+      .team-bouncer-name {
+        font-size: 18px;
+        max-width: 110px;
+      }
+      
       .main-circle {
-        width: 260px;
-        height: 260px;
+        width: 320px;
+        height: 320px;
       }
       
       .circle-content {
-        font-size: 90px;
+        font-size: 140px;
       }
       
       .circle-content.winner-number {
-        font-size: 120px;
+        font-size: 180px;
       }
       
       .team-name {
-        font-size: 28px;
+        font-size: 48px;
       }
     }
   </style>
@@ -417,58 +799,123 @@
       </button>
       <div class="status-dot" id="statusDot"></div>
     </div>
-    
+  
     <button class="nav-button" id="settingsBtn">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="3"></circle>
         <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
       </svg>
-    </button>
-  </div>
+          </button>
+    </div>
+  
+  <!-- Screen Flash Effect -->
+  <div class="screen-flash" id="screenFlash"></div>
 
   <!-- Main Content -->
   <div class="main-content">
     <div class="team-name" id="teamName"></div>
     
+    <!-- Bouncing Team System -->
+    <div class="bouncing-container" id="bouncingContainer">
+      <!-- Team bouncer circles will be generated here -->
+            </div>
+            
+    <!-- Center Exclusion Zone (invisible) -->
+    <div class="center-zone" id="centerZone"></div>
+    
     <div class="main-circle" id="mainCircle">
       <div class="circle-content waiting" id="circleContent">•</div>
-    </div>
-    
+      <!-- Celebration particles will be added here dynamically -->
+            </div>
+            
     <button class="reset-button" id="resetBtn">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <polyline points="23 4 23 10 17 10"></polyline>
         <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
       </svg>
     </button>
-  </div>
-
+          </div>
+          
   <!-- Settings Modal -->
   <div class="settings-modal" id="settingsModal">
     <div class="settings-content">
       <div class="settings-header">
         <h2 class="settings-title">Team Names</h2>
         <button class="close-button" id="closeSettings">×</button>
-      </div>
-      
+    </div>
+  
       <div id="teamInputs">
         <!-- Team inputs will be generated here -->
-      </div>
     </div>
-  </div>
+    
+      <div class="settings-actions">
+        <button class="settings-button secondary" id="resetAllSettings">Reset All to Default</button>
+        <button class="settings-button primary" id="saveSettings">Save Changes</button>
+            </div>
+            </div>
+            </div>
 
   <!-- Connection Modal -->
   <div class="connection-modal" id="connectionModal">
     <h3>Connect Buzzer System</h3>
-    <p>Connect your XIAO nRF52840 device via USB</p>
+    <p>Connect your ESP32-C Node32s device via USB</p>
     <button class="connect-button" id="connectDeviceBtn">Connect</button>
     <button class="cancel-button" id="cancelConnect">Cancel</button>
   </div>
-
+  
   <script>
     // Global variables
     let port, reader, serialWriter;
     let isConnected = false;
     let currentWinner = null;
+    let animationFrameId = null;
+    let teamBouncers = [];
+    let winnerAnimating = false;
+    
+    // Default team colors (fresh and vibrant)
+    const defaultTeamColors = {
+      1: '#FF3B82', // Hot Pink
+      2: '#06D6A0', // Fresh Mint
+      3: '#118AB2', // Ocean Blue
+      4: '#7209B7', // Electric Purple
+      5: '#F77F00', // Bright Orange
+      6: '#FCBF49'  // Golden Yellow
+    };
+    
+    // Bouncing system configuration
+    function getBouncingConfig() {
+      const isMobile = window.innerWidth <= 480;
+      const isTablet = window.innerWidth <= 768;
+      
+      if (isMobile) {
+        return {
+          speed: 2.0,          // Moderate speed
+          maxSpeed: 3.0,       // Speed cap
+          centerZoneRadius: 200,  // Much smaller center zone
+          cornerBuffer: 40,    // Small buffer
+          teamSize: 120,
+          collisionBuffer: 20
+        };
+      } else if (isTablet) {
+        return {
+          speed: 2.2,          // Moderate speed  
+          maxSpeed: 3.5,       // Speed cap
+          centerZoneRadius: 250,  // Smaller center zone
+          cornerBuffer: 50,    // Small buffer
+          teamSize: 140,
+          collisionBuffer: 25
+        };
+      } else {
+        return {
+          speed: 2.5,          // Moderate speed
+          maxSpeed: 4.0,       // Speed cap
+          centerZoneRadius: 300,  // Much smaller center zone for crossing
+          cornerBuffer: 60,    // Moderate buffer
+          teamSize: 170,
+          collisionBuffer: 30
+        };
+      }
+    }
     
     // DOM elements
     const connectionBtn = document.getElementById('connectionBtn');
@@ -485,7 +932,7 @@
     const cancelConnect = document.getElementById('cancelConnect');
     const teamInputs = document.getElementById('teamInputs');
 
-    // Initialize team inputs
+    // Initialize team inputs with color pickers
     function initializeTeamInputs() {
       teamInputs.innerHTML = '';
       for (let i = 1; i <= 6; i++) {
@@ -496,6 +943,27 @@
         label.className = 'team-label';
         label.textContent = `Team ${i}`;
         
+        const container = document.createElement('div');
+        container.className = 'team-input-container';
+        
+        // Color picker
+        const colorPicker = document.createElement('div');
+        colorPicker.className = 'team-color-picker';
+        
+        const colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.id = `team${i}Color`;
+        colorInput.value = getTeamColor(i);
+        
+        // Save color on change
+        colorInput.addEventListener('change', () => {
+          localStorage.setItem(`team${i}Color`, colorInput.value);
+          updateBouncerTeamColor(i, colorInput.value);
+        });
+        
+        colorPicker.appendChild(colorInput);
+        
+        // Team name input
         const input = document.createElement('input');
         input.className = 'team-input';
         input.type = 'text';
@@ -506,12 +974,492 @@
         // Save on input
         input.addEventListener('input', () => {
           localStorage.setItem(`team${i}Name`, input.value);
+          updateBouncerTeamName(i, input.value || `Team ${i}`);
         });
         
+        container.appendChild(colorPicker);
+        container.appendChild(input);
         group.appendChild(label);
-        group.appendChild(input);
+        group.appendChild(container);
         teamInputs.appendChild(group);
       }
+    }
+    
+    // Get team color (saved or default)
+    function getTeamColor(num) {
+      const saved = localStorage.getItem(`team${num}Color`);
+      return saved || defaultTeamColors[num];
+    }
+    
+    // Initialize bouncing team system
+    function initializeBouncingSystem() {
+      const bouncingContainer = document.getElementById('bouncingContainer');
+      bouncingContainer.innerHTML = '';
+      teamBouncers = [];
+      
+      for (let i = 1; i <= 6; i++) {
+        const teamBouncer = document.createElement('div');
+        teamBouncer.className = 'team-bouncer';
+        teamBouncer.setAttribute('data-team', i);
+        teamBouncer.style.background = getTeamColor(i);
+        
+        const number = document.createElement('div');
+        number.className = 'team-bouncer-number';
+        number.textContent = i;
+        
+        const name = document.createElement('div');
+        name.className = 'team-bouncer-name';
+        name.textContent = getTeamName(i);
+        
+        teamBouncer.appendChild(number);
+        teamBouncer.appendChild(name);
+        bouncingContainer.appendChild(teamBouncer);
+        
+        // Initialize bouncing properties with faster, more dynamic movement
+        const config = getBouncingConfig();
+        const position = getRandomPosition();
+        const bouncer = {
+          element: teamBouncer,
+          teamNum: i,
+          x: position.x,
+          y: position.y,
+          vx: (Math.random() - 0.5) * config.speed * 2,  // Random direction, full speed
+          vy: (Math.random() - 0.5) * config.speed * 2,  // Random direction, full speed
+          visible: true
+        };
+        
+        teamBouncers.push(bouncer);
+        
+        // Set initial position
+        teamBouncer.style.position = 'absolute';
+        teamBouncer.style.left = bouncer.x + 'px';
+        teamBouncer.style.top = bouncer.y + 'px';
+        teamBouncer.style.transform = 'scale(1)';
+        teamBouncer.style.zIndex = '10';
+        
+        updateBouncerPosition(bouncer);
+      }
+      
+      startBouncing();
+    }
+    
+    // Get random position avoiding center and corners
+    function getRandomPosition() {
+      const config = getBouncingConfig();
+      const screenWidth = window.innerWidth;
+      const screenHeight = window.innerHeight;
+      const centerX = screenWidth / 2;
+      const centerY = screenHeight / 2;
+      const buffer = config.cornerBuffer;
+      const teamSize = config.teamSize;
+      
+      let x, y;
+      let attempts = 0;
+      
+      do {
+        x = buffer + Math.random() * (screenWidth - 2 * buffer - teamSize);
+        y = buffer + Math.random() * (screenHeight - 2 * buffer - teamSize);
+        attempts++;
+      } while (
+        attempts < 50 && 
+        isInCenterZone(x + teamSize/2, y + teamSize/2)
+      );
+      
+      return { x, y };
+    }
+    
+    // Check if position is in center exclusion zone
+    function isInCenterZone(x, y) {
+      const config = getBouncingConfig();
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      const distance = Math.sqrt(
+        Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2)
+      );
+      return distance < config.centerZoneRadius;
+    }
+    
+    // Enhanced team collision system with energy boost
+    function checkTeamCollisions() {
+      const config = getBouncingConfig();
+      const collisionDistance = config.teamSize + config.collisionBuffer;
+      
+      for (let i = 0; i < teamBouncers.length; i++) {
+        const bouncer1 = teamBouncers[i];
+        if (!bouncer1.visible) continue;
+        
+        for (let j = i + 1; j < teamBouncers.length; j++) {
+          const bouncer2 = teamBouncers[j];
+          if (!bouncer2.visible) continue;
+          
+          const dx = (bouncer1.x + config.teamSize/2) - (bouncer2.x + config.teamSize/2);
+          const dy = (bouncer1.y + config.teamSize/2) - (bouncer2.y + config.teamSize/2);
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          if (distance < collisionDistance && distance > 0) {
+            // Dynamic collision with energy boost
+            const angle = Math.atan2(dy, dx);
+            const targetDistance = collisionDistance + 10; // Extra separation
+            const correction = (targetDistance - distance) / 2;
+            
+            // Separate teams with more force
+            bouncer1.x += Math.cos(angle) * correction;
+            bouncer1.y += Math.sin(angle) * correction;
+            bouncer2.x -= Math.cos(angle) * correction;
+            bouncer2.y -= Math.sin(angle) * correction;
+            
+            // Calculate relative velocity for realistic collision
+            const relativeVx = bouncer1.vx - bouncer2.vx;
+            const relativeVy = bouncer1.vy - bouncer2.vy;
+            
+            // Calculate collision response with energy boost
+            const normalX = dx / distance;
+            const normalY = dy / distance;
+            const relativeSpeed = relativeVx * normalX + relativeVy * normalY;
+            
+            if (relativeSpeed > 0) continue; // Moving apart already
+            
+            // Apply stable collision response
+            const restitution = 1.0; // Conserve energy for stability
+            const impulse = 2 * relativeSpeed * restitution / 2; // Mass = 1 for both
+            
+            bouncer1.vx -= impulse * normalX;
+            bouncer1.vy -= impulse * normalY;
+            bouncer2.vx += impulse * normalX;
+            bouncer2.vy += impulse * normalY;
+            
+            // Add small random variation
+            const energyBoost = 0.3;
+            bouncer1.vx += (Math.random() - 0.5) * energyBoost;
+            bouncer1.vy += (Math.random() - 0.5) * energyBoost;
+            bouncer2.vx += (Math.random() - 0.5) * energyBoost;
+            bouncer2.vy += (Math.random() - 0.5) * energyBoost;
+          }
+        }
+      }
+    }
+    
+    // Update bouncer position
+    function updateBouncerPosition(bouncer) {
+      if (bouncer.element && bouncer.visible) {
+        bouncer.element.style.left = bouncer.x + 'px';
+        bouncer.element.style.top = bouncer.y + 'px';
+      }
+    }
+    
+    // Reset team element to clean state
+    function resetTeamElement(bouncer) {
+      bouncer.element.classList.remove('winner-entering', 'winner-exiting', 'winner-celebrating', 'winner-launching', 'winner-positioned', 'hidden');
+      bouncer.element.style.transition = '';
+      bouncer.element.style.transform = 'scale(1)';
+      bouncer.element.style.opacity = '1';
+      bouncer.element.style.display = 'flex';
+      bouncer.element.style.position = 'absolute';
+      bouncer.element.style.zIndex = '10';
+      bouncer.element.style.boxShadow = ''; // Clear any special glow effects
+      bouncer.element.style.animation = ''; // Clear any ongoing animations
+      bouncer.element.style.border = ''; // Clear any custom borders
+      bouncer.visible = true;
+    }
+    
+    // Start bouncing animation
+    function startBouncing() {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      
+      function animate() {
+        const config = getBouncingConfig();
+        
+        teamBouncers.forEach(bouncer => {
+          if (!bouncer.visible) return;
+          
+          // Update position with current velocity
+          bouncer.x += bouncer.vx;
+          bouncer.y += bouncer.vy;
+          
+          // Screen boundaries for bouncing
+          const screenWidth = window.innerWidth;
+          const screenHeight = window.innerHeight;
+          const buffer = config.cornerBuffer;
+          const teamSize = config.teamSize;
+          
+          // Improved boundary collision for reliable crossing
+          let bounced = false;
+          
+          // Left and right boundaries - gentle bouncing that allows crossing
+          if (bouncer.x <= buffer) {
+            bouncer.x = buffer + 1;
+            if (bouncer.vx < 0) {
+              bouncer.vx = -bouncer.vx * 0.8 + config.speed * 0.5; // Bounce with minimum rightward speed
+            }
+            bounced = true;
+          } else if (bouncer.x >= screenWidth - buffer - teamSize) {
+            bouncer.x = screenWidth - buffer - teamSize - 1;
+            if (bouncer.vx > 0) {
+              bouncer.vx = -bouncer.vx * 0.8 - config.speed * 0.5; // Bounce with minimum leftward speed
+            }
+            bounced = true;
+          }
+          
+          // Top and bottom boundaries
+          if (bouncer.y <= buffer) {
+            bouncer.y = buffer + 1;
+            if (bouncer.vy < 0) {
+              bouncer.vy = -bouncer.vy * 0.8 + config.speed * 0.3;
+            }
+            bounced = true;
+          } else if (bouncer.y >= screenHeight - buffer - teamSize) {
+            bouncer.y = screenHeight - buffer - teamSize - 1;
+            if (bouncer.vy > 0) {
+              bouncer.vy = -bouncer.vy * 0.8 - config.speed * 0.3;
+            }
+            bounced = true;
+          }
+          
+          // Add gentle randomness after bouncing
+          if (bounced) {
+            bouncer.vx += (Math.random() - 0.5) * 0.5;
+            bouncer.vy += (Math.random() - 0.5) * 0.5;
+          }
+          
+          // Check center zone collision with dynamic bouncing
+          const centerX = bouncer.x + teamSize / 2;
+          const centerY = bouncer.y + teamSize / 2;
+          const screenCenterX = screenWidth / 2;
+          const screenCenterY = screenHeight / 2;
+          
+          const distanceFromCenter = Math.sqrt(
+            Math.pow(centerX - screenCenterX, 2) + Math.pow(centerY - screenCenterY, 2)
+          );
+          
+          // Gentler center zone collision that allows crossing
+          if (distanceFromCenter < config.centerZoneRadius) {
+            const penetration = config.centerZoneRadius - distanceFromCenter;
+            
+            // Calculate direction away from center
+            const normalX = (centerX - screenCenterX) / distanceFromCenter;
+            const normalY = (centerY - screenCenterY) / distanceFromCenter;
+            
+            // Gently push team out of center zone
+            bouncer.x += normalX * (penetration + 2);
+            bouncer.y += normalY * (penetration + 2);
+            
+            // Moderate reflection that doesn't add too much energy
+            const dotProduct = bouncer.vx * normalX + bouncer.vy * normalY;
+            
+            if (dotProduct < 0) { // Only reflect if moving towards center
+              const restitution = 0.9; // Slight energy loss for stability
+              bouncer.vx = (bouncer.vx - 2 * dotProduct * normalX) * restitution;
+              bouncer.vy = (bouncer.vy - 2 * dotProduct * normalY) * restitution;
+              
+              // Small random nudge for variation
+              bouncer.vx += (Math.random() - 0.5) * 0.5;
+              bouncer.vy += (Math.random() - 0.5) * 0.5;
+            }
+          }
+          
+          // Speed limiting to prevent teams from going too crazy
+          const currentSpeed = Math.sqrt(bouncer.vx * bouncer.vx + bouncer.vy * bouncer.vy);
+          if (currentSpeed > config.maxSpeed) {
+            const scale = config.maxSpeed / currentSpeed;
+            bouncer.vx *= scale;
+            bouncer.vy *= scale;
+          }
+          
+          // Minimum speed to keep things moving
+          if (currentSpeed < config.speed * 0.5) {
+            const scale = (config.speed * 0.5) / currentSpeed;
+            bouncer.vx *= scale;
+            bouncer.vy *= scale;
+          }
+          
+          updateBouncerPosition(bouncer);
+        });
+        
+        // Check for collisions between teams
+        checkTeamCollisions();
+        
+        animationFrameId = requestAnimationFrame(animate);
+      }
+      
+      animate();
+    }
+    
+    // Stop bouncing animation
+    function stopBouncing() {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+    }
+    
+    // Update bouncer team color
+    function updateBouncerTeamColor(teamNum, color) {
+      const bouncer = teamBouncers.find(b => b.teamNum === teamNum);
+      if (bouncer) {
+        bouncer.element.style.background = color;
+      }
+    }
+    
+    // Update bouncer team name
+    function updateBouncerTeamName(teamNum, name) {
+      const bouncer = teamBouncers.find(b => b.teamNum === teamNum);
+      if (bouncer) {
+        const nameElement = bouncer.element.querySelector('.team-bouncer-name');
+        if (nameElement) {
+          nameElement.textContent = name;
+        }
+      }
+    }
+    
+    // Debug and test animation to center
+    function animateWinnerToCenter(teamNum, callback) {
+      const winnerBouncer = teamBouncers.find(b => b.teamNum === teamNum);
+      if (!winnerBouncer) {
+        console.log('❌ Winner bouncer not found for team:', teamNum);
+        if (callback) callback();
+        return;
+      }
+      
+      console.log('🎉 WINNER! Starting animation for team', teamNum);
+      winnerAnimating = true;
+      
+      // Get current position
+      const element = winnerBouncer.element;
+      const currentRect = element.getBoundingClientRect();
+      const currentX = currentRect.left;
+      const currentY = currentRect.top;
+      
+      console.log('📍 Current team position (getBoundingClientRect):', { x: currentX, y: currentY });
+      console.log('📍 Bouncer data position:', { x: winnerBouncer.x, y: winnerBouncer.y });
+      
+      // Get circle center coordinates
+      const mainCircleElement = document.getElementById('mainCircle');
+      const circleRect = mainCircleElement.getBoundingClientRect();
+      const circleCenterX = circleRect.left + circleRect.width / 2;
+      const circleCenterY = circleRect.top + circleRect.height / 2;
+      
+      console.log('🎯 Circle center coordinates:', { x: circleCenterX, y: circleCenterY });
+      console.log('📐 Circle rect:', circleRect);
+      
+      // Calculate final position (center the team in the circle)
+      const config = getBouncingConfig();
+      const finalX = circleCenterX - config.teamSize / 2;
+      const finalY = circleCenterY - config.teamSize / 2;
+      
+      console.log('🎯 Final target position:', { x: finalX, y: finalY });
+      console.log('📏 Team size:', config.teamSize);
+      
+      // CRITICAL: Remove from bouncing system but KEEP the animation loop running
+      winnerBouncer.visible = false;
+      console.log('🛑 Removed team from bouncing system, visible =', winnerBouncer.visible);
+      
+      // Set up element for animation - convert to fixed positioning
+      console.log('🔧 Setting up element for animation...');
+      element.style.position = 'fixed';
+      element.style.left = currentX + 'px';
+      element.style.top = currentY + 'px';
+      element.style.zIndex = '1000';
+      element.style.transition = 'none'; // Remove transition temporarily
+      
+      // Force reflow
+      element.offsetHeight;
+      
+      console.log('✅ Element setup complete, current styles:', {
+        position: element.style.position,
+        left: element.style.left,
+        top: element.style.top,
+        zIndex: element.style.zIndex
+      });
+      
+      // Add celebration effect
+      element.classList.add('winner-celebrating');
+      
+      setTimeout(() => {
+        console.log('🚀 Starting movement animation...');
+        
+        // Remove celebration and set up smooth exciting transition
+        element.classList.remove('winner-celebrating');
+        element.style.transition = 'all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55)'; // Smooth and exciting!
+        
+        // Force reflow before animating
+        element.offsetHeight;
+        
+        // Animate to center
+        console.log('📍 Animating to:', { x: finalX, y: finalY });
+        element.style.left = finalX + 'px';
+        element.style.top = finalY + 'px';
+        element.style.transform = 'scale(0.8)'; // Slightly bigger for visibility
+        
+        // Complete animation
+        setTimeout(() => {
+          element.classList.add('winner-positioned');
+          winnerAnimating = false;
+          console.log('🏆 Winner animation complete! Final position:', {
+            left: element.style.left,
+            top: element.style.top,
+            transform: element.style.transform
+          });
+          
+          // Verify final position
+          const finalRect = element.getBoundingClientRect();
+          console.log('📍 Final actual position (getBoundingClientRect):', {
+            x: finalRect.left,
+            y: finalRect.top,
+            centerX: finalRect.left + finalRect.width / 2,
+            centerY: finalRect.top + finalRect.height / 2
+          });
+          
+          if (callback) callback();
+        }, 600); // Match the 0.6s animation
+        
+      }, 300);
+    }
+    
+
+    
+    // Simple animation from center back to bouncing
+    function animateWinnerFromCenter(teamNum, callback) {
+      const winnerBouncer = teamBouncers.find(b => b.teamNum === teamNum);
+      if (!winnerBouncer) {
+        console.log('Winner bouncer not found for reset:', teamNum);
+        if (callback) callback();
+        return;
+      }
+      
+      console.log('🚀 Moving winner back to bouncing:', teamNum);
+      winnerAnimating = true;
+      
+      // Get new random position
+      const newPos = getRandomPosition();
+      const config = getBouncingConfig();
+      
+      // Set up element for exit animation
+      const element = winnerBouncer.element;
+      element.classList.remove('winner-positioned');
+      element.style.position = 'absolute'; // Change back to absolute for bouncing
+      element.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+      
+      // Animate to new position
+      element.style.left = newPos.x + 'px';
+      element.style.top = newPos.y + 'px';
+      element.style.transform = 'scale(1)';
+      element.style.zIndex = '10';
+      
+      // Update bouncer data with fast movement
+      winnerBouncer.x = newPos.x;
+      winnerBouncer.y = newPos.y;
+      winnerBouncer.vx = (Math.random() - 0.5) * config.speed * 2;  // Full speed return
+      winnerBouncer.vy = (Math.random() - 0.5) * config.speed * 2;  // Full speed return
+      
+      setTimeout(() => {
+        // Return to bouncing system
+        resetTeamElement(winnerBouncer);
+        winnerAnimating = false;
+        console.log('🎯 Winner returned to bouncing!');
+        if (callback) callback();
+      }, 600);
     }
 
     // Get team name
@@ -519,7 +1467,7 @@
       const saved = localStorage.getItem(`team${num}Name`);
       return saved && saved.trim() ? saved.trim() : `Team ${num}`;
     }
-
+    
     // Connection functions
     async function connectSerial() {
       try {
@@ -527,7 +1475,7 @@
           alert('Web Serial API is not supported in this browser. Please use Chrome or Edge.');
           return;
         }
-
+        
         statusDot.className = 'status-dot connecting';
         
         port = await navigator.serial.requestPort();
@@ -557,7 +1505,7 @@
         }
       }
     }
-
+    
     async function readLoop() {
       try {
         while (true) {
@@ -580,49 +1528,242 @@
         statusDot.className = 'status-dot';
       }
     }
-
+    
     function handleSerialData(data) {
-      console.log('Received:', data);
+      console.log('📨 Received data:', data);
       
       if (data.startsWith('WINNER:')) {
-        const teamNum = data.split(':')[1];
+        const teamNum = parseInt(data.split(':')[1]);
+        console.log('🏆 Processing WINNER message for team:', teamNum);
+        
+        // Check if we can accept this winner
+        if (currentWinner !== null) {
+          console.log('⚠️ Winner already exists:', currentWinner, '- ignoring new winner:', teamNum);
+          return;
+        }
+        
+        console.log('✅ Accepting new winner:', teamNum);
         showWinner(teamNum);
       } else if (data === 'RESET' || data === 'READY') {
+        console.log('🔄 Processing RESET message');
         resetDisplay();
+      } else {
+        console.log('❓ Unknown message:', data);
       }
     }
-
+    
     // Display functions
     function showWinner(teamNum) {
+      console.log('🏆 showWinner called for team:', teamNum);
       currentWinner = teamNum;
       const name = getTeamName(teamNum);
+      const color = getTeamColor(teamNum);
       
-      // Show team name
-      teamName.textContent = name;
-      teamName.classList.add('visible');
+            console.log('🎯 Starting EXCITING WINNER animation!');
       
-      // Update circle
-      circleContent.textContent = teamNum;
-      circleContent.className = 'circle-content winner-number';
-      mainCircle.classList.add('winner');
+      // Stop bouncing immediately and freeze other teams
+      stopBouncing();
+      teamBouncers.forEach(bouncer => {
+        if (bouncer.teamNum !== teamNum) {
+          bouncer.visible = false; // Lock out other teams immediately
+        }
+      });
       
-      // Show reset button
-      resetBtn.classList.add('visible');
+      // Only the winning team gets to animate!
+      animateWinnerToCenter(teamNum, () => {
+        console.log('🎉 Winner reached the center!');
+        
+        // Winner made it - now trigger celebration effects
+        triggerCelebrationEffects();
+        
+        // Show team name with delay for dramatic effect
+      setTimeout(() => {
+          teamName.textContent = name;
+          teamName.classList.add('visible');
+        }, 200);
+        
+        // Update circle with team color
+        circleContent.textContent = teamNum;
+        circleContent.className = 'circle-content winner-number';
+        mainCircle.classList.add('winner');
+        mainCircle.style.background = `linear-gradient(135deg, ${color} 0%, ${adjustColorBrightness(color, -20)} 50%, ${adjustColorBrightness(color, -40)} 100%)`;
+        
+        // Show reset button with delay
+        setTimeout(() => {
+          resetBtn.classList.add('visible');
+        }, 600);
+      });
     }
-
+    
+    function triggerCelebrationEffects() {
+      // Screen flash effect
+      const screenFlash = document.getElementById('screenFlash');
+      screenFlash.classList.add('active');
+      setTimeout(() => {
+        screenFlash.classList.remove('active');
+      }, 600);
+      
+      // Create celebration particles
+      createCelebrationParticles();
+      
+      // Create confetti
+      setTimeout(createConfetti, 200);
+    }
+    
+    function createCelebrationParticles() {
+      const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
+      
+      for (let i = 0; i < 12; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'celebration-particle';
+        particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+        
+        // Position around the circle
+        const angle = (i / 12) * 360;
+        const radius = 120;
+        const x = Math.cos(angle * Math.PI / 180) * radius;
+        const y = Math.sin(angle * Math.PI / 180) * radius;
+        
+        particle.style.left = '50%';
+        particle.style.top = '50%';
+        particle.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
+        
+        mainCircle.appendChild(particle);
+        
+        // Trigger animation
+        setTimeout(() => {
+          particle.classList.add('burst');
+        }, i * 50);
+        
+        // Remove particle after animation
+        setTimeout(() => {
+          if (particle.parentNode) {
+            particle.parentNode.removeChild(particle);
+          }
+        }, 1200 + i * 50);
+      }
+    }
+    
+    function createConfetti() {
+      const container = document.querySelector('.main-content');
+      const colors = ['#FFD700', '#FFA500', '#FF6B6B', '#4ECDC4', '#45B7D1'];
+      
+      for (let i = 0; i < 20; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.background = `linear-gradient(45deg, ${colors[Math.floor(Math.random() * colors.length)]}, ${colors[Math.floor(Math.random() * colors.length)]})`;
+        confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.top = '-20px';
+        confetti.style.animationDelay = Math.random() * 0.5 + 's';
+        
+        container.appendChild(confetti);
+        
+        // Trigger animation
+        setTimeout(() => {
+          confetti.classList.add('fall');
+        }, 10);
+        
+        // Remove confetti after animation
+        setTimeout(() => {
+          if (confetti.parentNode) {
+            confetti.parentNode.removeChild(confetti);
+          }
+        }, 2500);
+      }
+    }
+    
     function resetDisplay() {
-      currentWinner = null;
+      console.log('🔄 Reset display called, currentWinner:', currentWinner, 'winnerAnimating:', winnerAnimating);
       
-      // Hide team name
-      teamName.classList.remove('visible');
+      // ALWAYS clear the current winner to allow fresh rounds
+      const hadWinner = currentWinner !== null;
+      const winnerTeamNum = currentWinner;
+      currentWinner = null; // Clear immediately for fresh start
       
-      // Reset circle
-      circleContent.textContent = '•';
-      circleContent.className = 'circle-content waiting';
-      mainCircle.classList.remove('winner');
+      if (hadWinner && !winnerAnimating) {
+        console.log('🚀 Resetting with previous winner:', winnerTeamNum);
+        
+        // Hide team name and reset circle immediately
+        teamName.classList.remove('visible');
+        circleContent.textContent = '•';
+        circleContent.className = 'circle-content waiting';
+        mainCircle.classList.remove('winner');
+        mainCircle.style.background = '';
+        resetBtn.classList.remove('visible');
+        
+        // Clean up celebration effects
+        cleanupCelebrationEffects();
+        
+        // Make sure all other teams are visible and bouncing first
+        teamBouncers.forEach(bouncer => {
+          if (bouncer.teamNum !== winnerTeamNum) {
+            resetTeamElement(bouncer);
+          }
+        });
+        
+        // Animate winner from center
+        animateWinnerFromCenter(winnerTeamNum, () => {
+          // After winner exits, resume bouncing for all teams
+          console.log('✅ Fresh round started - all teams bouncing');
+          startBouncing();
+        });
+        
+      } else {
+        // Simple reset when no winner or fresh start
+        console.log('🆕 Fresh reset - ready for new round');
+        
+        teamBouncers.forEach(bouncer => {
+          resetTeamElement(bouncer);
+        });
+        
+        teamName.classList.remove('visible');
+        circleContent.textContent = '•';
+        circleContent.className = 'circle-content waiting';
+        mainCircle.classList.remove('winner');
+        mainCircle.style.background = '';
+        resetBtn.classList.remove('visible');
+        cleanupCelebrationEffects();
+        
+        startBouncing();
+      }
       
-      // Hide reset button
-      resetBtn.classList.remove('visible');
+      // Force reset any animation states
+      winnerAnimating = false;
+      console.log('🎮 System ready for next round!');
+    }
+    
+    // Helper function to adjust color brightness
+    function adjustColorBrightness(color, percent) {
+      const num = parseInt(color.replace("#", ""), 16);
+      const amt = Math.round(2.55 * percent);
+      const R = (num >> 16) + amt;
+      const G = (num >> 8 & 0x00FF) + amt;
+      const B = (num & 0x0000FF) + amt;
+      return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+        (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+        (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+    }
+    
+    function cleanupCelebrationEffects() {
+      // Remove any remaining particles
+      const particles = document.querySelectorAll('.celebration-particle');
+      particles.forEach(particle => {
+        if (particle.parentNode) {
+          particle.parentNode.removeChild(particle);
+        }
+      });
+      
+      // Remove any remaining confetti
+      const confetti = document.querySelectorAll('.confetti');
+      confetti.forEach(conf => {
+        if (conf.parentNode) {
+          conf.parentNode.removeChild(conf);
+        }
+      });
+      
+      // Stop screen flash if active
+      const screenFlash = document.getElementById('screenFlash');
+      screenFlash.classList.remove('active');
     }
 
     // Send reset command
@@ -650,6 +1791,41 @@
           console.log('Reset performed (standalone mode)');
         }
       }
+    }
+
+    // Settings functions
+    function resetAllSettings() {
+      // Reset team names and colors to default
+      for (let i = 1; i <= 6; i++) {
+        localStorage.removeItem(`team${i}Name`);
+        localStorage.removeItem(`team${i}Color`);
+        
+        // Update UI
+        const nameInput = document.getElementById(`team${i}Input`);
+        const colorInput = document.getElementById(`team${i}Color`);
+        if (nameInput) nameInput.value = '';
+        if (colorInput) colorInput.value = defaultTeamColors[i];
+        
+        // Update bouncing system
+        updateBouncerTeamName(i, `Team ${i}`);
+        updateBouncerTeamColor(i, defaultTeamColors[i]);
+      }
+      
+      console.log('🔄 All settings reset to default');
+    }
+    
+    function saveSettings() {
+      // Force save all current values (already saved on change, but provides feedback)
+      settingsModal.classList.remove('visible');
+      console.log('💾 Settings saved successfully');
+      
+      // Visual feedback
+      const saveBtn = document.getElementById('saveSettings');
+      const originalText = saveBtn.textContent;
+      saveBtn.textContent = '✅ Saved!';
+        setTimeout(() => {
+        saveBtn.textContent = originalText;
+      }, 1500);
     }
 
     // Event listeners
@@ -680,20 +1856,37 @@
 
     resetBtn.addEventListener('click', sendReset);
 
+    // Settings event listeners
+    document.addEventListener('click', (e) => {
+      if (e.target && e.target.id === 'resetAllSettings') {
+        if (confirm('Reset all team names and colors to default? This cannot be undone.')) {
+          resetAllSettings();
+        }
+      }
+      if (e.target && e.target.id === 'saveSettings') {
+        saveSettings();
+      }
+    });
+
     // Keyboard simulation for testing
     function simulateKeyboardBuzzer(teamNum) {
+      console.log(`🎮 Keyboard simulation triggered for Team ${teamNum}`);
+      console.log(`   Current winner state: ${currentWinner}`);
+      console.log(`   Socket connected: ${typeof socket !== 'undefined' && socket && socket.connected}`);
+      
       // Check if we're in dev server mode (socket exists)
       if (typeof socket !== 'undefined' && socket && socket.connected) {
         // Send simulation event to dev server
+        console.log(`📤 Sending simulate_buzzer to dev server for Team ${teamNum}`);
         socket.emit('simulate_buzzer', {team: teamNum});
-        console.log(`Keyboard simulation: Team ${teamNum} buzzer (via dev server)`);
+        console.log(`✅ Keyboard simulation: Team ${teamNum} buzzer sent to dev server`);
       } else {
         // Direct simulation for standalone mode
         if (currentWinner === null) {
-          console.log(`Keyboard simulation: Team ${teamNum} buzzer (direct mode)`);
+          console.log(`✅ Keyboard simulation: Team ${teamNum} buzzer (direct mode)`);
           showWinner(teamNum);
         } else {
-          console.log(`Keyboard simulation: Team ${teamNum} buzzed (too late, Team ${currentWinner} already won)`);
+          console.log(`❌ Keyboard simulation: Team ${teamNum} buzzed (too late, Team ${currentWinner} already won)`);
         }
       }
     }
@@ -712,9 +1905,9 @@
         
         // Visual feedback - briefly highlight the connection button
         connectionBtn.style.transform = 'scale(0.95)';
-        setTimeout(() => {
+      setTimeout(() => {
           connectionBtn.style.transform = '';
-        }, 100);
+      }, 100);
       }
       
       // Reset with 'R' key
@@ -744,14 +1937,30 @@
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
       initializeTeamInputs();
+      initializeBouncingSystem();
       resetDisplay();
       
       // Show keyboard shortcuts info in console
+      console.log('🚀 EXCITING Quiz Buzzer with SPECTACULAR Winner Staging!');
       console.log('🎮 Keyboard Shortcuts Available:');
       console.log('  Keys 1-6: Simulate team buzzer presses');
       console.log('  Key R: Reset system (works in all modes)');
       console.log('  Note: Shortcuts work when no modal is open');
-      console.log('  📏 Enhanced UI: Larger circle and team names for better visibility');
+      console.log('🏀 IMPROVED Bouncing Teams with Smooth Movement!');
+      console.log('  🎯 Large center circle (480px) with 600px exclusion zone');
+      console.log('  📏 Bigger team circles (170px) + LARGE team names (22px)');
+      console.log('  🚫 Teams can FREELY CROSS from left to right and back!');
+      console.log('  💥 Stable collisions with gentle energy conservation!');
+      console.log('  🎨 Fresh vibrant team colors (customizable in settings)');
+      console.log('  ⚡ 2-2.5x FASTER movement - smooth and reliable crossing!');
+      console.log('  🎉 EXCITING WINNER Animation:');
+      console.log('    • 0.3s celebration bounce with blue glow');
+      console.log('    • 0.6s smooth exciting dash to center');  
+      console.log('    • Immediate lockout of other teams (realistic!)');
+      console.log('    • Winner appears inside circle');
+      console.log('    • Clean reset returns all teams to bouncing');
+      console.log('  ⚡ REALISTIC: Only the first team to buzz gets to animate!');
+      console.log('  🌟 Enhanced effects: Screen flash, confetti, particle burst');
     });
   </script>
 </body>
