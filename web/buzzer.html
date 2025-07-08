@@ -74,11 +74,11 @@
     }
     
     .status-dot.connected {
-      background: #30d158;
+      background: #30d158; /* Green - device ready and working */
     }
     
     .status-dot.connecting {
-      background: #ff9500;
+      background: #ff9500; /* Orange/Yellow - device connected but not responding */
       animation: pulse 1.5s infinite;
     }
     
@@ -112,6 +112,8 @@
       letter-spacing: 1px;
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      z-index: 1000; /* Ensure it's always on top */
+      position: relative;
     }
     
     .team-name.visible {
@@ -243,8 +245,8 @@
     /* Center Exclusion Zone */
     .center-zone {
       position: absolute;
-      width: 1200px;
-      height: 1200px;
+      width: 600px;
+      height: 600px;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
@@ -569,27 +571,42 @@
       color: #1d1d1f;
     }
     
-    /* Connection Modal */
+        /* Connection Modal */
     .connection-modal {
       position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       z-index: 300;
       opacity: 0;
       pointer-events: none;
       transition: all 0.3s ease;
-      text-align: center;
-      min-width: 300px;
     }
-    
+
     .connection-modal.visible {
       opacity: 1;
       pointer-events: auto;
+    }
+
+    .connection-content {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      min-width: 300px;
+      transform: scale(0.9) translateY(20px);
+      transition: all 0.3s ease;
+    }
+
+    .connection-modal.visible .connection-content {
+      transform: scale(1) translateY(0);
     }
     
     .connection-modal h3 {
@@ -857,16 +874,28 @@
 
   <!-- Connection Modal -->
   <div class="connection-modal" id="connectionModal">
-    <h3>Connect Buzzer System</h3>
-    <p>Connect your ESP32-C Node32s device via USB</p>
-    <button class="connect-button" id="connectDeviceBtn">Connect</button>
-    <button class="cancel-button" id="cancelConnect">Cancel</button>
+    <div class="connection-content">
+      <h3>Connect Arduino Buzzer System</h3>
+      <p>Connect your Arduino/ESP32 device via USB cable</p>
+      <div style="font-size: 16px; color: #666; margin: 15px 0; text-align: left; line-height: 1.4;">
+        <strong>Before connecting:</strong><br>
+        • Upload the buzzer code to your Arduino<br>
+        • Set baud rate to 9600 in Arduino IDE<br>
+        • Close Arduino IDE Serial Monitor<br>
+        • Make sure USB cable is connected properly
+      </div>
+      <button class="connect-button" id="connectDeviceBtn">Connect Arduino</button>
+      <button class="cancel-button" id="cancelConnect">Use Simulation Mode</button>
+    </div>
   </div>
   
   <script>
     // Global variables
     let port, reader, serialWriter;
     let isConnected = false;
+    let isDeviceReady = false; // New: tracks if device is actually working
+    let connectionHealth = 0; // Track connection health (0-100)
+    let lastDataReceived = 0; // Timestamp of last data
     let currentWinner = null;
     let animationFrameId = null;
     let teamBouncers = [];
@@ -882,37 +911,46 @@
       6: '#FCBF49'  // Golden Yellow
     };
     
-    // Bouncing system configuration
+    // Enhanced bouncing system configuration with realistic physics
     function getBouncingConfig() {
       const isMobile = window.innerWidth <= 480;
       const isTablet = window.innerWidth <= 768;
       
       if (isMobile) {
         return {
-          speed: 2.0,          // Moderate speed
-          maxSpeed: 3.0,       // Speed cap
-          centerZoneRadius: 200,  // Much smaller center zone
-          cornerBuffer: 40,    // Small buffer
+          speed: 3.5,              // Billiard ball speed (mobile)
+          maxSpeed: 7.0,           // Fast like cue ball
+          minSpeed: 1.5,           // Always moving
+          centerCircleRadius: 180, // Circle collision radius
+          centerZoneRadius: 200,   // Safety zone
+          cornerBuffer: 40,        // Edge buffer
           teamSize: 120,
-          collisionBuffer: 20
+          restitution: 0.95,       // Slightly less bouncy for realism
+          tableFriction: 0.9995    // Very minimal table friction
         };
       } else if (isTablet) {
         return {
-          speed: 2.2,          // Moderate speed  
-          maxSpeed: 3.5,       // Speed cap
-          centerZoneRadius: 250,  // Smaller center zone
-          cornerBuffer: 50,    // Small buffer
+          speed: 3.8,              // Billiard ball speed (tablet)
+          maxSpeed: 7.5,           // Fast like cue ball
+          minSpeed: 1.8,           // Always moving
+          centerCircleRadius: 210,
+          centerZoneRadius: 250,
+          cornerBuffer: 50,
           teamSize: 140,
-          collisionBuffer: 25
+          restitution: 0.95,       // Slightly less bouncy for realism
+          tableFriction: 0.9995    // Very minimal table friction
         };
       } else {
         return {
-          speed: 2.5,          // Moderate speed
-          maxSpeed: 4.0,       // Speed cap
-          centerZoneRadius: 300,  // Much smaller center zone for crossing
-          cornerBuffer: 60,    // Moderate buffer
+          speed: 4.0,              // Billiard ball speed
+          maxSpeed: 8.0,           // Fast like cue ball
+          minSpeed: 2.0,           // Always moving
+          centerCircleRadius: 240, // Main circle collision radius
+          centerZoneRadius: 300,   // Safety zone
+          cornerBuffer: 60,
           teamSize: 170,
-          collisionBuffer: 30
+          restitution: 0.95,       // Slightly less bouncy for realism
+          tableFriction: 0.9995    // Very minimal table friction
         };
       }
     }
@@ -1015,27 +1053,33 @@
         teamBouncer.appendChild(name);
         bouncingContainer.appendChild(teamBouncer);
         
-        // Initialize bouncing properties with faster, more dynamic movement
+        // Initialize with billiard ball physics
         const config = getBouncingConfig();
         const position = getRandomPosition();
+        
+        // Random angle for billiard-style initial velocity
+        const angle = Math.random() * Math.PI * 2;
+        const initialSpeed = config.speed + Math.random() * (config.maxSpeed - config.speed) * 0.5;
+        
         const bouncer = {
           element: teamBouncer,
           teamNum: i,
           x: position.x,
           y: position.y,
-          vx: (Math.random() - 0.5) * config.speed * 2,  // Random direction, full speed
-          vy: (Math.random() - 0.5) * config.speed * 2,  // Random direction, full speed
+          vx: Math.cos(angle) * initialSpeed,  // Clean directional velocity
+          vy: Math.sin(angle) * initialSpeed,  // Clean directional velocity
           visible: true
         };
         
         teamBouncers.push(bouncer);
         
-        // Set initial position
+        // Set initial position using transform for hardware acceleration
         teamBouncer.style.position = 'absolute';
-        teamBouncer.style.left = bouncer.x + 'px';
-        teamBouncer.style.top = bouncer.y + 'px';
-        teamBouncer.style.transform = 'scale(1)';
+        teamBouncer.style.left = '0px';
+        teamBouncer.style.top = '0px';
+        teamBouncer.style.transform = `translate(${bouncer.x}px, ${bouncer.y}px) scale(1)`;
         teamBouncer.style.zIndex = '10';
+        teamBouncer.dataset.scale = '1'; // Track scale for updates
         
         updateBouncerPosition(bouncer);
       }
@@ -1062,27 +1106,77 @@
         attempts++;
       } while (
         attempts < 50 && 
-        isInCenterZone(x + teamSize/2, y + teamSize/2)
+        isInCenterCircle(x + teamSize/2, y + teamSize/2)
       );
       
       return { x, y };
     }
     
-    // Check if position is in center exclusion zone
-    function isInCenterZone(x, y) {
+    // Check if position is in center circle collision area
+    function isInCenterCircle(x, y) {
       const config = getBouncingConfig();
       const centerX = window.innerWidth / 2;
       const centerY = window.innerHeight / 2;
       const distance = Math.sqrt(
         Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2)
       );
-      return distance < config.centerZoneRadius;
+      return distance < (config.centerCircleRadius + config.teamSize / 2);
     }
     
-    // Enhanced team collision system with energy boost
+    // Precise center circle collision (billiard ball physics)
+    function checkCenterCircleCollision(bouncer) {
+      const config = getBouncingConfig();
+      const screenWidth = window.innerWidth;
+      const screenHeight = window.innerHeight;
+      const centerX = screenWidth / 2;
+      const centerY = screenHeight / 2;
+      const teamRadius = config.teamSize / 2;
+      
+      // Team center position
+      const teamCenterX = bouncer.x + teamRadius;
+      const teamCenterY = bouncer.y + teamRadius;
+      
+      // Distance from team center to circle center
+      const dx = teamCenterX - centerX;
+      const dy = teamCenterY - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // Collision distance (circle radius + team radius)
+      const collisionDistance = config.centerCircleRadius + teamRadius;
+      
+      // Only collide when team is inside or touching the circle
+      if (distance <= collisionDistance && distance > 0) {
+        // Calculate collision normal (direction from circle center to team center)
+        const normalX = dx / distance;
+        const normalY = dy / distance;
+        
+        // Push team outside the circle to the exact boundary
+        const targetDistance = collisionDistance + 2; // Small buffer to prevent sticking
+        const newTeamCenterX = centerX + normalX * targetDistance;
+        const newTeamCenterY = centerY + normalY * targetDistance;
+        bouncer.x = newTeamCenterX - teamRadius;
+        bouncer.y = newTeamCenterY - teamRadius;
+        
+        // Calculate velocity component along collision normal
+        const dotProduct = bouncer.vx * normalX + bouncer.vy * normalY;
+        
+        // Only reflect if moving toward circle center (prevent double bouncing)
+        if (dotProduct < 0) {
+          // Perfect elastic reflection
+          bouncer.vx -= 2 * dotProduct * normalX * config.restitution;
+          bouncer.vy -= 2 * dotProduct * normalY * config.restitution;
+        }
+        
+        return true; // Collision occurred
+      }
+      return false;
+    }
+    
+    // Precise billiard ball collision system
     function checkTeamCollisions() {
       const config = getBouncingConfig();
-      const collisionDistance = config.teamSize + config.collisionBuffer;
+      const teamRadius = config.teamSize / 2;
+      const collisionDistance = teamRadius * 2; // Exact touching distance
       
       for (let i = 0; i < teamBouncers.length; i++) {
         const bouncer1 = teamBouncers[i];
@@ -1092,58 +1186,57 @@
           const bouncer2 = teamBouncers[j];
           if (!bouncer2.visible) continue;
           
-          const dx = (bouncer1.x + config.teamSize/2) - (bouncer2.x + config.teamSize/2);
-          const dy = (bouncer1.y + config.teamSize/2) - (bouncer2.y + config.teamSize/2);
+          // Calculate distance between centers
+          const dx = (bouncer1.x + teamRadius) - (bouncer2.x + teamRadius);
+          const dy = (bouncer1.y + teamRadius) - (bouncer2.y + teamRadius);
           const distance = Math.sqrt(dx * dx + dy * dy);
           
-          if (distance < collisionDistance && distance > 0) {
-            // Dynamic collision with energy boost
-            const angle = Math.atan2(dy, dx);
-            const targetDistance = collisionDistance + 10; // Extra separation
-            const correction = (targetDistance - distance) / 2;
+          // Only collide when actually touching (not before)
+          if (distance <= collisionDistance && distance > 0) {
+            // Collision normal (direction from bouncer2 to bouncer1)
+            const normalX = dx / distance;
+            const normalY = dy / distance;
             
-            // Separate teams with more force
-            bouncer1.x += Math.cos(angle) * correction;
-            bouncer1.y += Math.sin(angle) * correction;
-            bouncer2.x -= Math.cos(angle) * correction;
-            bouncer2.y -= Math.sin(angle) * correction;
+            // Separate objects to prevent overlap
+            const overlap = collisionDistance - distance;
+            if (overlap > 0) {
+              const separation = overlap / 2;
+              bouncer1.x += normalX * separation;
+              bouncer1.y += normalY * separation;
+              bouncer2.x -= normalX * separation;
+              bouncer2.y -= normalY * separation;
+            }
             
-            // Calculate relative velocity for realistic collision
+            // Calculate relative velocity
             const relativeVx = bouncer1.vx - bouncer2.vx;
             const relativeVy = bouncer1.vy - bouncer2.vy;
             
-            // Calculate collision response with energy boost
-            const normalX = dx / distance;
-            const normalY = dy / distance;
-            const relativeSpeed = relativeVx * normalX + relativeVy * normalY;
+            // Velocity component along collision normal
+            const velocityAlongNormal = relativeVx * normalX + relativeVy * normalY;
             
-            if (relativeSpeed > 0) continue; // Moving apart already
+            // Only resolve if objects are moving toward each other
+            if (velocityAlongNormal > 0) continue;
             
-            // Apply stable collision response
-            const restitution = 1.0; // Conserve energy for stability
-            const impulse = 2 * relativeSpeed * restitution / 2; // Mass = 1 for both
+            // Perfect elastic collision (billiard ball physics)
+            const restitution = config.restitution;
+            const impulse = -(1 + restitution) * velocityAlongNormal / 2; // Equal masses
             
-            bouncer1.vx -= impulse * normalX;
-            bouncer1.vy -= impulse * normalY;
-            bouncer2.vx += impulse * normalX;
-            bouncer2.vy += impulse * normalY;
-            
-            // Add small random variation
-            const energyBoost = 0.3;
-            bouncer1.vx += (Math.random() - 0.5) * energyBoost;
-            bouncer1.vy += (Math.random() - 0.5) * energyBoost;
-            bouncer2.vx += (Math.random() - 0.5) * energyBoost;
-            bouncer2.vy += (Math.random() - 0.5) * energyBoost;
+            // Apply impulse to both objects
+            bouncer1.vx += impulse * normalX;
+            bouncer1.vy += impulse * normalY;
+            bouncer2.vx -= impulse * normalX;
+            bouncer2.vy -= impulse * normalY;
           }
         }
       }
     }
     
-    // Update bouncer position
+    // Optimized position update using transform for better performance
     function updateBouncerPosition(bouncer) {
       if (bouncer.element && bouncer.visible) {
-        bouncer.element.style.left = bouncer.x + 'px';
-        bouncer.element.style.top = bouncer.y + 'px';
+        // Use transform instead of left/top for hardware acceleration, preserve scale
+        const currentScale = bouncer.element.dataset.scale || '1';
+        bouncer.element.style.transform = `translate(${bouncer.x}px, ${bouncer.y}px) scale(${currentScale})`;
       }
     }
     
@@ -1151,16 +1244,26 @@
     function resetTeamElement(bouncer) {
       bouncer.element.classList.remove('winner-entering', 'winner-exiting', 'winner-celebrating', 'winner-launching', 'winner-positioned', 'hidden');
       bouncer.element.style.transition = '';
-      bouncer.element.style.transform = 'scale(1)';
       bouncer.element.style.opacity = '1';
       bouncer.element.style.display = 'flex';
       bouncer.element.style.position = 'absolute';
+      bouncer.element.style.left = '0px';
+      bouncer.element.style.top = '0px';
       bouncer.element.style.zIndex = '10';
       bouncer.element.style.boxShadow = ''; // Clear any special glow effects
       bouncer.element.style.animation = ''; // Clear any ongoing animations
       bouncer.element.style.border = ''; // Clear any custom borders
+      bouncer.element.dataset.scale = '1'; // Reset scale tracking
       bouncer.visible = true;
+      
+      // Update position with proper transform
+      updateBouncerPosition(bouncer);
     }
+    
+    // Optimized animation system with throttling
+    let lastFrameTime = 0;
+    const TARGET_FPS = 60;
+    const FRAME_INTERVAL = 1000 / TARGET_FPS;
     
     // Start bouncing animation
     function startBouncing() {
@@ -1168,122 +1271,115 @@
         cancelAnimationFrame(animationFrameId);
       }
       
-      function animate() {
-        const config = getBouncingConfig();
+      lastFrameTime = performance.now();
+      
+      function animate(currentTime) {
+        // Throttle to target FPS for consistent performance
+        const deltaTime = currentTime - lastFrameTime;
         
-        teamBouncers.forEach(bouncer => {
-          if (!bouncer.visible) return;
+        if (deltaTime >= FRAME_INTERVAL) {
+          const config = getBouncingConfig();
+          let needsUpdate = false;
           
-          // Update position with current velocity
-          bouncer.x += bouncer.vx;
-          bouncer.y += bouncer.vy;
-          
-          // Screen boundaries for bouncing
-          const screenWidth = window.innerWidth;
-          const screenHeight = window.innerHeight;
-          const buffer = config.cornerBuffer;
-          const teamSize = config.teamSize;
-          
-          // Improved boundary collision for reliable crossing
-          let bounced = false;
-          
-          // Left and right boundaries - gentle bouncing that allows crossing
-          if (bouncer.x <= buffer) {
-            bouncer.x = buffer + 1;
-            if (bouncer.vx < 0) {
-              bouncer.vx = -bouncer.vx * 0.8 + config.speed * 0.5; // Bounce with minimum rightward speed
-            }
-            bounced = true;
-          } else if (bouncer.x >= screenWidth - buffer - teamSize) {
-            bouncer.x = screenWidth - buffer - teamSize - 1;
-            if (bouncer.vx > 0) {
-              bouncer.vx = -bouncer.vx * 0.8 - config.speed * 0.5; // Bounce with minimum leftward speed
-            }
-            bounced = true;
-          }
-          
-          // Top and bottom boundaries
-          if (bouncer.y <= buffer) {
-            bouncer.y = buffer + 1;
-            if (bouncer.vy < 0) {
-              bouncer.vy = -bouncer.vy * 0.8 + config.speed * 0.3;
-            }
-            bounced = true;
-          } else if (bouncer.y >= screenHeight - buffer - teamSize) {
-            bouncer.y = screenHeight - buffer - teamSize - 1;
-            if (bouncer.vy > 0) {
-              bouncer.vy = -bouncer.vy * 0.8 - config.speed * 0.3;
-            }
-            bounced = true;
-          }
-          
-          // Add gentle randomness after bouncing
-          if (bounced) {
-            bouncer.vx += (Math.random() - 0.5) * 0.5;
-            bouncer.vy += (Math.random() - 0.5) * 0.5;
-          }
-          
-          // Check center zone collision with dynamic bouncing
-          const centerX = bouncer.x + teamSize / 2;
-          const centerY = bouncer.y + teamSize / 2;
-          const screenCenterX = screenWidth / 2;
-          const screenCenterY = screenHeight / 2;
-          
-          const distanceFromCenter = Math.sqrt(
-            Math.pow(centerX - screenCenterX, 2) + Math.pow(centerY - screenCenterY, 2)
-          );
-          
-          // Gentler center zone collision that allows crossing
-          if (distanceFromCenter < config.centerZoneRadius) {
-            const penetration = config.centerZoneRadius - distanceFromCenter;
+          teamBouncers.forEach(bouncer => {
+            if (!bouncer.visible) return;
             
-            // Calculate direction away from center
-            const normalX = (centerX - screenCenterX) / distanceFromCenter;
-            const normalY = (centerY - screenCenterY) / distanceFromCenter;
+            // Update position with current velocity
+            const oldX = bouncer.x;
+            const oldY = bouncer.y;
+            bouncer.x += bouncer.vx;
+            bouncer.y += bouncer.vy;
             
-            // Gently push team out of center zone
-            bouncer.x += normalX * (penetration + 2);
-            bouncer.y += normalY * (penetration + 2);
-            
-            // Moderate reflection that doesn't add too much energy
-            const dotProduct = bouncer.vx * normalX + bouncer.vy * normalY;
-            
-            if (dotProduct < 0) { // Only reflect if moving towards center
-              const restitution = 0.9; // Slight energy loss for stability
-              bouncer.vx = (bouncer.vx - 2 * dotProduct * normalX) * restitution;
-              bouncer.vy = (bouncer.vy - 2 * dotProduct * normalY) * restitution;
-              
-              // Small random nudge for variation
-              bouncer.vx += (Math.random() - 0.5) * 0.5;
-              bouncer.vy += (Math.random() - 0.5) * 0.5;
+            // Track if position actually changed
+            if (Math.abs(bouncer.x - oldX) > 0.1 || Math.abs(bouncer.y - oldY) > 0.1) {
+              needsUpdate = true;
             }
+          
+            // Screen boundaries for bouncing
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+            const buffer = config.cornerBuffer;
+            const teamSize = config.teamSize;
+            
+            // Perfect billiard ball boundary collisions
+            let bounced = false;
+            
+            // Left and right boundaries - perfect elastic reflection
+            if (bouncer.x <= buffer) {
+              bouncer.x = buffer + 1;
+              if (bouncer.vx < 0) {
+                bouncer.vx = -bouncer.vx * config.restitution; // Perfect reflection
+              }
+              bounced = true;
+            } else if (bouncer.x >= screenWidth - buffer - teamSize) {
+              bouncer.x = screenWidth - buffer - teamSize - 1;
+              if (bouncer.vx > 0) {
+                bouncer.vx = -bouncer.vx * config.restitution; // Perfect reflection
+              }
+              bounced = true;
+            }
+            
+            // Top and bottom boundaries - perfect elastic reflection
+            if (bouncer.y <= buffer) {
+              bouncer.y = buffer + 1;
+              if (bouncer.vy < 0) {
+                bouncer.vy = -bouncer.vy * config.restitution; // Perfect reflection
+              }
+              bounced = true;
+            } else if (bouncer.y >= screenHeight - buffer - teamSize) {
+              bouncer.y = screenHeight - buffer - teamSize - 1;
+              if (bouncer.vy > 0) {
+                bouncer.vy = -bouncer.vy * config.restitution; // Perfect reflection
+              }
+              bounced = true;
+            }
+            
+            // Check collision with center circle (treat as solid object)
+            checkCenterCircleCollision(bouncer);
+            
+            // Apply minimal billiard ball physics
+            
+            // 1. Very minimal table friction (like smooth billiard table)
+            bouncer.vx *= config.tableFriction;
+            bouncer.vy *= config.tableFriction;
+            
+            // 2. Speed limits only - no artificial slowing
+            const currentSpeed = Math.sqrt(bouncer.vx * bouncer.vx + bouncer.vy * bouncer.vy);
+            
+            // Cap maximum speed only (prevent runaway velocities)
+            if (currentSpeed > config.maxSpeed) {
+              const scale = config.maxSpeed / currentSpeed;
+              bouncer.vx *= scale;
+              bouncer.vy *= scale;
+            }
+            
+            // Maintain minimum speed only if nearly stopped
+            else if (currentSpeed < 0.1) {
+              const angle = Math.random() * Math.PI * 2;
+              bouncer.vx = Math.cos(angle) * config.minSpeed;
+              bouncer.vy = Math.sin(angle) * config.minSpeed;
+            }
+          });
+          
+          // Check for collisions between teams only if needed
+          if (needsUpdate) {
+            checkTeamCollisions();
+            
+            // Batch DOM updates for better performance
+            teamBouncers.forEach(bouncer => {
+              if (bouncer.visible) {
+                updateBouncerPosition(bouncer);
+              }
+            });
           }
           
-          // Speed limiting to prevent teams from going too crazy
-          const currentSpeed = Math.sqrt(bouncer.vx * bouncer.vx + bouncer.vy * bouncer.vy);
-          if (currentSpeed > config.maxSpeed) {
-            const scale = config.maxSpeed / currentSpeed;
-            bouncer.vx *= scale;
-            bouncer.vy *= scale;
-          }
-          
-          // Minimum speed to keep things moving
-          if (currentSpeed < config.speed * 0.5) {
-            const scale = (config.speed * 0.5) / currentSpeed;
-            bouncer.vx *= scale;
-            bouncer.vy *= scale;
-          }
-          
-          updateBouncerPosition(bouncer);
-        });
-        
-        // Check for collisions between teams
-        checkTeamCollisions();
+          lastFrameTime = currentTime;
+        }
         
         animationFrameId = requestAnimationFrame(animate);
       }
       
-      animate();
+      animate(performance.now());
     }
     
     // Stop bouncing animation
@@ -1313,7 +1409,7 @@
       }
     }
     
-    // Debug and test animation to center
+    // Smooth winner animation to center
     function animateWinnerToCenter(teamNum, callback) {
       const winnerBouncer = teamBouncers.find(b => b.teamNum === teamNum);
       if (!winnerBouncer) {
@@ -1322,99 +1418,72 @@
         return;
       }
       
-      console.log('🎉 WINNER! Starting animation for team', teamNum);
+      console.log('🎉 WINNER! Starting smooth animation for team', teamNum);
       winnerAnimating = true;
       
-      // Get current position
       const element = winnerBouncer.element;
-      const currentRect = element.getBoundingClientRect();
-      const currentX = currentRect.left;
-      const currentY = currentRect.top;
-      
-      console.log('📍 Current team position (getBoundingClientRect):', { x: currentX, y: currentY });
-      console.log('📍 Bouncer data position:', { x: winnerBouncer.x, y: winnerBouncer.y });
-      
-      // Get circle center coordinates
-      const mainCircleElement = document.getElementById('mainCircle');
-      const circleRect = mainCircleElement.getBoundingClientRect();
-      const circleCenterX = circleRect.left + circleRect.width / 2;
-      const circleCenterY = circleRect.top + circleRect.height / 2;
-      
-      console.log('🎯 Circle center coordinates:', { x: circleCenterX, y: circleCenterY });
-      console.log('📐 Circle rect:', circleRect);
-      
-      // Calculate final position (center the team in the circle)
       const config = getBouncingConfig();
-      const finalX = circleCenterX - config.teamSize / 2;
-      const finalY = circleCenterY - config.teamSize / 2;
       
-      console.log('🎯 Final target position:', { x: finalX, y: finalY });
-      console.log('📏 Team size:', config.teamSize);
+      // Use the bouncer's actual position data (not getBoundingClientRect)
+      const currentX = winnerBouncer.x;
+      const currentY = winnerBouncer.y;
       
-      // CRITICAL: Remove from bouncing system but KEEP the animation loop running
+      console.log('📍 Current bouncer position:', { x: currentX, y: currentY });
+      
+      // Calculate screen center for the main circle
+      const screenCenterX = window.innerWidth / 2;
+      const screenCenterY = window.innerHeight / 2;
+      
+      // Calculate final position (center the team in the screen center)
+      const finalX = screenCenterX - config.teamSize / 2;
+      const finalY = screenCenterY - config.teamSize / 2;
+      
+      console.log('🎯 Target center position:', { x: finalX, y: finalY });
+      
+      // Remove from bouncing system immediately
       winnerBouncer.visible = false;
-      console.log('🛑 Removed team from bouncing system, visible =', winnerBouncer.visible);
       
-      // Set up element for animation - convert to fixed positioning
-      console.log('🔧 Setting up element for animation...');
-      element.style.position = 'fixed';
-      element.style.left = currentX + 'px';
-      element.style.top = currentY + 'px';
+      // Set up element for smooth animation using current position
+      element.style.position = 'absolute';
+      element.style.left = '0px';
+      element.style.top = '0px';
       element.style.zIndex = '1000';
-      element.style.transition = 'none'; // Remove transition temporarily
+      element.style.transition = 'none';
+      
+      // Start from current bouncing position
+      element.style.transform = `translate(${currentX}px, ${currentY}px) scale(1)`;
+      element.dataset.scale = '1';
       
       // Force reflow
       element.offsetHeight;
       
-      console.log('✅ Element setup complete, current styles:', {
-        position: element.style.position,
-        left: element.style.left,
-        top: element.style.top,
-        zIndex: element.style.zIndex
-      });
-      
-      // Add celebration effect
+      // Add celebration effect at current position
       element.classList.add('winner-celebrating');
       
       setTimeout(() => {
-        console.log('🚀 Starting movement animation...');
-        
-        // Remove celebration and set up smooth exciting transition
+        // Remove celebration and start smooth movement
         element.classList.remove('winner-celebrating');
-        element.style.transition = 'all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55)'; // Smooth and exciting!
+        element.style.transition = 'all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)'; // Smooth easing
         
-        // Force reflow before animating
+        // Force reflow
         element.offsetHeight;
         
-        // Animate to center
-        console.log('📍 Animating to:', { x: finalX, y: finalY });
-        element.style.left = finalX + 'px';
-        element.style.top = finalY + 'px';
-        element.style.transform = 'scale(0.8)'; // Slightly bigger for visibility
+        // Animate smoothly to center with scale down
+        element.style.transform = `translate(${finalX}px, ${finalY}px) scale(0.7)`;
+        element.dataset.scale = '0.7';
+        
+        console.log('🚀 Smooth animation to center started');
         
         // Complete animation
         setTimeout(() => {
           element.classList.add('winner-positioned');
           winnerAnimating = false;
-          console.log('🏆 Winner animation complete! Final position:', {
-            left: element.style.left,
-            top: element.style.top,
-            transform: element.style.transform
-          });
-          
-          // Verify final position
-          const finalRect = element.getBoundingClientRect();
-          console.log('📍 Final actual position (getBoundingClientRect):', {
-            x: finalRect.left,
-            y: finalRect.top,
-            centerX: finalRect.left + finalRect.width / 2,
-            centerY: finalRect.top + finalRect.height / 2
-          });
+          console.log('🏆 Winner smoothly positioned at center');
           
           if (callback) callback();
-        }, 600); // Match the 0.6s animation
+        }, 800); // Match the 0.8s animation
         
-      }, 300);
+      }, 200); // Shorter celebration time
     }
     
 
@@ -1439,19 +1508,24 @@
       const element = winnerBouncer.element;
       element.classList.remove('winner-positioned');
       element.style.position = 'absolute'; // Change back to absolute for bouncing
+      element.style.left = '0px';
+      element.style.top = '0px';
       element.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-      
-      // Animate to new position
-      element.style.left = newPos.x + 'px';
-      element.style.top = newPos.y + 'px';
-      element.style.transform = 'scale(1)';
       element.style.zIndex = '10';
+      element.dataset.scale = '1';
       
-      // Update bouncer data with fast movement
+      // Animate to new position using transform
+      element.style.transform = `translate(${newPos.x}px, ${newPos.y}px) scale(1)`;
+      
+      // Update bouncer data with billiard ball return velocity
       winnerBouncer.x = newPos.x;
       winnerBouncer.y = newPos.y;
-      winnerBouncer.vx = (Math.random() - 0.5) * config.speed * 2;  // Full speed return
-      winnerBouncer.vy = (Math.random() - 0.5) * config.speed * 2;  // Full speed return
+      
+      // Clean directional velocity for return
+      const returnAngle = Math.random() * Math.PI * 2;
+      const returnSpeed = config.speed + Math.random() * (config.maxSpeed - config.speed) * 0.3;
+      winnerBouncer.vx = Math.cos(returnAngle) * returnSpeed;
+      winnerBouncer.vy = Math.sin(returnAngle) * returnSpeed;
       
       setTimeout(() => {
         // Return to bouncing system
@@ -1476,80 +1550,695 @@
           return;
         }
         
-        statusDot.className = 'status-dot connecting';
+        // Check if we're already trying to connect
+        if (isConnected) {
+          console.log('⚠️ Already connected - disconnect first');
+          if (confirm('Already connected to a device. Disconnect, unpair, and reconnect?')) {
+            await disconnectSerial(true); // Full disconnect with unpair
+            // Wait a moment before reconnecting
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } else {
+            return;
+          }
+        }
+        
+        // Clean initial state
+        isConnected = false;
+        isDeviceReady = false;
+        connectionHealth = 0;
+        lastDataReceived = 0;
+        readLoopActive = false;
+        
+        console.log('🔌 Starting fresh connection attempt...');
+        
+        console.log('📋 Available ports before selection:', await navigator.serial.getPorts());
+        
+        // Request port with better user guidance
+        console.log('🔌 Requesting serial port selection...');
+        console.log('💡 Select your Arduino/ESP32 device from the popup');
+        console.log('   Look for: "USB Serial", "Arduino", "ESP32", "CH340", "CP210x", etc.');
         
         port = await navigator.serial.requestPort();
-        await port.open({ baudRate: 115200 });
         
-        const textDecoder = new TextDecoderStream();
-        const textEncoder = new TextEncoderStream();
+        console.log('✅ Port selected:', port);
+        console.log('📊 Port info:', {
+          readable: !!port.readable,
+          writable: !!port.writable
+        });
         
-        const readable = port.readable.pipeThrough(textDecoder);
-        reader = readable.getReader();
+        // Check if device is still connected after selection
+        const portsAfterSelection = await navigator.serial.getPorts();
+        const portStillExists = portsAfterSelection.includes(port);
+        console.log('🔍 Port still exists after selection:', portStillExists);
         
-        const writable = port.writable.pipeThrough(textEncoder);
-        serialWriter = writable.getWriter();
+        if (!portStillExists) {
+          throw new Error('Device was disconnected after selection. Please reconnect and try again.');
+        }
         
-        isConnected = true;
-        statusDot.className = 'status-dot connected';
-        connectionModal.classList.remove('visible');
+        // Small delay to ensure port is ready (some systems need this)
+        console.log('⏳ Waiting for port to stabilize...');
+        await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Start reading
-        readLoop();
+        // Try different baud rates if initial connection fails
+        const baudRates = [9600, 115200, 57600, 38400, 19200];
+        let connected = false;
+        let lastError = null;
+        
+        for (const baudRate of baudRates) {
+          try {
+            console.log(`🔌 Attempting connection at ${baudRate} baud...`);
+            await port.open({ 
+              baudRate: baudRate,
+              dataBits: 8,
+              stopBits: 1,
+              parity: 'none',
+              flowControl: 'none'
+            });
+            
+            // Wait for Arduino to initialize
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Set up writer for outgoing data FIRST
+            serialWriter = port.writable.getWriter();
+            
+            // Set up reader for incoming data
+            const textDecoder = new TextDecoderStream();
+            const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+            reader = textDecoder.readable.getReader();
+            
+            console.log('📖 Reader and writer setup complete');
+            
+            isConnected = true;
+            isDeviceReady = false; // Not ready until we confirm communication
+            connectionHealth = 0;
+            // Don't change dot color yet - wait for device response
+            connectionModal.classList.remove('visible');
+            
+            console.log(`🔗 Serial port opened at ${baudRate} baud - verifying device...`);
+            console.log('📋 Connection state:', { isConnected, isDeviceReady, hasReader: !!reader, hasWriter: !!serialWriter });
+            
+            // Update status based on current state (should be yellow - connected but not ready)
+            updateConnectionStatus();
+            
+            // Verify connection stability before starting read loop
+            setTimeout(async () => {
+              console.log('🔍 Verifying connection stability...');
+              
+              // Check if port is still accessible
+              try {
+                const stillAccessible = port && port.readable && port.writable;
+                console.log('📊 Port accessibility check:', stillAccessible);
+                
+                if (!stillAccessible) {
+                  console.error('❌ Port no longer accessible - aborting connection');
+                  handleDeviceLost();
+                  return;
+                }
+                
+                // Wait a bit more to ensure stability
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Start reading if still stable
+                if (isConnected && port) {
+                  console.log('🚀 Starting read loop...');
+                  readLoop();
+                  
+                  // Test communication after read loop starts
+                  setTimeout(() => {
+                    if (isConnected && !isDeviceReady) {
+                      console.log('🧪 Testing Arduino communication...');
+                      testDeviceConnection();
+                    }
+                  }, 1000);
+                }
+                
+              } catch (error) {
+                console.error('❌ Stability check failed:', error);
+                handleDeviceLost();
+              }
+            }, 500);
+            
+            connected = true;
+            break;
+            
+          } catch (baudError) {
+            lastError = baudError;
+            console.log(`❌ Failed at ${baudRate} baud:`, baudError.message);
+            
+            // Close port if it was opened
+            try {
+              await port.close();
+            } catch (e) {
+              // Ignore close errors
+            }
+            
+            // Wait before trying next baud rate
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+        
+        if (!connected) {
+          // Provide specific help for "Failed to open serial port" error
+          if (lastError && lastError.message.includes('Failed to open serial port')) {
+            const helpMessage = `
+❌ SERIAL PORT ACCESS DENIED
+
+Common causes and solutions:
+
+🔍 MOST LIKELY CAUSES:
+1. Arduino IDE Serial Monitor is open (CLOSE IT!)
+2. Another browser tab has the port open
+3. Device was unplugged after selection
+
+🛠️ TROUBLESHOOTING STEPS:
+1. Close Arduino IDE completely (not just Serial Monitor)
+2. Close other browser tabs using serial devices
+3. Unplug and reconnect your Arduino/ESP32
+4. Try a different USB port
+5. Check if device shows up in system (Device Manager on Windows)
+6. Try a different USB cable
+
+💡 QUICK FIX:
+• Windows: Check Device Manager → Ports (COM & LPT)
+• Mac: Run 'ls /dev/cu.*' in Terminal
+• Linux: Run 'ls /dev/ttyUSB* /dev/ttyACM*'
+
+The port should appear when device is connected.`;
+            
+            console.error(helpMessage);
+            alert('Serial Port Access Denied!\n\nMost likely cause: Arduino IDE Serial Monitor is open.\n\n1. Close Arduino IDE completely\n2. Unplug and reconnect Arduino\n3. Try connecting again\n\nCheck console (F12) for detailed troubleshooting guide.');
+            throw new Error('Serial port access denied - see console for help');
+          }
+          
+          throw lastError || new Error('All baud rates failed');
+        }
         
       } catch (err) {
         console.error('Connection error:', err);
         statusDot.className = 'status-dot';
-        if (err.name !== 'NotFoundError') {
-          alert('Failed to connect to device');
+        connectionModal.classList.remove('visible');
+        
+        let errorMessage = '';
+        
+        if (err.name === 'NotFoundError') {
+          console.log('🚫 User cancelled device selection');
+          return; // Don't show error for user cancellation
+        } else if (err.name === 'NetworkError' || err.message.includes('Failed to open serial port')) {
+          errorMessage = `Arduino Connection Failed!
+
+Troubleshooting Steps:
+1. Make sure your Arduino/ESP32 is properly connected via USB
+2. Check that no other programs (like Arduino IDE Serial Monitor) are using the port
+3. Try uploading the Arduino code again
+4. Restart your Arduino/ESP32 device
+5. Try a different USB cable or port
+
+Technical Error: ${err.message || 'Port access denied'}
+
+The system will continue to work in simulation mode. Press keys 1-6 to test.`;
+        } else if (err.name === 'InvalidStateError') {
+          errorMessage = `Port Already in Use!
+
+The serial port is already open in another tab or application.
+Please close other connections and try again.
+
+Note: Make sure Arduino IDE Serial Monitor is closed.`;
+        } else {
+          errorMessage = `Connection Error: ${err.message || 'Unknown error'}
+
+Please check:
+- Arduino is connected and powered
+- Correct Arduino code is uploaded
+- USB cable is working properly
+- No other applications are using the serial port
+
+The system will work in simulation mode.`;
+        }
+        
+        if (errorMessage) {
+          alert(errorMessage);
         }
       }
     }
     
+    // Robust serial read with improved message parsing
+    let serialBuffer = '';
+    let messageQueue = [];
+    let isProcessingQueue = false;
+    let readLoopActive = false;
+    
     async function readLoop() {
+      if (readLoopActive) {
+        console.log('⚠️ Read loop already active, skipping...');
+        return;
+      }
+      
+      readLoopActive = true;
+      console.log('📖 Starting robust serial read loop...');
+      
       try {
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
+        let readCount = 0;
+        
+        while (isConnected && reader) {
+          try {
+            const { value, done } = await reader.read();
+            readCount++;
+            
+            if (readCount % 100 === 0) {
+              console.log(`📊 Read operations: ${readCount}, connected: ${isConnected}`);
+            }
+            
+            if (done) {
+              console.log('📚 Read stream ended');
+              break;
+            }
+            
+                          if (value) {
+                console.log('📡 Raw data received:', JSON.stringify(value));
+                
+                // Update device health - we're receiving data!
+                lastDataReceived = Date.now();
+                connectionHealth = Math.min(100, connectionHealth + 10);
+                
+                // If this is the first data, mark device as ready
+                if (!isDeviceReady) {
+                  isDeviceReady = true;
+                  console.log('✅ Arduino device is now ready and responding!');
+                  console.log('💡 Device management:');
+                  console.log('  • Disconnect & unpair: Click connection button (recommended)');
+                  console.log('  • Just disconnect: window.debugSerial.disconnect()');
+                  updateConnectionStatus();
+                }
+                
+                // Clean the incoming data and add to buffer
+                const cleanValue = value.replace(/\r/g, ''); // Remove carriage returns
+                serialBuffer += cleanValue;
+                
+                console.log('📦 Current buffer:', JSON.stringify(serialBuffer));
+                
+                // Process complete lines (split on newline)
+                const lines = serialBuffer.split('\n');
+                // Keep the last partial line in buffer
+                serialBuffer = lines.pop() || '';
+                
+                // Queue complete lines for processing
+                lines.forEach(line => {
+                  const trimmed = line.trim();
+                  if (trimmed && trimmed.length > 0) {
+                    console.log('🔍 Raw line from Arduino:', JSON.stringify(trimmed));
+                    messageQueue.push(trimmed);
+                  }
+                });
+                
+                // Process queue immediately for responsiveness
+                if (!isProcessingQueue && messageQueue.length > 0) {
+                  processMessageQueue();
+                }
+              } else {
+              // No data available, small delay
+              await new Promise(resolve => setTimeout(resolve, 10));
+            }
+            
+          } catch (readError) {
+            if (readError.name === 'NetworkError' && readError.message.includes('device has been lost')) {
+              console.error('🔌 Device lost during read operation!');
+              handleDeviceLost();
+              break; // Exit read loop immediately
+            } else {
+              console.error('❌ Individual read error:', readError);
+              // Reduce health on read errors but don't immediately disconnect
+              connectionHealth = Math.max(0, connectionHealth - 10);
+              updateConnectionStatus();
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+          }
+        }
+        
+        console.log('📖 Read loop exited normally');
+        
+      } catch (error) {
+        if (error.name === 'NetworkError' && error.message.includes('device has been lost')) {
+          console.error('🔌 Arduino device disconnected/lost!');
+          handleDeviceLost();
+        } else if (error.name !== 'NetworkError') {
+          console.error('❌ Read loop error:', error);
+          // Reduce connection health on errors
+          connectionHealth = Math.max(0, connectionHealth - 20);
+          updateConnectionStatus();
+        } else {
+          console.log('🔌 Connection closed normally');
+        }
+        
+                  // Only set disconnected if it's a real disconnection
+          if (error.name === 'NetworkError') {
+            isConnected = false;
+            isDeviceReady = false;
+            connectionHealth = 0;
+            updateConnectionStatus();
+          }
+      } finally {
+        readLoopActive = false;
+        console.log('📖 Read loop cleanup complete');
+      }
+    }
+    
+    // Robust message processing with improved error handling
+    async function processMessageQueue() {
+      if (isProcessingQueue) return;
+      isProcessingQueue = true;
+      
+      try {
+        while (messageQueue.length > 0) {
+          const message = messageQueue.shift();
+          console.log('⚡ Processing queued message:', JSON.stringify(message));
           
-          if (value) {
-            const lines = value.split('\n');
-            lines.forEach(line => {
-              const trimmed = line.trim();
-              if (trimmed) {
-                handleSerialData(trimmed);
-              }
-            });
+          try {
+            handleSerialData(message);
+          } catch (error) {
+            console.error('❌ Error processing message:', message, 'Error:', error);
+          }
+          
+          // Small delay between messages for stability
+          if (messageQueue.length > 0) {
+            await new Promise(resolve => setTimeout(resolve, 2));
           }
         }
       } catch (error) {
-        console.error('Read error:', error);
-        isConnected = false;
-        statusDot.className = 'status-dot';
+        console.error('❌ Message queue processing error:', error);
+      } finally {
+        isProcessingQueue = false;
       }
     }
     
-    function handleSerialData(data) {
-      console.log('📨 Received data:', data);
+    // Handle device lost/disconnected
+    function handleDeviceLost() {
+      // Prevent multiple simultaneous calls
+      if (!isConnected && !port) {
+        console.log('🔍 Device already cleaned up, skipping...');
+        return;
+      }
       
-      if (data.startsWith('WINNER:')) {
-        const teamNum = parseInt(data.split(':')[1]);
-        console.log('🏆 Processing WINNER message for team:', teamNum);
+      console.error('🚨 Arduino device has been lost/disconnected!');
+      
+      // Immediately update state
+      const wasConnected = isConnected;
+      isConnected = false;
+      isDeviceReady = false;
+      connectionHealth = 0;
+      lastDataReceived = 0;
+      readLoopActive = false;
+      
+      // Clean up connection objects thoroughly
+      if (reader) {
+        try {
+          reader.cancel().catch(() => {}); // Ignore errors
+          reader.releaseLock();
+        } catch (e) {
+          // Ignore errors during cleanup
+        }
+        reader = null;
+      }
+      
+      if (serialWriter) {
+        try {
+          serialWriter.releaseLock();
+        } catch (e) {
+          // Ignore errors during cleanup
+        }
+        serialWriter = null;
+      }
+      
+      if (port) {
+        try {
+          port.close();
+        } catch (e) {
+          // Ignore errors during cleanup
+        }
+        port = null;
+      }
+      
+      // Update status after cleanup
+      updateConnectionStatus();
+      
+      console.log('🧹 Device cleanup completed');
+      
+      // Show user notification only if we were actually connected
+      if (wasConnected) {
+        setTimeout(() => {
+          alert('Arduino device disconnected!\n\nPossible causes:\n1. USB cable unplugged\n2. Device powered off\n3. Driver issue\n\nTo reconnect:\n1. Check USB connection\n2. Close any other serial programs\n3. Click the connection button to reconnect');
+        }, 500);
+      }
+    }
+    
+    // Test device connection and readiness
+    async function testDeviceConnection() {
+      if (!isConnected || !serialWriter) {
+        console.log('❌ Cannot test - no connection');
+        return;
+      }
+      
+      console.log('🧪 Testing device communication...');
+      
+      // Give initial health points during testing to show yellow
+      connectionHealth = 25; // Enough to show yellow but not green
+      updateConnectionStatus();
+      
+      try {
+        // Send a reset command to test communication
+        await queueSerialWrite('RESET\n');
+        console.log('📤 Test command sent, waiting for response...');
         
-        // Check if we can accept this winner
-        if (currentWinner !== null) {
-          console.log('⚠️ Winner already exists:', currentWinner, '- ignoring new winner:', teamNum);
-          return;
+        // Wait up to 5 seconds for device to respond
+        const testTimeout = setTimeout(() => {
+          if (!isDeviceReady) {
+            console.log('⚠️ Device not responding - may not be ready');
+            connectionHealth = 50; // Partial connection
+            updateConnectionStatus();
+          }
+        }, 5000);
+        
+        // If device responds within timeout, testTimeout will be cleared by data reception
+        setTimeout(() => clearTimeout(testTimeout), 5000);
+        
+      } catch (error) {
+        console.error('❌ Device test failed:', error);
+        connectionHealth = 0;
+        updateConnectionStatus();
+      }
+    }
+    
+    // Update status dot based on device readiness (primary indicator)
+    function updateConnectionStatus() {
+      const oldClass = statusDot.className;
+      
+      // Strict device readiness check
+      if (isDeviceReady === true && connectionHealth >= 50 && isConnected === true && port && reader && serialWriter) {
+        statusDot.className = 'status-dot connected'; // Green - device ready and working
+      } else if (isConnected === true && connectionHealth > 0 && port) {
+        statusDot.className = 'status-dot connecting'; // Yellow - connected but device not ready/responding
+      } else {
+        statusDot.className = 'status-dot'; // Red - not connected or no device response
+      }
+      
+      const newColor = statusDot.className.includes('connected') ? 'GREEN' : 
+                      statusDot.className.includes('connecting') ? 'YELLOW' : 'RED';
+      
+      if (oldClass !== statusDot.className) {
+        console.log('📊 Status changed:', oldClass, '→', statusDot.className);
+      }
+      
+      console.log('📊 Status updated (device-focused):', {
+        isConnected,
+        isDeviceReady,
+        connectionHealth,
+        hasPort: !!port,
+        hasReader: !!reader,
+        hasWriter: !!serialWriter,
+        dotColor: newColor
+      });
+    }
+    
+    // Monitor connection health periodically
+    function startConnectionMonitor() {
+      setInterval(() => {
+        // Check if we think we're connected but port is gone
+        if (isConnected && port) {
+          try {
+            // Check if port is still accessible
+            if (!port.readable || !port.writable) {
+              console.log('⚠️ Port no longer accessible - device may be lost');
+              handleDeviceLost();
+              return;
+            }
+          } catch (error) {
+            console.log('⚠️ Port check failed - device may be lost:', error);
+            handleDeviceLost();
+            return;
+          }
         }
         
-        console.log('✅ Accepting new winner:', teamNum);
-        showWinner(teamNum);
-      } else if (data === 'RESET' || data === 'READY') {
-        console.log('🔄 Processing RESET message');
-        resetDisplay();
-      } else {
-        console.log('❓ Unknown message:', data);
+        // Health monitoring for active devices
+        if (isConnected && isDeviceReady) {
+          const timeSinceLastData = Date.now() - lastDataReceived;
+          
+          // If no data for more than 30 seconds, reduce health
+          if (timeSinceLastData > 30000) {
+            connectionHealth = Math.max(0, connectionHealth - 5);
+            console.log('⚠️ No data received recently, reducing connection health');
+            updateConnectionStatus();
+            
+            // If health gets too low, assume device is lost
+            if (connectionHealth <= 10) {
+              console.log('💀 Connection health critical - assuming device lost');
+              handleDeviceLost();
+            }
+          }
+        }
+        
+        // Debug status every 30 seconds when connected
+        if (isConnected && Date.now() % 30000 < 5000) {
+          console.log('🔍 Connection monitor check:', {
+            isConnected,
+            isDeviceReady,
+            connectionHealth,
+            hasPort: !!port,
+            timeSinceData: lastDataReceived ? (Date.now() - lastDataReceived) / 1000 + 's' : 'never'
+          });
+        }
+      }, 5000); // Check every 5 seconds
+    }
+    
+    function handleSerialData(data) {
+      console.log('📨 Processing message from Arduino:', JSON.stringify(data));
+      
+      // Clean up the data
+      const cleanData = data.trim();
+      if (!cleanData || cleanData.length === 0) {
+        console.log('📭 Ignoring empty message');
+        return; // Ignore empty lines
       }
+      
+      // Advanced message validation and corruption handling
+      
+      // 1. Check for messages that are too long (likely concatenated)
+      if (cleanData.length > 50) {
+        console.log('⚠️ Message too long, likely concatenated:', cleanData.substring(0, 50) + '...');
+        // Try to extract valid patterns from concatenated message
+        tryExtractFromConcatenated(cleanData);
+        return;
+      }
+      
+      // 2. Handle WINNER messages (clean and corrupted)
+      if (cleanData.includes('WINNER')) {
+        return handleWinnerMessage(cleanData);
+      }
+      
+      // 3. Handle RESET/READY messages (clean and corrupted)
+      if (cleanData.includes('RESET') || cleanData.includes('READY')) {
+        console.log('🔄 Processing RESET/READY message from Arduino');
+        resetDisplay();
+        return;
+      }
+      
+      // 4. Handle TIMING messages (new format)
+      if (cleanData.startsWith('TIMING:')) {
+        const parts = cleanData.split(':');
+        if (parts.length === 3) {
+          const teamPart = parts[1]; // T1 or T2
+          const timing = parts[2];   // microseconds
+          console.log(`⏱️ Timing data - ${teamPart}: ${timing} microseconds`);
+        } else {
+          console.log('❌ Invalid TIMING message format:', cleanData);
+        }
+        return;
+      }
+      
+      // 5. Handle legacy debug/timing messages  
+      if (cleanData.startsWith('DEBUG:') || cleanData.startsWith('INFO:') || 
+          cleanData.startsWith('T1:') || cleanData.startsWith('T2:')) {
+        console.log('🐛 Arduino debug/timing:', cleanData);
+        return;
+      }
+      
+      // 6. Check for exact clean messages
+      if (cleanData === 'READY' || cleanData === 'RESET') {
+        console.log('✅ Clean control message:', cleanData);
+        resetDisplay();
+        return;
+      }
+      
+      // 7. If we get here, it's an unknown message
+      console.log('❓ Unknown message format:', cleanData);
+    }
+    
+    function handleWinnerMessage(message) {
+      console.log('🏆 Processing potential WINNER message:', message);
+      
+      // Try exact match first (cleanest case)
+      if (message.startsWith('WINNER:')) {
+        const parts = message.split(':');
+        if (parts.length === 2) {
+          const teamNum = parseInt(parts[1]);
+          if (!isNaN(teamNum) && teamNum >= 1 && teamNum <= 6) {
+            return acceptWinner(teamNum, 'clean');
+          }
+        }
+        console.log('❌ Clean WINNER message but invalid format:', message);
+        return;
+      }
+      
+      // Try to extract from corrupted message
+      const winnerMatch = message.match(/WINNER:([1-6])/);
+      if (winnerMatch) {
+        const teamNum = parseInt(winnerMatch[1]);
+        console.log('🔧 Extracted WINNER from corrupted message:', teamNum);
+        return acceptWinner(teamNum, 'extracted');
+      }
+      
+      // Check for partial WINNER (just "WINNER" or "WINNE" etc.)
+      if (message.match(/WINN?E?R?$/i)) {
+        console.log('❌ Partial WINNER message detected but no team number:', message);
+        return;
+      }
+      
+      console.log('❌ WINNER keyword found but could not extract team number:', message);
+    }
+    
+    function acceptWinner(teamNum, source) {
+      console.log(`🏆 ${source.toUpperCase()} WINNER message for team:`, teamNum);
+      
+      // Check if we can accept this winner
+      if (currentWinner !== null) {
+        console.log('⚠️ Winner already exists:', currentWinner, '- ignoring new winner:', teamNum);
+        return;
+      }
+      
+      console.log('✅ Accepting winner:', teamNum);
+      showWinner(teamNum);
+    }
+    
+    function tryExtractFromConcatenated(message) {
+      console.log('🔧 Trying to extract valid messages from concatenated data');
+      
+      // Look for WINNER patterns
+      const winnerMatches = message.match(/WINNER:([1-6])/g);
+      if (winnerMatches && winnerMatches.length > 0) {
+        // Take the first valid winner
+        const firstWinner = winnerMatches[0];
+        const teamNum = parseInt(firstWinner.split(':')[1]);
+        console.log('🔧 Extracted first WINNER from concatenated message:', teamNum);
+        acceptWinner(teamNum, 'concatenated');
+        return;
+      }
+      
+      // Look for READY/RESET
+      if (message.includes('READY') || message.includes('RESET')) {
+        console.log('🔧 Extracted RESET/READY from concatenated message');
+        resetDisplay();
+        return;
+      }
+      
+      console.log('❌ Could not extract valid messages from concatenated data');
     }
     
     // Display functions
@@ -1577,7 +2266,7 @@
         triggerCelebrationEffects();
         
         // Show team name with delay for dramatic effect
-      setTimeout(() => {
+        setTimeout(() => {
           teamName.textContent = name;
           teamName.classList.add('visible');
         }, 200);
@@ -1675,60 +2364,38 @@
     function resetDisplay() {
       console.log('🔄 Reset display called, currentWinner:', currentWinner, 'winnerAnimating:', winnerAnimating);
       
-      // ALWAYS clear the current winner to allow fresh rounds
+      // Stop all animation immediately for responsive reset
+      stopBouncing();
+      
+      // Force clear all states
       const hadWinner = currentWinner !== null;
       const winnerTeamNum = currentWinner;
       currentWinner = null; // Clear immediately for fresh start
+      winnerAnimating = false; // Force stop any ongoing animations
       
-      if (hadWinner && !winnerAnimating) {
-        console.log('🚀 Resetting with previous winner:', winnerTeamNum);
-        
-        // Hide team name and reset circle immediately
-        teamName.classList.remove('visible');
-        circleContent.textContent = '•';
-        circleContent.className = 'circle-content waiting';
-        mainCircle.classList.remove('winner');
-        mainCircle.style.background = '';
-        resetBtn.classList.remove('visible');
-        
-        // Clean up celebration effects
-        cleanupCelebrationEffects();
-        
-        // Make sure all other teams are visible and bouncing first
-        teamBouncers.forEach(bouncer => {
-          if (bouncer.teamNum !== winnerTeamNum) {
-            resetTeamElement(bouncer);
-          }
-        });
-        
-        // Animate winner from center
-        animateWinnerFromCenter(winnerTeamNum, () => {
-          // After winner exits, resume bouncing for all teams
-          console.log('✅ Fresh round started - all teams bouncing');
-          startBouncing();
-        });
-        
-      } else {
-        // Simple reset when no winner or fresh start
-        console.log('🆕 Fresh reset - ready for new round');
-        
-        teamBouncers.forEach(bouncer => {
-          resetTeamElement(bouncer);
-        });
-        
-        teamName.classList.remove('visible');
-        circleContent.textContent = '•';
-        circleContent.className = 'circle-content waiting';
-        mainCircle.classList.remove('winner');
-        mainCircle.style.background = '';
-        resetBtn.classList.remove('visible');
-        cleanupCelebrationEffects();
-        
+      // Always perform immediate UI reset for consistency
+      teamName.classList.remove('visible');
+      teamName.textContent = '';
+      circleContent.textContent = '•';
+      circleContent.className = 'circle-content waiting';
+      mainCircle.classList.remove('winner');
+      mainCircle.style.background = '';
+      resetBtn.classList.remove('visible');
+      
+      // Clean up all celebration effects immediately
+      cleanupCelebrationEffects();
+      
+      // Reset all team elements to clean state
+      teamBouncers.forEach(bouncer => {
+        resetTeamElement(bouncer);
+      });
+      
+      // For smoother reset, use a shorter delay before starting bouncing
+      setTimeout(() => {
         startBouncing();
-      }
+        console.log('✅ Fresh round started - all teams bouncing');
+      }, 100); // Reduced delay for more responsive feel
       
-      // Force reset any animation states
-      winnerAnimating = false;
       console.log('🎮 System ready for next round!');
     }
     
@@ -1766,30 +2433,75 @@
       screenFlash.classList.remove('active');
     }
 
-    // Send reset command
+    // Non-blocking serial write with queue
+    let writeQueue = [];
+    let isWriting = false;
+    
+    async function queueSerialWrite(data) {
+      writeQueue.push(data);
+      if (!isWriting) {
+        processWriteQueue();
+      }
+    }
+    
+    async function processWriteQueue() {
+      if (isWriting || !isConnected || !serialWriter) return;
+      isWriting = true;
+      
+      try {
+        while (writeQueue.length > 0 && isConnected) {
+          const data = writeQueue.shift();
+          const encoder = new TextEncoder();
+          const encoded = encoder.encode(data);
+          await serialWriter.write(encoded);
+          
+          // Small delay to prevent overwhelming Arduino
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+      } catch (error) {
+        console.error('❌ Write queue error:', error);
+      } finally {
+        isWriting = false;
+      }
+    }
+    
+    // Send reset command (optimized)
     async function sendReset() {
+      console.log('🔄 sendReset() called - checking connection modes...');
+      console.log('   Socket connected:', typeof socket !== 'undefined' && socket && socket.connected);
+      console.log('   Hardware connected:', isConnected && !!serialWriter);
+      console.log('   Current winner:', currentWinner);
+      
+      // Always reset display first for immediate visual feedback
+      resetDisplay();
+      
       // Check if we're in dev server mode
       if (typeof socket !== 'undefined' && socket && socket.connected) {
         try {
           socket.emit('reset_buzzers');
-          console.log('Reset sent to dev server');
+          console.log('✅ Reset sent to dev server');
         } catch (error) {
-          console.error('Dev server reset error:', error);
+          console.error('❌ Dev server reset error:', error);
         }
       } else if (isConnected && serialWriter) {
-        // Real hardware mode
+        // Real hardware mode with non-blocking write
         try {
-          await serialWriter.write('RESET\n');
-          console.log('Reset sent to hardware');
+          console.log('📤 Queuing RESET command to Arduino...');
+          await queueSerialWrite('RESET\n');
+          console.log('✅ Reset command queued for Arduino hardware');
+          
+          // Give Arduino time to process and respond
+          setTimeout(() => {
+            console.log('⏳ Waiting for Arduino READY confirmation...');
+          }, 100);
+          
         } catch (error) {
-          console.error('Hardware reset error:', error);
+          console.error('❌ Hardware reset error:', error);
+          console.log('💡 Try disconnecting and reconnecting Arduino');
         }
       } else {
         // Standalone mode (no connection)
-        if (currentWinner !== null) {
-          resetDisplay();
-          console.log('Reset performed (standalone mode)');
-        }
+        console.log('✅ Reset performed (standalone mode - no hardware connected)');
       }
     }
 
@@ -1829,15 +2541,16 @@
     }
 
     // Event listeners
-    connectionBtn.addEventListener('click', () => {
-      if (!isConnected) {
-        connectionModal.classList.add('visible');
-      }
-    });
-
     connectDeviceBtn.addEventListener('click', connectSerial);
     cancelConnect.addEventListener('click', () => {
       connectionModal.classList.remove('visible');
+    });
+
+    // Close connection modal when clicking backdrop
+    connectionModal.addEventListener('click', (e) => {
+      if (e.target === connectionModal) {
+        connectionModal.classList.remove('visible');
+      }
     });
 
     settingsBtn.addEventListener('click', () => {
@@ -1873,21 +2586,31 @@
       console.log(`🎮 Keyboard simulation triggered for Team ${teamNum}`);
       console.log(`   Current winner state: ${currentWinner}`);
       console.log(`   Socket connected: ${typeof socket !== 'undefined' && socket && socket.connected}`);
+      console.log(`   Hardware connected: ${isConnected}`);
+      
+      // Check current winner state first
+      if (currentWinner !== null) {
+        console.log(`❌ Keyboard simulation: Team ${teamNum} buzzed (too late, Team ${currentWinner} already won)`);
+        return;
+      }
       
       // Check if we're in dev server mode (socket exists)
       if (typeof socket !== 'undefined' && socket && socket.connected) {
         // Send simulation event to dev server
         console.log(`📤 Sending simulate_buzzer to dev server for Team ${teamNum}`);
-        socket.emit('simulate_buzzer', {team: teamNum});
-        console.log(`✅ Keyboard simulation: Team ${teamNum} buzzer sent to dev server`);
+        try {
+          socket.emit('simulate_buzzer', {team: teamNum});
+          console.log(`✅ Keyboard simulation: Team ${teamNum} buzzer sent to dev server`);
+        } catch (error) {
+          console.error(`❌ Socket error for Team ${teamNum}:`, error);
+          // Fallback to direct simulation
+          console.log(`🔄 Falling back to direct simulation for Team ${teamNum}`);
+          showWinner(teamNum);
+        }
       } else {
         // Direct simulation for standalone mode
-        if (currentWinner === null) {
-          console.log(`✅ Keyboard simulation: Team ${teamNum} buzzer (direct mode)`);
-          showWinner(teamNum);
-        } else {
-          console.log(`❌ Keyboard simulation: Team ${teamNum} buzzed (too late, Team ${currentWinner} already won)`);
-        }
+        console.log(`✅ Keyboard simulation: Team ${teamNum} buzzer (direct mode)`);
+        showWinner(teamNum);
       }
     }
 
@@ -1934,11 +2657,297 @@
       }
     });
 
+    // Debug functions (available in console)
+    window.debugSerial = {
+      status: () => {
+        console.log('🔍 Serial Debug Status:');
+        console.log('  isConnected:', isConnected);
+        console.log('  isDeviceReady:', isDeviceReady);
+        console.log('  connectionHealth:', connectionHealth);
+        console.log('  lastDataReceived:', new Date(lastDataReceived).toLocaleTimeString());
+        console.log('  hasPort:', !!port);
+        console.log('  hasReader:', !!reader);
+        console.log('  hasWriter:', !!serialWriter);
+        console.log('  readLoopActive:', readLoopActive);
+        console.log('  serialBuffer:', JSON.stringify(serialBuffer));
+        console.log('  messageQueue length:', messageQueue.length);
+        console.log('  isProcessingQueue:', isProcessingQueue);
+        console.log('  statusDot class:', statusDot.className);
+      },
+      
+      testRead: async () => {
+        if (!reader) {
+          console.log('❌ No reader available');
+          return;
+        }
+        console.log('🧪 Manual read test...');
+        try {
+          const { value, done } = await reader.read();
+          console.log('📡 Manual read result:', { value: JSON.stringify(value), done });
+        } catch (error) {
+          console.error('❌ Manual read error:', error);
+        }
+      },
+      
+      restartRead: () => {
+        console.log('🔄 Restarting read loop...');
+        readLoopActive = false;
+        if (isConnected && reader) {
+          setTimeout(() => readLoop(), 100);
+        }
+      },
+      
+      sendTest: () => {
+        console.log('📤 Sending test command to Arduino...');
+        queueSerialWrite('TEST\n');
+      },
+      
+      clearBuffer: () => {
+        serialBuffer = '';
+        messageQueue = [];
+        console.log('🧹 Serial buffer and queue cleared');
+      },
+      
+      checkPorts: async () => {
+        if (!('serial' in navigator)) {
+          console.log('❌ Web Serial API not supported');
+          return;
+        }
+        
+        try {
+          const ports = await navigator.serial.getPorts();
+          console.log('🔍 Available serial ports:');
+          if (ports.length === 0) {
+            console.log('  No ports available');
+            console.log('💡 This might mean:');
+            console.log('  1. No devices connected');
+            console.log('  2. Devices not granted permission yet');
+            console.log('  3. Drivers not installed');
+          } else {
+            ports.forEach((port, index) => {
+              console.log(`  Port ${index + 1}:`, port);
+            });
+          }
+        } catch (error) {
+          console.error('❌ Error checking ports:', error);
+        }
+      },
+      
+      diagnoseConnection: () => {
+        console.log('🏥 CONNECTION DIAGNOSIS:');
+        console.log('='.repeat(50));
+        console.log('BROWSER SUPPORT:');
+        console.log('  Web Serial API:', 'serial' in navigator ? '✅ Supported' : '❌ Not supported');
+        console.log('  Browser:', navigator.userAgent.includes('Chrome') ? 'Chrome ✅' : 'Other browser ⚠️');
+        console.log('');
+        console.log('CONNECTION STATE:');
+        console.log('  isConnected:', isConnected ? '✅' : '❌');
+        console.log('  isDeviceReady:', isDeviceReady ? '✅' : '❌');
+        console.log('  connectionHealth:', connectionHealth);
+        console.log('  hasPort:', !!port ? '✅' : '❌');
+        console.log('  hasReader:', !!reader ? '✅' : '❌');
+        console.log('  hasWriter:', !!serialWriter ? '✅' : '❌');
+        console.log('');
+        console.log('COMMON ISSUES:');
+        console.log('  1. Arduino IDE open → Close it completely');
+        console.log('  2. Other browser tabs using serial → Close them');
+        console.log('  3. Device unplugged → Reconnect USB cable');
+        console.log('  4. Wrong drivers → Check Device Manager/System Info');
+        console.log('  5. Permission denied → Try different browser/restart');
+        console.log('');
+        console.log('NEXT STEPS:');
+        console.log('  • Run: window.debugSerial.checkPorts()');
+        console.log('  • Check system device list');
+        console.log('  • Try different USB port/cable');
+        console.log('='.repeat(50));
+      },
+      
+      disconnect: () => {
+        console.log('🔌 Disconnecting device (keeping paired)...');
+        disconnectSerial(false);
+      },
+      
+      disconnectAndForget: () => {
+        console.log('🧹 Disconnecting and forgetting device...');
+        disconnectSerial(true);
+      },
+      
+      forgetDevice: async () => {
+        // Alias for disconnectAndForget - same functionality
+        window.debugSerial.disconnectAndForget();
+      },
+      
+      listPairedDevices: async () => {
+        try {
+          const ports = await navigator.serial.getPorts();
+          console.log('📋 Paired devices in browser:');
+          if (ports.length === 0) {
+            console.log('  No devices paired');
+          } else {
+            ports.forEach((port, index) => {
+              console.log(`  Device ${index + 1}:`, port);
+            });
+            console.log('');
+            console.log('💡 To unpair a device:');
+            console.log('  1. Connect to it: Click connection button');
+            console.log('  2. Unpair it: window.debugSerial.forgetDevice()');
+            console.log('  OR visit: chrome://settings/content/serialPorts');
+          }
+        } catch (error) {
+          console.error('❌ Error listing paired devices:', error);
+        }
+      }
+    };
+    
+    // Initialize connection status
+    function initializeConnectionStatus() {
+      // Ensure device status is properly set on load
+      isConnected = false;
+      isDeviceReady = false;
+      connectionHealth = 0;
+      lastDataReceived = 0;
+      readLoopActive = false;
+      
+      // Force red dot on initialization
+      statusDot.className = 'status-dot'; // Red by default (no device)
+      updateConnectionStatus(); // Double-check with proper logic
+      
+      console.log('🔗 Device status initialized:', { 
+        isConnected, 
+        isDeviceReady, 
+        connectionHealth,
+        dotColor: statusDot.className.includes('connected') ? 'GREEN' : 
+                 statusDot.className.includes('connecting') ? 'YELLOW' : 'RED'
+      });
+      
+      // Check if Web Serial API is supported
+      if (!('serial' in navigator)) {
+        console.warn('⚠️ Web Serial API not supported in this browser');
+        connectionBtn.title = 'Web Serial not supported - use Chrome or Edge';
+      } else {
+        console.log('✅ Web Serial API is supported');
+        connectionBtn.title = 'Click to connect Arduino device';
+      }
+      
+      console.log('🛠️ Debug commands available:');
+      console.log('  window.debugSerial.status() - Check connection state');
+      console.log('  window.debugSerial.diagnoseConnection() - Full diagnosis');
+      console.log('  window.debugSerial.checkPorts() - List available ports');
+      console.log('  window.debugSerial.listPairedDevices() - Show paired devices');
+      console.log('  window.debugSerial.disconnect() - Disconnect only (keep paired)');
+      console.log('  window.debugSerial.disconnectAndForget() - Disconnect & unpair');
+      console.log('  window.debugSerial.restartRead() - Restart reading');
+      console.log('  window.debugSerial.sendTest() - Send test command');
+    }
+
+    // Disconnect function with option to forget device
+    async function disconnectSerial(forgetDevice = false) {
+      try {
+        console.log('🔌 Disconnecting from Arduino...');
+        
+        // Store port reference for potential forgetting
+        const portToForget = port;
+        
+        if (reader) {
+          try {
+            await reader.cancel();
+            await reader.releaseLock();
+          } catch (e) {
+            console.log('Reader cleanup completed');
+          }
+          reader = null;
+        }
+        
+        if (serialWriter) {
+          try {
+            await serialWriter.releaseLock();
+          } catch (e) {
+            console.log('Writer cleanup completed');
+          }
+          serialWriter = null;
+        }
+        
+        if (port) {
+          try {
+            await port.close();
+            console.log('✅ Port closed successfully');
+          } catch (e) {
+            console.log('Port close completed');
+          }
+        }
+        
+        // Forget device from browser if requested
+        if (forgetDevice && portToForget) {
+          try {
+            await portToForget.forget();
+            console.log('🧹 Device unpaired from browser successfully');
+          } catch (e) {
+            console.log('⚠️ Could not forget device:', e.message);
+          }
+        }
+        
+        port = null;
+        
+        // Reset all connection state
+        isConnected = false;
+        isDeviceReady = false;
+        connectionHealth = 0;
+        lastDataReceived = 0;
+        readLoopActive = false;
+        updateConnectionStatus();
+        
+        const actionMsg = forgetDevice ? 'disconnected and unpaired' : 'disconnected';
+        console.log(`✅ Arduino ${actionMsg} successfully`);
+        
+      } catch (error) {
+        console.error('❌ Error during disconnect:', error);
+        // Force reset connection state even if there was an error
+        isConnected = false;
+        isDeviceReady = false;
+        connectionHealth = 0;
+        lastDataReceived = 0;
+        readLoopActive = false;
+        updateConnectionStatus();
+        reader = null;
+        serialWriter = null;
+        port = null;
+      }
+    }
+
+    // Add disconnect button functionality to connection button
+    function updateConnectionButton() {
+      connectionBtn.addEventListener('click', () => {
+        console.log('🔗 Connection button clicked, isConnected:', isConnected);
+        
+        if (isConnected) {
+          // If connected, fully disconnect and forget device to prevent errors
+          const choice = confirm('Disconnect and unpair Arduino device?\n\n' +
+                               'This will:\n' +
+                               '• Close the connection\n' +
+                               '• Remove device from browser\'s paired list\n' +
+                               '• Prevent connection conflicts\n\n' +
+                               'You\'ll need to select the device again next time.');
+          
+          if (choice) {
+            console.log('🧹 User requested full disconnect and unpair');
+            disconnectSerial(true); // Full disconnect with forget
+          }
+        } else {
+          // If not connected, show connection modal
+          console.log('📱 Opening connection modal');
+          connectionModal.classList.add('visible');
+        }
+      });
+    }
+
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
+      initializeConnectionStatus();
+      updateConnectionButton();
       initializeTeamInputs();
       initializeBouncingSystem();
       resetDisplay();
+      startConnectionMonitor(); // Start monitoring connection health
       
       // Show keyboard shortcuts info in console
       console.log('🚀 EXCITING Quiz Buzzer with SPECTACULAR Winner Staging!');
@@ -1946,21 +2955,60 @@
       console.log('  Keys 1-6: Simulate team buzzer presses');
       console.log('  Key R: Reset system (works in all modes)');
       console.log('  Note: Shortcuts work when no modal is open');
-      console.log('🏀 IMPROVED Bouncing Teams with Smooth Movement!');
-      console.log('  🎯 Large center circle (480px) with 600px exclusion zone');
-      console.log('  📏 Bigger team circles (170px) + LARGE team names (22px)');
-      console.log('  🚫 Teams can FREELY CROSS from left to right and back!');
-      console.log('  💥 Stable collisions with gentle energy conservation!');
-      console.log('  🎨 Fresh vibrant team colors (customizable in settings)');
-      console.log('  ⚡ 2-2.5x FASTER movement - smooth and reliable crossing!');
-      console.log('  🎉 EXCITING WINNER Animation:');
-      console.log('    • 0.3s celebration bounce with blue glow');
-      console.log('    • 0.6s smooth exciting dash to center');  
+      console.log('🎱 REALISTIC BILLIARD BALL Physics!');
+      console.log('  🎯 Center circle collision - precise contact detection');
+      console.log('  📏 Teams bounce only when actually touching (no early collisions)');
+      console.log('  ⚡ Realistic physics: 95% restitution, minimal friction, precise reflections');
+      console.log('  💥 Contact-only collisions with momentum conservation');
+      console.log('  🎨 Team name always visible on top (z-index: 1000)');
+      console.log('  🚀 Smooth winner animation - no jumping or position glitches');
+      console.log('  🎉 SMOOTH WINNER Animation:');
+      console.log('    • 0.2s celebration bounce at current position');
+      console.log('    • 0.8s smooth glide to screen center (no jumping!)');  
       console.log('    • Immediate lockout of other teams (realistic!)');
-      console.log('    • Winner appears inside circle');
-      console.log('    • Clean reset returns all teams to bouncing');
+      console.log('    • Winner smoothly scales down inside circle');
+      console.log('    • Clean reset returns all teams to realistic bouncing');
       console.log('  ⚡ REALISTIC: Only the first team to buzz gets to animate!');
       console.log('  🌟 Enhanced effects: Screen flash, confetti, particle burst');
+      console.log('📡 Connection Status:', { isConnected, supportSerial: 'serial' in navigator });
+      console.log('');
+      console.log('🔌 Arduino Connection Instructions:');
+      console.log('  1. Connect your XIAO nRF52840 (or compatible) via USB');
+      console.log('  2. Click the connection button (Wi-Fi icon) in top-left');
+      console.log('  3. Select your Arduino device from the browser popup');
+      console.log('  4. Status dot shows: 🔴 Red=No Device, 🟡 Yellow=Testing, 🟢 Green=Device Ready');
+      console.log('  5. Green dot means Arduino is responding and ready for buzzers');
+      console.log('  6. Arduino will send WINNER:X messages when buzzers are pressed');
+      console.log('  7. To disconnect: Click connection button again (fully unpairs device)');
+      console.log('');
+      console.log('⚡ Expected Arduino Messages:');
+      console.log('  • WINNER:1 through WINNER:6 - Team buzzer pressed');
+      console.log('  • RESET or READY - Reset all buzzers');
+      console.log('  • DEBUG: or INFO: - Debug information');
+      console.log('');
+      console.log('🛠️ DEBUGGING SERIAL ISSUES:');
+      console.log('  Status Dot Colors (Device-Focused):');
+      console.log('    🔴 Red = No device found or not responding');
+      console.log('    🟡 Yellow = Device connected but testing/not ready');
+      console.log('    🟢 Green = Device ready and working properly');
+      console.log('  If you get "device has been lost" error:');
+      console.log('  1. Check USB cable connection');
+      console.log('  2. Try different USB port');
+      console.log('  3. Reconnect Arduino and try again');
+      console.log('  If you get "Failed to open serial port":');
+      console.log('  1. Close Arduino IDE completely (most common cause)');
+      console.log('  2. Unplug and reconnect Arduino device');
+      console.log('  3. Try different USB port/cable');
+      console.log('  4. Run: window.debugSerial.diagnoseConnection()');
+      console.log('  To manage paired devices:');
+      console.log('  1. List paired: window.debugSerial.listPairedDevices()');
+      console.log('  2. Disconnect & unpair: Click connection button (recommended)');
+      console.log('  3. Just disconnect: window.debugSerial.disconnect()');
+      console.log('  If yellow but not green:');
+      console.log('  1. Run: window.debugSerial.checkPorts()');
+      console.log('  2. Run: window.debugSerial.status()');
+      console.log('  3. Check if Arduino is sending data in Serial Monitor');
+      console.log('');
     });
   </script>
 </body>

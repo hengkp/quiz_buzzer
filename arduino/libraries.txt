@@ -4,6 +4,8 @@
 
 ### Board Support
 - **ESP32 Arduino Core** - Board definitions for ESP32-C boards
+  - **Version Compatibility**: v2.0.0 to v3.x supported
+  - **Important**: Core 3.x has updated LEDC API (see notes below)
 
 ## Installation Instructions
 
@@ -24,8 +26,50 @@
 
 ### Library Versions (Tested)
 - ESP32 Arduino Core: v2.0.0 or later
+- ESP32 Arduino Core: v3.x (requires LEDC API updates)
+
+## ESP32 Arduino Core 3.x Compatibility
+
+### LEDC API Changes in Core 3.x
+If you get compilation errors like:
+```
+error: 'ledcSetup' was not declared in this scope
+error: 'ledcAttachPin' was not declared in this scope
+```
+
+**Solution**: Update your code from Core 2.x to Core 3.x API:
+
+#### Old API (Core 2.x):
+```cpp
+ledcSetup(channel, frequency, resolution);
+ledcAttachPin(pin, channel);
+ledcWrite(channel, duty);
+```
+
+#### New API (Core 3.x):
+```cpp
+ledcAttach(pin, frequency, resolution);  // Combined function
+ledcWrite(pin, duty);                    // Write to pin instead of channel
+```
+
+### Project Files Updated
+- ✅ `quiz_buzzer.ino` - Updated for Core 3.x compatibility
+- ✅ `quiz_2teams.ino` - No PWM usage, works with all versions
 
 ## Notes
 - No additional libraries required for basic buzzer functionality
 - System uses only built-in GPIO and Serial communication
+- PWM functionality (buzzers/tones) uses LEDC API
 - Web interface handles all display functionality 
+
+## Troubleshooting Common Issues
+
+### Compilation Errors
+- **"ledcSetup not declared"**: Update to Core 3.x API (see above)
+- **Board not found**: Install ESP32 board support package
+- **Upload fails**: Try different baud rate or hold BOOT button
+
+### Hardware Issues  
+- **No serial output**: Check baud rate (115200)
+- **Connection issues**: Use Chrome/Edge for Web Serial API
+- **GPIO conflicts**: Use safe pins listed in code comments 

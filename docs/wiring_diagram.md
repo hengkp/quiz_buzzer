@@ -1,300 +1,222 @@
-# Detailed Wiring Diagram - ESP32-C Node32s Quiz Buzzer System
+# 🔧 Quiz Buzzer Wiring Diagram
 
-## Component Layout Overview
+## ⚡ YOUR ESP32 Board Pin Configuration
 
+Based on your actual ESP32 board pinout, here are the **confirmed available GPIO pins**:
+
+**Your Board Layout:**
 ```
-                    ┌─────────────────┐
-                    │   Mac/PC USB    │
-                    └─────────┬───────┘
-                              │ USB-C Cable
-                    ┌─────────▼───────┐
-                    │ ESP32-C Node32s │
-                    │                 │
-                    │  GPIO 0,1,4,5,6,7│◄─── Buzzer Inputs (6x)
-                    │  GPIO A0–A5     │◄─── MOSFET Enable (6x)
-                    │  GPIO 10–15     │◄─── Status LEDs (6x)
-                    │  GPIO 8,9       │◄─── Reset Buttons (Yellow/Blue)
-                    │  3V3 GND        │
-                    └─────────────────┘
-                              │
-                    ┌─────────▼───────┐
-                    │   Web Interface │
-                    │  (Chrome/Edge)  │
-                    └─────────────────┘
-
-    Power-Gate Bank (6x BS250 P-Channel MOSFETs on breadboard):
-    ┌─────────────────────────────────────────────────┐
-    │ +3.3V ─── BS250 ─── RJ45 Pin3 ───► Team 1 Power │
-    │           Gate ◄─── A0 (Enable 1)               │
-    │                                                 │
-    │ +3.3V ─── BS250 ─── RJ45 Pin3 ───► Team 2 Power │
-    │           Gate ◄─── A1 (Enable 2)               │
-    │                                                 │
-    │         ... (repeat for Teams 3-6) ...         │
-    └─────────────────────────────────────────────────┘
-
-    Team Connections (Cat-6 cables with RJ45 connectors):
-    Team 1 ────5m Cat-6───► Signal:GPIO0, GND:GND, Power:BS250-1, Enable:A0
-    Team 2 ────5m Cat-6───► Signal:GPIO1, GND:GND, Power:BS250-2, Enable:A1  
-    Team 3 ────5m Cat-6───► Signal:GPIO4, GND:GND, Power:BS250-3, Enable:A2
-    Team 4 ────5m Cat-6───► Signal:GPIO5, GND:GND, Power:BS250-4, Enable:A3
-    Team 5 ────5m Cat-6───► Signal:GPIO6, GND:GND, Power:BS250-5, Enable:A4
-    Team 6 ────5m Cat-6───► Signal:GPIO7, GND:GND, Power:BS250-6, Enable:A5
-    
-    Reset Buttons:
-    Yellow ────────────► GPIO 8
-    Blue   ────────────► GPIO 9
+Right side (USB-C at bottom): 3V3, GND, D15, D2, D4, RX2, TX2, D5, D18, D19, D21, RX0, TX0, D22, D23
+Left side:                    VIN, GND, D13, D14, D27, D26, D25, D33, D32, D35, D34, Vn, VP, EN
 ```
 
-## Cat-6 Cable & RJ45 Pin Mapping
+## 📍 NEW Pin Assignments (Optimized for Your Board)
 
-Each buzzer box uses **4 conductors** from Cat-6 cable with standard color coding:
-
-| RJ45 Pin | Wire Color | Function | Direction | ESP32-C Side | Box Side |
-|----------|------------|----------|-----------|--------------|----------|
-| 1 | White/Orange | BUZZER_SIGNAL | Input | GPIO pin (INPUT_PULLUP) | One leg of push-button |
-| 2 | Solid Orange | GND | Ground | Common ground rail | Other leg of button & LED "–" |
-| 3 | White/Green | POWER | Output | BS250 MOSFET drain | LED/buzzer "+" |
-| 4 | Solid Green | ENABLE | Control | MOSFET gate (via resistors) | Unused (gate control) |
-| 5-8 | *Unused* | - | - | - | - |
-
-## Step-by-Step Wiring Instructions
-
-### Step 1: Prepare the Breadboard
-
-1. Place ESP32-C Node32s on breadboard
-2. Connect power rails:
-   - ESP32-C 3V3 → breadboard positive rail (red)
-   - ESP32-C GND → breadboard negative rail (black/blue)
-
-### Step 2: Build Power-Gate Bank (6x BS250 P-Channel MOSFETs)
-
-For each of the 6 teams, build this circuit on the breadboard:
+### 🏆 2-Team Configuration (`quiz_2teams.ino`):
 
 ```
-       +3.3V rail
-           │
-         ┌─┴─┐ Source
-         │BS │  BS250 P-Channel MOSFET (TO-92 package)
-         │250│
-         │   │
-         └─┬─┘ Drain ──► RJ45 Pin 3 (POWER) out to buzzer box
- Gate ──10Ω┤    
-           │
-      100kΩ│ (pull-up resistor)
-           └──┬───► to +3.3V rail
-             
- ESP32 Pin AX ─► Gate control (Enable signal, active LOW)
+Team 1 Button:  GPIO13 (D13) → GND
+Team 2 Button:  GPIO14 (D14) → GND  
+Team 1 LED:     GPIO18 (D18) → 220Ω → LED+ → GND
+Team 2 LED:     GPIO19 (D19) → 220Ω → LED+ → GND
 ```
 
-**Component Requirements per MOSFET:**
-- 1x BS250 P-Channel MOSFET (TO-92 package)  
-- 1x 10Ω resistor (gate drive limiter)
-- 1x 100kΩ resistor (pull-up to 3.3V)
+### 🏆 6-Team Configuration (`quiz_buzzer.ino`):
 
-**BS250 Pinout (TO-92, flat side facing you):**
 ```
-     ┌─────┐
-     │ BS  │ Flat side
-     │ 250 │
-     └──┬──┘
-   Gate │ │ Source (+3.3V)
-        │ │
-        │ └─── Drain (to load)
-        └───── Gate
-```
+Team Buttons (INPUT_PULLUP):
+- Team 1: GPIO4  (D4)  → GND
+- Team 2: GPIO5  (D5)  → GND
+- Team 3: GPIO13 (D13) → GND
+- Team 4: GPIO14 (D14) → GND
+- Team 5: GPIO21 (D21) → GND
+- Team 6: GPIO22 (D22) → GND
 
-**MOSFET Assignments:**
-- Team 1: Enable → A0, Power out → RJ45-1 Pin 3
-- Team 2: Enable → A1, Power out → RJ45-2 Pin 3  
-- Team 3: Enable → A2, Power out → RJ45-3 Pin 3
-- Team 4: Enable → A3, Power out → RJ45-4 Pin 3
-- Team 5: Enable → A4, Power out → RJ45-5 Pin 3
-- Team 6: Enable → A5, Power out → RJ45-6 Pin 3
-
-### Step 3: Status LEDs (6x on Breadboard)
-
-Each status LED shows which team's power is active:
-
-| Team | ESP32-C Pin | LED Connection |
-|------|-------------|----------------|
-| 1 | GPIO 10 | LED anode → MOSFET drain, cathode → GPIO 10 via 220Ω |
-| 2 | GPIO 11 | LED anode → MOSFET drain, cathode → GPIO 11 via 220Ω |
-| 3 | GPIO 12 | LED anode → MOSFET drain, cathode → GPIO 12 via 220Ω |
-| 4 | GPIO 13 | LED anode → MOSFET drain, cathode → GPIO 13 via 220Ω |
-| 5 | GPIO 14 | LED anode → MOSFET drain, cathode → GPIO 14 via 220Ω |
-| 6 | GPIO 15 | LED anode → MOSFET drain, cathode → GPIO 15 via 220Ω |
-
-**LED Control Logic:**
-- GPIO pin HIGH = LED OFF (cathode pulled up)
-- GPIO pin LOW = LED ON (current flows through 220Ω resistor)
-
-### Step 4: Buzzer Box Connections (Simplified)
-
-Each buzzer box contains **only**:
-1. RJ45 Keystone Jack
-2. Momentary push-button switch 
-3. 5mm Green LED (optional) for "powered" indicator
-4. Buzzer or light for audio/visual feedback
-
-**Inside each buzzer box**:
-```
-RJ45 Keystone Jack          Components
-┌─────────────────┐        ┌─────────────┐
-│ Pin 1 (Signal)  │────────│ Button Leg 1│
-│ Pin 2 (Ground)  │────┬───│ Button Leg 2│
-│ Pin 3 (Power)   │────┼───│ LED/Buzz +  │
-│ Pin 4 (Enable)  │    └───│ LED/Buzz -  │
-│ Pins 5-8 (NC)   │        └─────────────┘
-└─────────────────┘
+Team LEDs (OUTPUT):
+- Team 1: GPIO18 (D18) → 220Ω → LED+ → GND
+- Team 2: GPIO19 (D19) → 220Ω → LED+ → GND
+- Team 3: GPIO23 (D23) → 220Ω → LED+ → GND
+- Team 4: GPIO25 (D25) → 220Ω → LED+ → GND
+- Team 5: GPIO26 (D26) → 220Ω → LED+ → GND
+- Team 6: GPIO27 (D27) → 220Ω → LED+ → GND
 ```
 
-**No internal MOSFETs or complex circuits needed in the boxes!**
+## 🔌 Complete Wiring Instructions
 
-### Step 5: Reset Buttons (Yellow & Blue)
+### 2-Team Setup (Testing):
 
-Two simple momentary pushbuttons on the main breadboard:
-
-| Button Color | ESP32-C Pin | Wiring |
-|--------------|-------------|--------|
-| Yellow | GPIO 8 | One terminal → GPIO 8, other → GND |
-| Blue | GPIO 9 | One terminal → GPIO 9, other → GND |
-
-Both use INPUT_PULLUP mode in software (normally HIGH, LOW when pressed).
-
-### Step 6: Power Connection
-
-- Connect ESP32-C to Mac/PC via USB-C cable
-- This provides both power (5V → 3.3V regulated) and serial communication
-- No external power supply needed
-
-## Complete Pin Usage Table
-
-| ESP32-C Pin | Function | Connection | Pull-up | Notes |
-|-------------|----------|------------|---------|-------|
-| GPIO 0 | Buzzer 1 Signal | RJ45-1 Pin 1 | Internal | Active LOW |
-| GPIO 1 | Buzzer 2 Signal | RJ45-2 Pin 1 | Internal | Active LOW |
-| GPIO 4 | Buzzer 3 Signal | RJ45-3 Pin 1 | Internal | Active LOW |
-| GPIO 5 | Buzzer 4 Signal | RJ45-4 Pin 1 | Internal | Active LOW |
-| GPIO 6 | Buzzer 5 Signal | RJ45-5 Pin 1 | Internal | Active LOW |
-| GPIO 7 | Buzzer 6 Signal | RJ45-6 Pin 1 | Internal | Active LOW |
-| GPIO 8 | Yellow Reset Btn | Button to GND | Internal | Active LOW |
-| GPIO 9 | Blue Reset Btn | Button to GND | Internal | Active LOW |
-| GPIO 10 | Status LED 1 | LED cathode via 220Ω | - | Active LOW |
-| GPIO 11 | Status LED 2 | LED cathode via 220Ω | - | Active LOW |
-| GPIO 12 | Status LED 3 | LED cathode via 220Ω | - | Active LOW |
-| GPIO 13 | Status LED 4 | LED cathode via 220Ω | - | Active LOW |
-| GPIO 14 | Status LED 5 | LED cathode via 220Ω | - | Active LOW |
-| GPIO 15 | Status LED 6 | LED cathode via 220Ω | - | Active LOW |
-| A0 | Enable 1 | BS250 Gate 1 via 10Ω | - | Active LOW |
-| A1 | Enable 2 | BS250 Gate 2 via 10Ω | - | Active LOW |
-| A2 | Enable 3 | BS250 Gate 3 via 10Ω | - | Active LOW |
-| A3 | Enable 4 | BS250 Gate 4 via 10Ω | - | Active LOW |
-| A4 | Enable 5 | BS250 Gate 5 via 10Ω | - | Active LOW |
-| A5 | Enable 6 | BS250 Gate 6 via 10Ω | - | Active LOW |
-| 3V3 | Power | BS250 Sources + breadboard rail | - | 3.3V supply |
-| GND | Ground | Common + RJ45 Pin 2 | - | All grounds |
-
-## Power Control Logic
-
-**Normal State (Ready for Questions):**
-- All Enable pins (A0-A5) = HIGH
-- All BS250 MOSFETs OFF → No power to any buzzer box
-- Teams can press buttons (signal detection still works)
-- All status LEDs OFF
-
-**Winner Locked State:**
-- All Enable pins = HIGH (turn everything OFF first)
-- Winner's Enable pin = LOW (power only the winner's box)
-- Winner's status LED ON, others OFF
-- Winner's box LED/buzzer can light up/sound
-
-**Reset State:**
-- All Enable pins = HIGH 
-- All BS250 MOSFETs OFF → No power to any buzzer box
-- All status LEDs OFF
-- System ready for next question
-
-## Cable Management & Testing
-
-### Cat-6 Cable Assignments
-
-**Standard Cat-6 Color Coding:**
+#### Team 1 Circuit:
 ```
-Pair 1: White/Orange (Pin 1) + Solid Orange (Pin 2)
-Pair 2: White/Green (Pin 3) + Solid Green (Pin 4)  
-Pair 3: White/Blue + Solid Blue (unused)
-Pair 4: White/Brown + Solid Brown (unused)
+ESP32 D13 ────[Button]──── GND
+ESP32 D18 ────[220Ω]────[LED+]──── GND
 ```
 
-**Cable Labeling:**
-- Label each 5m Cat-6 cable clearly: "TEAM 1", "TEAM 2", etc.
-- Use cable ties every 50cm for strain relief
-- Secure connections at both RJ45 ends
-
-### Testing Procedures
-
-**Individual Channel Test:**
-1. Connect one Cat-6 cable between controller and buzzer box
-2. Press buzzer button
-3. Verify signal detection (check serial monitor for "WINNER:X")
-4. Verify power control (status LED should light up)
-5. Test reset functionality
-
-**MOSFET Testing:**
-1. Use multimeter to verify:
-   - Source pin = +3.3V
-   - Gate pin = +3.3V when OFF (Enable pin HIGH)
-   - Gate pin = ~0V when ON (Enable pin LOW)
-   - Drain pin = +3.3V when ON, floating when OFF
-
-**Signal Integrity Test:**
-1. Test all 6 channels simultaneously
-2. Have multiple people press buttons at same time
-3. Verify only first press is registered
-4. Check for false triggers or missed presses
-
-## Troubleshooting Wiring Issues
-
-### MOSFET Problems
+#### Team 2 Circuit:
 ```
-Symptom: LED/buzzer always on
-Check:
-- BS250 pinout (Source to +3.3V, not Drain!)
-- Enable pin going HIGH when should be OFF
-- 100kΩ pull-up resistor present (Gate→Source)
-
-Symptom: LED/buzzer never lights
-Check:
-- BS250 connections (Source, Drain, Gate)
-- Enable pin going LOW when winner selected
-- 10Ω gate drive resistor present
-- Power reaching buzzer box via Pin 3
+ESP32 D14 ────[Button]──── GND
+ESP32 D19 ────[220Ω]────[LED+]──── GND
 ```
 
-### Signal Detection Problems
-```
-Symptom: False triggers
-Check:
-- Solid ground connections (RJ45 Pin 2)
-- 0.1µF capacitor across input and ground
-- Cable shielding for long runs
+### 6-Team Setup (Full System):
 
-Symptom: No button response
-Check:
-- Continuity RJ45 Pin 1 to ESP32-C input
-- Switch closing properly in buzzer box
-- INPUT_PULLUP enabled in software
+#### Buttons (All use INPUT_PULLUP):
+```
+D4  ────[Team 1 Button]──── GND
+D5  ────[Team 2 Button]──── GND
+D13 ────[Team 3 Button]──── GND
+D14 ────[Team 4 Button]──── GND
+D21 ────[Team 5 Button]──── GND
+D22 ────[Team 6 Button]──── GND
 ```
 
-### Status LED Issues
+#### LEDs (All use 220Ω current limiting):
 ```
-Symptom: LEDs always on/off
-Check:
-- LED polarity (anode to MOSFET drain)
-- 220Ω current limiting resistor
-- GPIO pin control (HIGH=off, LOW=on)
-- Common ground connections
+D18 ────[220Ω]────[Team 1 LED+]──── GND
+D19 ────[220Ω]────[Team 2 LED+]──── GND
+D23 ────[220Ω]────[Team 3 LED+]──── GND
+D25 ────[220Ω]────[Team 4 LED+]──── GND
+D26 ────[220Ω]────[Team 5 LED+]──── GND
+D27 ────[220Ω]────[Team 6 LED+]──── GND
 ```
 
-This completes the updated wiring instructions for the ESP32-C Node32s system with Cat-6 infrastructure and centralized BS250 MOSFET power control. 
+## 🚫 Why These Pins Are SAFE
+
+✅ **Pins We're Using (Safe):**
+- **D4, D5**: General purpose I/O, no conflicts
+- **D13, D14**: General purpose I/O, no conflicts
+- **D18, D19**: General purpose I/O, no conflicts
+- **D21, D22, D23**: General purpose I/O, no conflicts
+- **D25, D26, D27**: General purpose I/O, no conflicts
+
+❌ **Pins We're AVOIDING (Problematic):**
+- **D2**: Built-in LED (causes serial corruption)
+- **D15**: Strapping pin (affects boot mode)
+- **RX0, TX0**: Serial programming pins
+- **RX2, TX2**: Serial2 (better to avoid)
+- **D34, D35**: Input-only pins (can't drive LEDs)
+- **VP, Vn**: Analog-only pins
+- **EN**: Reset/Enable pin
+
+## 🛠️ Detailed Component Connections
+
+### Buttons (INPUT_PULLUP Configuration):
+- **No external resistors needed** (using internal pullup)
+- **Wiring**: One leg to GPIO pin, other leg to GND
+- **Logic**: HIGH when released, LOW when pressed
+- **Debounce**: 20ms software debounce in code
+
+### LEDs (OUTPUT Configuration):
+- **Current limiting**: 220Ω resistor required
+- **Wiring**: GPIO → 220Ω resistor → LED anode (long leg) → LED cathode (short leg) → GND
+- **Logic**: HIGH = LED on, LOW = LED off
+- **Current**: ~3.3V / 220Ω = 15mA (safe for ESP32)
+
+### Power Connections:
+```
+ESP32 VIN ──── 5V (from USB)
+ESP32 3V3 ──── 3.3V (regulated output) 
+ESP32 GND ──── Common ground for all components
+```
+
+## 🔧 Arduino IDE Configuration
+
+**Critical Settings for Your Board:**
+```
+Board: "ESP32 Dev Module"
+Upload Speed: 921600
+CPU Frequency: 240MHz
+Flash Frequency: 80MHz
+Flash Mode: QIO
+Flash Size: 4MB
+Partition Scheme: Default
+Baud Rate: 115200
+```
+
+## 🧪 Testing Procedure
+
+### Step 1: Hardware Verification
+1. **Connect ESP32 via USB**
+2. **Wire 2-team circuit** (D13, D14, D18, D19)
+3. **Upload `quiz_2teams.ino`**
+4. **Open Serial Monitor at 115200 baud**
+5. **Should see**: `READY`
+
+### Step 2: Button Testing
+```
+Press Team 1 button (D13) → Should see: WINNER:1
+Press Team 2 button (D14) → Should see: WINNER:2
+Type: RESET → Should see: READY
+```
+
+### Step 3: LED Testing
+```
+Press Team 1 button → D18 LED should light up
+Press Team 2 button → D19 LED should light up
+Type: RESET → All LEDs should turn off
+```
+
+### Step 4: Web Interface Testing
+1. **Close Serial Monitor**
+2. **Run**: `cd web && python dev_server.py`
+3. **Open**: http://localhost:8000/admin
+4. **Should see 6 team buttons with GPIO pin labels**
+5. **Test keyboard keys 1-6 and R**
+
+## 🐛 Troubleshooting Your Board
+
+### Problem: Still Getting Corrupted Serial ()
+**Solution**: 
+1. ✅ Verify board selection: "ESP32 Dev Module"
+2. ✅ Check baud rate: 115200 in both Arduino and Serial Monitor
+3. ✅ Try different USB cable
+4. ✅ Power cycle ESP32
+
+### Problem: Buttons Not Responding
+**Solution**:
+1. ✅ Check wiring: GPIO pin to one button leg, other leg to GND
+2. ✅ Verify pin numbers: D4, D5, D13, D14, D21, D22
+3. ✅ Test button continuity with multimeter
+4. ✅ Ensure momentary (not latching) buttons
+
+### Problem: LEDs Not Lighting
+**Solution**:
+1. ✅ Check LED polarity: Long leg (anode) to resistor
+2. ✅ Verify 220Ω resistor value (Red-Red-Brown bands)
+3. ✅ Confirm GPIO pins: D18, D19, D23, D25, D26, D27
+4. ✅ Test LED with 3V battery to verify it works
+
+### Problem: Web Interface Connection
+**Solution**:
+1. ✅ Use Chrome or Edge browser (Web Serial API required)
+2. ✅ Close Serial Monitor before running web server
+3. ✅ Check URL: http://localhost:8000 (not https)
+
+## 📋 Bill of Materials (Updated)
+
+### For 2-Team Testing:
+- **1x ESP32 board** (your FCC ID 2a53n-esp32)
+- **2x Push buttons** (momentary, normally open)
+- **2x LEDs** (any color, 5mm)
+- **2x 220Ω resistors**
+- **Breadboard + jumper wires**
+- **USB cable**
+
+### For 6-Team Full System:
+- **1x ESP32 board** (your FCC ID 2a53n-esp32)
+- **6x Push buttons** (momentary, normally open)
+- **6x LEDs** (any color, 5mm)
+- **6x 220Ω resistors**
+- **Breadboard or PCB**
+- **Jumper wires**
+- **6x Buzzer boxes** (optional enclosures)
+- **Cat-6 cables** (optional for remote boxes)
+
+## 🎯 Expected Performance
+
+### Normal Operation:
+- **Serial startup**: `READY` within 2 seconds
+- **Button response**: `WINNER:X` within 50ms
+- **LED response**: Light up within 100ms  
+- **Reset time**: All LEDs off within 200ms
+
+This configuration uses your **actual available GPIO pins** and avoids all the problematic pins that were causing serial corruption and connection issues. 
