@@ -29,7 +29,7 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='.', static_url_path='')
 app.config['SECRET_KEY'] = 'buzzer-dev-key'
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
@@ -403,6 +403,15 @@ def verify_or_create_certs(cert_path, key_path):
     
     # Generate new certificates
     return create_self_signed_cert(cert_path, key_path)
+
+@app.route('/assets/<path:filename>')
+def serve_assets(filename):
+    """Serve static assets (MP3, images, etc.)"""
+    from flask import send_from_directory
+    try:
+        return send_from_directory('assets', filename)
+    except FileNotFoundError:
+        return "File not found", 404
 
 @app.route('/')
 def index():

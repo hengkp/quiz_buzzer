@@ -865,6 +865,8 @@
         <!-- Team inputs will be generated here -->
     </div>
     
+
+    
       <div class="settings-actions">
         <button class="settings-button secondary" id="resetAllSettings">Reset All to Default</button>
         <button class="settings-button primary" id="saveSettings">Save Changes</button>
@@ -900,6 +902,95 @@
     let animationFrameId = null;
     let teamBouncers = [];
     let winnerAnimating = false;
+        let duckAudio = null; // HTML5 Audio element for duck sound
+    let isAudioInitialized = false;
+    
+    // Initialize duck sound MP3 file
+    async function initializeAudio() {
+      if (!isAudioInitialized) {
+        try {
+          // Create HTML5 Audio element with the duck sound file
+          duckAudio = new Audio('assets/audio/duck-toy-sound.mp3');
+          duckAudio.preload = 'auto';
+          duckAudio.volume = 0.7;
+          
+          // Wait for audio to be ready
+          await new Promise((resolve, reject) => {
+            duckAudio.addEventListener('canplaythrough', resolve, { once: true });
+            duckAudio.addEventListener('error', reject, { once: true });
+            duckAudio.load(); // Start loading
+          });
+          
+          isAudioInitialized = true;
+          console.log('🦆 Duck sound MP3 loaded successfully!');
+          
+        } catch (error) {
+          console.warn('⚠️ Could not load duck sound MP3:', error);
+          duckAudio = null;
+          isAudioInitialized = false;
+        }
+      }
+      
+      const isReady = duckAudio && isAudioInitialized;
+      
+      if (isReady) {
+        console.log('🦆 Duck sound ready! Using real duck-toy-sound.mp3!');
+      }
+      
+      return isReady;
+    }
+    
+    // Play actual duck sound MP3 file
+    async function playBuzzerSound() {
+      try {
+        // Initialize audio system
+        const audioReady = await initializeAudio();
+        
+        if (!audioReady) {
+          console.warn('⚠️ Duck sound not ready - audio disabled');
+          console.log('💡 Click any button on the page first to enable audio');
+          return;
+        }
+        
+        // Play the actual duck sound MP3 file
+        playDuckSoundMP3();
+        
+      } catch (error) {
+        console.warn('⚠️ Error playing duck sound MP3:', error);
+        console.log('💡 Make sure to interact with the page first (click any button)');
+      }
+    }
+    
+    // 🦆 Play actual duck sound MP3 file
+    function playDuckSoundMP3() {
+      if (!duckAudio || !isAudioInitialized) {
+        console.warn('⚠️ Duck sound MP3 not ready');
+        return;
+      }
+      
+      try {
+        // Reset audio to beginning and play
+        duckAudio.currentTime = 0;
+        const playPromise = duckAudio.play();
+        
+        // Handle modern browser play() promise
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              console.log('🦆 QUACK! Playing real duck-toy-sound.mp3!');
+            })
+            .catch(error => {
+              console.warn('⚠️ Duck sound play failed:', error);
+              console.log('💡 User interaction may be required first');
+            });
+        } else {
+          console.log('🦆 QUACK! Playing real duck-toy-sound.mp3!');
+        }
+        
+      } catch (error) {
+        console.warn('⚠️ Error playing duck sound MP3:', error);
+      }
+    }
     
     // Default team colors (fresh and vibrant)
     const defaultTeamColors = {
@@ -1021,6 +1112,7 @@
         group.appendChild(container);
         teamInputs.appendChild(group);
       }
+      
     }
     
     // Get team color (saved or default)
@@ -2241,14 +2333,17 @@ The system will work in simulation mode.`;
       console.log('❌ Could not extract valid messages from concatenated data');
     }
     
-    // Display functions
+        // Display functions
     function showWinner(teamNum) {
       console.log('🏆 showWinner called for team:', teamNum);
       currentWinner = teamNum;
       const name = getTeamName(teamNum);
       const color = getTeamColor(teamNum);
       
-            console.log('🎯 Starting EXCITING WINNER animation!');
+      // Play adorable duck sound immediately when team buzzes in
+      playBuzzerSound();
+      
+      console.log('🎯 Starting EXCITING WINNER animation!');
       
       // Stop bouncing immediately and freeze other teams
       stopBouncing();
@@ -2523,6 +2618,8 @@ The system will work in simulation mode.`;
         updateBouncerTeamColor(i, defaultTeamColors[i]);
       }
       
+
+      
       console.log('🔄 All settings reset to default');
     }
     
@@ -2541,8 +2638,12 @@ The system will work in simulation mode.`;
     }
 
     // Event listeners
-    connectDeviceBtn.addEventListener('click', connectSerial);
-    cancelConnect.addEventListener('click', () => {
+    connectDeviceBtn.addEventListener('click', async () => {
+      await initializeAudio(); // Initialize audio on user interaction
+      connectSerial();
+    });
+    cancelConnect.addEventListener('click', async () => {
+      await initializeAudio(); // Initialize audio on user interaction
       connectionModal.classList.remove('visible');
     });
 
@@ -2553,24 +2654,32 @@ The system will work in simulation mode.`;
       }
     });
 
-    settingsBtn.addEventListener('click', () => {
+    settingsBtn.addEventListener('click', async () => {
+      await initializeAudio(); // Initialize audio on user interaction
       settingsModal.classList.add('visible');
     });
 
-    closeSettings.addEventListener('click', () => {
+    closeSettings.addEventListener('click', async () => {
+      await initializeAudio(); // Initialize audio on user interaction
       settingsModal.classList.remove('visible');
     });
 
-    settingsModal.addEventListener('click', (e) => {
+    settingsModal.addEventListener('click', async (e) => {
+      await initializeAudio(); // Initialize audio on user interaction
       if (e.target === settingsModal) {
         settingsModal.classList.remove('visible');
       }
     });
 
-    resetBtn.addEventListener('click', sendReset);
+    resetBtn.addEventListener('click', async () => {
+      await initializeAudio(); // Initialize audio on user interaction
+      sendReset();
+    });
 
     // Settings event listeners
-    document.addEventListener('click', (e) => {
+    document.addEventListener('click', async (e) => {
+      await initializeAudio(); // Initialize audio on user interaction
+      
       if (e.target && e.target.id === 'resetAllSettings') {
         if (confirm('Reset all team names and colors to default? This cannot be undone.')) {
           resetAllSettings();
@@ -2615,7 +2724,10 @@ The system will work in simulation mode.`;
     }
 
     // Keyboard event listener for testing
-    document.addEventListener('keydown', (event) => {
+    document.addEventListener('keydown', async (event) => {
+      // Initialize audio on first user interaction
+      await initializeAudio();
+      
       // Only respond to number keys 1-6 and only when no modal is open
       const key = event.key;
       const isModalOpen = settingsModal.classList.contains('visible') || 
@@ -2657,6 +2769,9 @@ The system will work in simulation mode.`;
       }
     });
 
+    // Global function for testing duck sound
+    window.playDuckSound = playBuzzerSound;
+    
     // Debug functions (available in console)
     window.debugSerial = {
       status: () => {
@@ -2838,6 +2953,9 @@ The system will work in simulation mode.`;
       console.log('  window.debugSerial.disconnectAndForget() - Disconnect & unpair');
       console.log('  window.debugSerial.restartRead() - Restart reading');
       console.log('  window.debugSerial.sendTest() - Send test command');
+      console.log('');
+      console.log('🦆 Duck Sound Commands:');
+      console.log('  window.playDuckSound() - Play cute duck sound manually');
     }
 
     // Disconnect function with option to forget device
@@ -2916,7 +3034,10 @@ The system will work in simulation mode.`;
 
     // Add disconnect button functionality to connection button
     function updateConnectionButton() {
-      connectionBtn.addEventListener('click', () => {
+      connectionBtn.addEventListener('click', async () => {
+        // Initialize audio on user interaction
+        await initializeAudio();
+        
         console.log('🔗 Connection button clicked, isConnected:', isConnected);
         
         if (isConnected) {
@@ -2951,10 +3072,27 @@ The system will work in simulation mode.`;
       
       // Show keyboard shortcuts info in console
       console.log('🚀 EXCITING Quiz Buzzer with SPECTACULAR Winner Staging!');
+      console.log('🦆 NEW: Real Duck Sound MP3 System!');
+      console.log('   🎵 Using actual duck-toy-sound.mp3 file');
+      console.log('   🔊 High-quality MP3 audio playback');
+      console.log('   📁 Organized in assets/audio/ folder');
       console.log('🎮 Keyboard Shortcuts Available:');
-      console.log('  Keys 1-6: Simulate team buzzer presses');
+      console.log('  Keys 1-6: Simulate team buzzer presses (with real duck sound!)');
       console.log('  Key R: Reset system (works in all modes)');
       console.log('  Note: Shortcuts work when no modal is open');
+      console.log('');
+      console.log('🔊 AUDIO SETUP:');
+      console.log('  • Duck sound requires user interaction to enable');
+      console.log('  • Click any button first (connection, settings, etc.)');
+      console.log('  • After first click, all duck sounds will work');
+      console.log('  • Audio will auto-initialize on first keyboard press');
+      console.log('');
+      console.log('🦆 DUCK SOUND SYSTEM:');
+      console.log('  • Real MP3 file: assets/audio/duck-toy-sound.mp3');
+      console.log('  • HTML5 Audio element for reliable playback');
+      console.log('  • Auto-preload and volume optimization');
+      console.log('  • Browser autoplay policy compliant');
+      console.log('  • Test duck sound: window.playDuckSound()');
       console.log('🎱 REALISTIC BILLIARD BALL Physics!');
       console.log('  🎯 Center circle collision - precise contact detection');
       console.log('  📏 Teams bounce only when actually touching (no early collisions)');
