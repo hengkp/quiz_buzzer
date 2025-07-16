@@ -4,10 +4,10 @@
 const int BUZZER_PIN[6] = {4, 5, 13, 14, 21, 22};
 
 // Cat-6 Pin3 → box LEDs (LOW = ON)
-const int LED_PIN[6]    = {18, 19, 23, 25, 26, 27 };
+const int LED_PIN[6]    = {18, 19, 23, 27, 26, 25 };
 
 // Cat-6 Pin4 → box speakers (tone())
-const int SOUND_PIN[6]  = {2, 15, 16, 17, 32, 33};
+const int SOUND_PIN[6]  = {15, 2, 16, 17, 33, 32};
 
 // On-board BOOT button → reset
 const int RESET_BUTTON  = 0;
