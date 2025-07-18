@@ -114,13 +114,17 @@ class ArduinoSerial:
         self.write_thread.start()
     
     def _read_loop(self):
-        """Optimized non-blocking read loop with message validation"""
+        """Optimized non-blocking read loop with message validation and disconnect detection"""
         buffer = ""
+        consecutive_errors = 0
+        max_errors = 5  # Max consecutive errors before assuming disconnect
+        
         while self.is_connected and not self.stop_threads:
             try:
                 if self.serial_port and self.serial_port.in_waiting > 0:
                     data = self.serial_port.read(self.serial_port.in_waiting).decode('utf-8', errors='ignore')
                     buffer += data
+                    consecutive_errors = 0  # Reset error count on successful read
                     
                     # Process complete lines with validation
                     while '\n' in buffer:
@@ -136,8 +140,20 @@ class ArduinoSerial:
                 time.sleep(0.01)  # Small delay to prevent CPU spinning
                 
             except Exception as e:
-                logger.error(f"Read error: {e}")
-                time.sleep(0.1)
+                consecutive_errors += 1
+                
+                # Check for device disconnection errors
+                if "Device not configured" in str(e) or "Errno 6" in str(e):
+                    logger.error(f"Arduino device disconnected: {e}")
+                    self._handle_disconnection()
+                    break
+                elif consecutive_errors >= max_errors:
+                    logger.error(f"Too many consecutive read errors ({consecutive_errors}), assuming device disconnect")
+                    self._handle_disconnection()
+                    break
+                else:
+                    logger.error(f"Read error ({consecutive_errors}/{max_errors}): {e}")
+                    time.sleep(0.5)  # Longer delay after errors
 
     def _validate_message(self, message):
         """Validate Arduino message format and integrity"""
@@ -214,8 +230,36 @@ class ArduinoSerial:
         logger.info(f"Unknown message format (may be valid): {message}")
         return True
     
+    def _handle_disconnection(self):
+        """Handle Arduino disconnection gracefully"""
+        logger.warning("🔌 Arduino disconnected - cleaning up connection...")
+        
+        # Mark as disconnected to stop loops
+        self.is_connected = False
+        
+        # Clean up serial port
+        if self.serial_port:
+            try:
+                self.serial_port.close()
+            except:
+                pass  # Ignore errors during cleanup
+            self.serial_port = None
+        
+        # Update game state
+        global game_state
+        game_state['arduino_connected'] = False
+        
+        # Notify clients
+        socketio.emit('arduino_status', {'connected': False, 'message': 'Arduino disconnected'})
+        socketio.emit('log', {'message': 'Arduino disconnected - running in simulation mode'})
+        
+        logger.info("✅ Arduino disconnect handled - server continuing in simulation mode")
+
     def _write_loop(self):
-        """Non-blocking write loop with queue"""
+        """Non-blocking write loop with queue and disconnect detection"""
+        consecutive_errors = 0
+        max_errors = 3  # Fewer retries for write errors
+        
         while self.is_connected and not self.stop_threads:
             try:
                 # Wait for data to write (with timeout)
@@ -224,14 +268,27 @@ class ArduinoSerial:
                 if self.serial_port and self.is_connected:
                     self.serial_port.write(data.encode('utf-8'))
                     self.serial_port.flush()
+                    consecutive_errors = 0  # Reset on successful write
                     
                 self.write_queue.task_done()
                 
             except queue.Empty:
                 continue
             except Exception as e:
-                logger.error(f"Write error: {e}")
-                time.sleep(0.1)
+                consecutive_errors += 1
+                
+                # Check for device disconnection errors
+                if "Device not configured" in str(e) or "Errno 6" in str(e):
+                    logger.error(f"Arduino device disconnected during write: {e}")
+                    self._handle_disconnection()
+                    break
+                elif consecutive_errors >= max_errors:
+                    logger.error(f"Too many consecutive write errors ({consecutive_errors}), assuming device disconnect")
+                    self._handle_disconnection()
+                    break
+                else:
+                    logger.error(f"Write error ({consecutive_errors}/{max_errors}): {e}")
+                    time.sleep(0.5)
     
     def _handle_arduino_message(self, message):
         """Handle incoming Arduino messages with improved validation"""
@@ -244,11 +301,19 @@ class ArduinoSerial:
         if message.startswith('WINNER:'):
             try:
                 team = int(message.split(':')[1])
-                if game_state['winner'] is None:
+                if game_state['winner'] is None and 1 <= team <= 6:
                     game_state['winner'] = team
                     logger.info(f"🏆 Team {team} wins!")
+                    
+                    # Emit buzzer press event for Among Us interface
+                    socketio.emit('buzzer_pressed', {'teamId': team})
+                    add_log(f"Team {team} win the buzz")
                 else:
-                    logger.warning(f"Team {team} winner ignored - Team {game_state['winner']} already won")
+                    if team < 1 or team > 6:
+                        logger.warning(f"Invalid team number: {team}")
+                    else:
+                        logger.warning(f"Team {team} winner ignored - Team {game_state['winner']} already won")
+                        add_log(f"Team {team} buzzed (too late)")
             except (ValueError, IndexError):
                 logger.warning(f"Invalid winner message format: {message}")
         elif message.startswith('TIMING:'):
@@ -264,6 +329,7 @@ class ArduinoSerial:
         elif message in ['RESET', 'READY']:
             game_state['winner'] = None
             logger.info(f"🔄 Game reset: {message}")
+            socketio.emit('clear_buzzers')
         else:
             logger.info(f"ℹ️ Other message: {message}")
     
@@ -276,26 +342,65 @@ class ArduinoSerial:
     
     def disconnect(self):
         """Disconnect from Arduino"""
+        logger.info("Disconnecting from Arduino...")
+        
         self.stop_threads = True
         self.is_connected = False
         
+        # Clear write queue
+        try:
+            while not self.write_queue.empty():
+                self.write_queue.get_nowait()
+                self.write_queue.task_done()
+        except:
+            pass
+        
+        # Wait for threads to finish
+        if hasattr(self, 'read_thread') and self.read_thread and self.read_thread.is_alive():
+            self.read_thread.join(timeout=1)
+            
+        if hasattr(self, 'write_thread') and self.write_thread and self.write_thread.is_alive():
+            self.write_thread.join(timeout=1)
+        
+        # Close serial port
         if self.serial_port:
             try:
                 self.serial_port.close()
-            except:
-                pass
+            except Exception as e:
+                logger.error(f"Error closing serial port: {e}")
             self.serial_port = None
             
-        logger.info("Arduino disconnected")
+        logger.info("✅ Arduino disconnected cleanly")
 
 # Initialize Arduino communication
 arduino = ArduinoSerial()
 
-# Enhanced game state
+# Enhanced game state for Among Us Quiz Bowl
 game_state = {
     'winner': None,
     'connected_clients': 0,
-    'arduino_connected': False
+    'arduino_connected': False,
+    'teams': {
+        1: {'name': 'Team 1', 'score': 0, 'color': 'red', 'cards': {'angel': False, 'devil': False, 'cross': False}, 'rank': 0},
+        2: {'name': 'Team 2', 'score': 0, 'color': 'blue', 'cards': {'angel': False, 'devil': False, 'cross': False}, 'rank': 0},
+        3: {'name': 'Team 3', 'score': 0, 'color': 'lime', 'cards': {'angel': False, 'devil': False, 'cross': False}, 'rank': 0},
+        4: {'name': 'Team 4', 'score': 0, 'color': 'orange', 'cards': {'angel': False, 'devil': False, 'cross': False}, 'rank': 0},
+        5: {'name': 'Team 5', 'score': 0, 'color': 'purple', 'cards': {'angel': False, 'devil': False, 'cross': False}, 'rank': 0},
+        6: {'name': 'Team 6', 'score': 0, 'color': 'cyan', 'cards': {'angel': False, 'devil': False, 'cross': False}, 'rank': 0}
+    },
+    'timer': {
+        'value': 15,
+        'running': False,
+        'default': 15
+    },
+    'question_set': {
+        'current': 1,
+        'subject': 'general',
+        'title': '',
+        'sub_question': 0
+    },
+    'challenge_2x': False,
+    'logs': []
 }
 
 def create_self_signed_cert(cert_path="ssl/server.crt", key_path="ssl/server.key"):
@@ -415,81 +520,34 @@ def serve_assets(filename):
 
 @app.route('/')
 def index():
-    """Serve the buzzer HTML with WebSocket integration"""
+    """Serve the unified Among Us interface"""
     try:
-        with open('buzzer.html', 'r') as f:
-            html_content = f.read()
-        
-        # Inject WebSocket client code
-        websocket_code = """
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>
-      let socket;
-      
-      function connectToDevServer() {
-        // Use the current protocol (HTTP or HTTPS)
-        const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-        const socketUrl = `${protocol}//${window.location.host}`;
-        
-        socket = io(socketUrl);
-        
-        socket.on('connect', function() {
-          isConnected = true;
-          statusDot.className = 'status-dot connected';
-          connectionModal.classList.remove('visible');
-          console.log('Connected to dev server via', protocol);
-        });
-        
-        socket.on('disconnect', function() {
-          isConnected = false;
-          statusDot.className = 'status-dot';
-          console.log('Disconnected from dev server');
-          
-          // Clear any connection state to ensure clean reconnect
-          if (typeof socket !== 'undefined') {
-            socket = null;
-          }
-        });
-        
-        socket.on('buzzer_data', function(data) {
-          console.log('Received from dev server:', data);
-          handleSerialData(data);
-        });
-        
-        return Promise.resolve();
-      }
-      
-      // Override functions for dev server
-      window.sendReset = async function() {
-        if (socket && socket.connected) {
-          socket.emit('reset_buzzers');
-          console.log('Reset sent to dev server');
-        } else {
-          resetDisplay();
-        }
-      };
-      
-      window.connectSerial = async function() {
-        console.log('🔄 Dev server reconnect requested - refreshing page for clean connection...');
-        window.location.reload();
-        return Promise.resolve();
-      };
-      
-      // Auto-connect when page loads
-      window.addEventListener('load', function() {
-        const isHttps = window.location.protocol === 'https:';
-        console.log(`Dev server mode (${isHttps ? 'HTTPS' : 'HTTP'}) - auto-connecting...`);
-        connectToDevServer();
-      });
-    </script>
-    """
-        
-        # Insert before closing body tag
-        modified_html = html_content.replace('</body>', websocket_code + '</body>')
-        return modified_html
-        
+        with open('among_us.html', 'r') as f:
+            return f.read()
     except FileNotFoundError:
-        return "<h1>Error: buzzer.html not found</h1>"
+        return "<h1>Error: among_us.html not found</h1>", 404
+
+@app.route('/among_us')
+def among_us():
+    """Serve the unified Among Us interface"""
+    try:
+        with open('among_us.html', 'r') as f:
+            return f.read()
+    except FileNotFoundError:
+        return "<h1>Error: among_us.html not found</h1>", 404
+
+@app.route('/console')
+def console():
+    """Serve the console window interface"""
+    try:
+        with open('console.html', 'r') as f:
+            return f.read()
+    except FileNotFoundError:
+        return "<h1>Error: console.html not found</h1>", 404
+
+
+
+
 
 @socketio.on('connect')
 def handle_connect():
@@ -602,6 +660,348 @@ def handle_get_serial_ports():
             logger.error(f"Error listing ports: {e}")
     
     socketio.emit('serial_ports', {'ports': ports, 'available': SERIAL_AVAILABLE})
+
+# Among Us Quiz Bowl Event Handlers
+
+@socketio.on('refresh_ports')
+def handle_refresh_ports():
+    """Refresh and send available serial ports"""
+    handle_get_serial_ports()
+    emit('ports_refreshed', {'ports': []})
+
+@socketio.on('team_update')
+def handle_team_update(data):
+    """Handle team information updates"""
+    team_id = data.get('teamId')
+    updates = data.get('updates', {})
+    
+    if team_id in game_state['teams']:
+        game_state['teams'][team_id].update(updates)
+        
+        # Broadcast update to all clients
+        socketio.emit('team_update', {
+            'teamId': team_id,
+            'updates': updates
+        })
+        
+        # Log the update
+        if 'name' in updates:
+            add_log(f"Team {team_id} name changed to '{updates['name']}'")
+        if 'color' in updates:
+            add_log(f"Team {team_id} color changed to {updates['color']}")
+
+@socketio.on('score_update')
+def handle_score_update(data):
+    """Handle score updates with sound effects"""
+    team_id = data.get('teamId')
+    score = data.get('score')
+    adjustment = data.get('adjustment', 0)
+    correct = data.get('correct', adjustment > 0)
+    reset = data.get('reset', False)
+    
+    if team_id in game_state['teams']:
+        game_state['teams'][team_id]['score'] = score
+        
+        # Broadcast score update
+        socketio.emit('score_update', {
+            'teamId': team_id,
+            'score': score,
+            'adjustment': adjustment,
+            'correct': correct,
+            'reset': reset
+        })
+        
+        # Log the score change
+        if reset:
+            add_log(f"Team {team_id} score reset to 0")
+        else:
+            action = "correct" if correct else "incorrect"
+            challenge_text = " (2x Challenge)" if game_state['challenge_2x'] and adjustment != 0 else ""
+            add_log(f"Team {team_id} answered {action} and got {'+' if adjustment > 0 else ''}{adjustment}{challenge_text}")
+
+@socketio.on('set_timer')
+def handle_set_timer(data):
+    """Set timer value"""
+    value = data.get('value', 15)
+    game_state['timer']['value'] = value
+    game_state['timer']['default'] = value
+    
+    socketio.emit('timer_update', {
+        'value': value,
+        'running': game_state['timer']['running']
+    })
+    
+    add_log(f"Timer set to {format_time(value)}")
+
+@socketio.on('start_timer')
+def handle_start_timer():
+    """Start the timer"""
+    game_state['timer']['running'] = True
+    
+    socketio.emit('timer_update', {
+        'value': game_state['timer']['value'],
+        'running': True
+    })
+    
+    add_log("Timer started")
+
+@socketio.on('pause_timer')
+def handle_pause_timer():
+    """Pause the timer"""
+    game_state['timer']['running'] = False
+    
+    socketio.emit('timer_update', {
+        'value': game_state['timer']['value'],
+        'running': False
+    })
+    
+    add_log("Timer paused")
+
+@socketio.on('stop_timer')
+def handle_stop_timer():
+    """Stop the timer"""
+    game_state['timer']['running'] = False
+    
+    socketio.emit('timer_update', {
+        'value': game_state['timer']['value'],
+        'running': False
+    })
+    
+    add_log("Timer stopped")
+
+@socketio.on('reset_timer')
+def handle_reset_timer(data):
+    """Reset timer to default or specified value"""
+    value = data.get('value', game_state['timer']['default'])
+    game_state['timer']['value'] = value
+    game_state['timer']['running'] = False
+    
+    socketio.emit('timer_update', {
+        'value': value,
+        'running': False
+    })
+    
+    add_log("Timer reset")
+
+@socketio.on('timer_ended')
+def handle_timer_ended():
+    """Handle timer reaching zero"""
+    game_state['timer']['running'] = False
+    add_log("Timer ended")
+
+@socketio.on('question_set_update')
+def handle_question_set_update(data):
+    """Update question set information"""
+    set_number = data.get('setNumber', 1)
+    subject = data.get('subject', 'general')
+    title = data.get('title', '')
+    sub_question = data.get('subQuestion', 0)
+    
+    game_state['question_set'].update({
+        'current': set_number,
+        'subject': subject,
+        'title': title,
+        'sub_question': sub_question
+    })
+    
+    socketio.emit('question_set_update', {
+        'setNumber': set_number,
+        'subject': subject,
+        'title': title,
+        'subQuestion': sub_question
+    })
+
+@socketio.on('start_question_set')
+def handle_start_question_set(data):
+    """Start a new question set"""
+    set_number = data.get('setNumber', 1)
+    subject = data.get('subject', 'general')
+    
+    game_state['question_set'].update({
+        'current': set_number,
+        'subject': subject,
+        'sub_question': 0
+    })
+    
+    socketio.emit('question_set_update', {
+        'setNumber': set_number,
+        'subject': subject,
+        'subQuestion': 0
+    })
+    
+    add_log(f"Started Question Set {set_number}")
+
+@socketio.on('reset_question_set')
+def handle_reset_question_set():
+    """Reset question set to beginning"""
+    game_state['question_set']['sub_question'] = 0
+    
+    socketio.emit('question_set_update', {
+        'setNumber': game_state['question_set']['current'],
+        'subject': game_state['question_set']['subject'],
+        'subQuestion': 0
+    })
+    
+    add_log("Question set reset")
+
+@socketio.on('action_card_used')
+def handle_action_card_used(data):
+    """Handle action card usage"""
+    team_id = data.get('teamId')
+    card_type = data.get('cardType')
+    used = data.get('used', True)
+    
+    if team_id in game_state['teams'] and card_type in ['angel', 'devil', 'cross']:
+        game_state['teams'][team_id]['cards'][card_type] = used
+        
+        socketio.emit('action_card_used', {
+            'teamId': team_id,
+            'cardType': card_type,
+            'used': used
+        })
+        
+        action = "used" if used else "reset"
+        add_log(f"Team {team_id} {card_type} card {action}")
+
+@socketio.on('challenge_update')
+def handle_challenge_update(data):
+    """Handle 2x challenge toggle"""
+    enabled = data.get('enabled', False)
+    game_state['challenge_2x'] = enabled
+    
+    socketio.emit('challenge_update', {'enabled': enabled})
+    
+    add_log(f"2x Challenge {'enabled' if enabled else 'disabled'}")
+
+@socketio.on('clear_buzzers')
+def handle_clear_buzzers():
+    """Clear all buzzers"""
+    game_state['winner'] = None
+    
+    if arduino.is_connected:
+        arduino.write('RESET\n')
+    
+    socketio.emit('clear_buzzers')
+    add_log("All buzzers cleared")
+
+@socketio.on('buzzer_pressed')
+def handle_buzzer_pressed(data):
+    """Handle buzzer press from Arduino or simulation"""
+    team_id = data.get('teamId')
+    
+    if game_state['winner'] is None:
+        game_state['winner'] = team_id
+        
+        socketio.emit('buzzer_pressed', {'teamId': team_id})
+        add_log(f"Team {team_id} win the buzz")
+    else:
+        add_log(f"Team {team_id} buzzed (too late)")
+
+@socketio.on('progress_update')
+def handle_progress_update(data):
+    """Handle progress bar updates"""
+    set_number = data.get('setNumber', 1)
+    question_number = data.get('questionNumber', 1)
+    title = data.get('title', '')
+    subject = data.get('subject', 'general')
+    progress_percentage = data.get('progressPercentage', 0)
+    animate_run = data.get('animateRun', False)
+    
+    # Update game state
+    game_state['question_set'].update({
+        'current': set_number,
+        'question_number': question_number,
+        'title': title,
+        'subject': subject,
+        'progress': progress_percentage
+    })
+    
+    # Broadcast to all clients
+    socketio.emit('progress_update', {
+        'setNumber': set_number,
+        'questionNumber': question_number,
+        'title': title,
+        'subject': subject,
+        'progressPercentage': progress_percentage,
+        'animateRun': animate_run
+    })
+
+@socketio.on('character_update')
+def handle_character_update(data):
+    """Handle character color updates"""
+    team_id = data.get('teamId')
+    color = data.get('color')
+    
+    if team_id in game_state['teams']:
+        game_state['teams'][team_id]['color'] = color
+        
+        # Broadcast to all clients
+        socketio.emit('character_update', {
+            'teamId': team_id,
+            'color': color
+        })
+
+@socketio.on('test_buzzer')
+def handle_test_buzzer(data):
+    """Handle test buzzer press from keyboard shortcuts"""
+    team_id = data.get('teamId')
+    
+    if game_state['winner'] is None:
+        game_state['winner'] = team_id
+        
+        socketio.emit('buzzer_pressed', {'teamId': team_id})
+        add_log(f"Team {team_id} test buzz-in")
+    else:
+        add_log(f"Team {team_id} test buzzed (too late)")
+
+def add_log(message, type='info'):
+    """Add entry to game logs"""
+    import datetime
+    
+    log_entry = {
+        'timestamp': datetime.datetime.now().isoformat(),
+        'message': message,
+        'type': type
+    }
+    
+    game_state['logs'].append(log_entry)
+    
+    # Keep only last 100 log entries
+    if len(game_state['logs']) > 100:
+        game_state['logs'] = game_state['logs'][-100:]
+    
+    # Broadcast to all clients
+    socketio.emit('log_update', log_entry)
+
+def format_time(seconds):
+    """Format seconds into MM:SS format"""
+    mins = seconds // 60
+    secs = seconds % 60
+    return f"{mins}:{secs:02d}"
+
+# Timer background thread
+def timer_thread():
+    """Background thread to handle timer countdown"""
+    while True:
+        time.sleep(1)
+        if game_state['timer']['running'] and game_state['timer']['value'] > 0:
+            game_state['timer']['value'] -= 1
+            
+            # Broadcast timer update
+            socketio.emit('timer_update', {
+                'value': game_state['timer']['value'],
+                'running': game_state['timer']['running']
+            })
+            
+            # Check if timer reached zero
+            if game_state['timer']['value'] == 0:
+                game_state['timer']['running'] = False
+                socketio.emit('timer_ended')
+                add_log("Timer ended")
+
+# Start timer thread
+timer_bg_thread = threading.Thread(target=timer_thread, daemon=True)
+timer_bg_thread.start()
 
 def main():
     """Run the development server with HTTP or HTTPS support"""

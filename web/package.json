@@ -1,0 +1,55 @@
+{
+  "name": "among-us-quiz-buzzer",
+  "version": "1.0.0",
+  "description": "Among Us themed quiz buzzer system with progress character white script",
+  "main": "dev_server.py",
+  "scripts": {
+    "test": "node run_progress_white_test.js",
+    "test:syntax": "node run_progress_white_test.js --syntax",
+    "test:html": "node run_progress_white_test.js --html",
+    "test:animations": "node run_progress_white_test.js --animations",
+    "start": "python dev_server.py",
+    "start:https": "python dev_server.py --https",
+    "dev": "python dev_server.py",
+    "serve": "python dev_server.py"
+  },
+  "keywords": [
+    "quiz",
+    "buzzer",
+    "among-us",
+    "lottie",
+    "animation",
+    "education",
+    "competition"
+  ],
+  "author": "Quiz Buzzer Team",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "node": ">=12.0.0",
+    "python": ">=3.7.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/quiz_buzzer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/quiz_buzzer/issues"
+  },
+  "homepage": "https://github.com/yourusername/quiz_buzzer#readme",
+  "files": [
+    "set_progress_white.js",
+    "test_progress_white.html",
+    "run_progress_white_test.js",
+    "README_progress_white.md",
+    "among_us.html",
+    "console.html",
+    "dev_server.py",
+    "assets/"
+  ],
+  "directories": {
+    "test": "./",
+    "doc": "./"
+  }
+} 
