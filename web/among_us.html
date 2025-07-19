@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Among Us Quiz Bowl - Unified Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="set_progress_white.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         
@@ -784,7 +786,8 @@
             border: 2px solid rgba(255, 255, 255, 0.3);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
-            overflow: hidden;
+            overflow: visible;
+            min-height: 200px;
         }
         
         .team-card-main.buzzing {
@@ -856,18 +859,20 @@
         
         .score-display {
             position: absolute;
-            top: 50%;
-            right: -10px;
-            transform: translateY(-50%);
-            font-size: 2.2rem;
+            top: 10px;
+            right: 10px;
+            font-size: 1.8rem;
             font-weight: 700;
             color: #2c3e50;
-            background: rgba(52, 73, 94, 0.1);
-            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 6px 10px;
             border-radius: 12px;
-            border: 2px solid rgba(52, 73, 94, 0.2);
-            min-width: 60px;
+            border: 2px solid rgba(var(--team-color), 0.3);
+            min-width: 50px;
             text-align: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 10;
         }
         
         .action-cards {
@@ -945,16 +950,80 @@
         
         /* Enhanced Responsive Design */
         
+        /* Common base styles for all screens */
+        .main-container {
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Projector screens 4:3 aspect ratio */
+        @media screen and (aspect-ratio: 4/3) {
+            .teams-grid-main { 
+                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: repeat(2, 1fr);
+                gap: 1.5vw;
+            }
+            .team-card-main { 
+                padding: 1.2vw; 
+                min-height: 15vh;
+            }
+            .main-title { font-size: 3.5vw; }
+            .subtitle { font-size: 1.8vw; }
+            .timer-value { font-size: 3vw; }
+            .character-container { width: 6vw; height: 6vw; }
+            .score-display { font-size: 1.4vw; }
+        }
+        
+        /* Projector screens 16:10 aspect ratio */
+        @media screen and (aspect-ratio: 16/10) {
+            .teams-grid-main { 
+                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: repeat(2, 1fr);
+                gap: 1.2vw;
+            }
+            .team-card-main { 
+                padding: 1vw; 
+                min-height: 18vh;
+            }
+            .main-title { font-size: 3vw; }
+            .subtitle { font-size: 1.5vw; }
+            .timer-value { font-size: 2.5vw; }
+            .character-container { width: 5vw; height: 5vw; }
+            .score-display { font-size: 1.2vw; }
+        }
+        
+        /* Wide screens 16:9 aspect ratio */
+        @media screen and (aspect-ratio: 16/9) {
+            .teams-grid-main { 
+                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: repeat(2, 1fr);
+                gap: 1vw;
+            }
+            .team-card-main { 
+                padding: 0.8vw; 
+                min-height: 20vh;
+            }
+            .main-title { font-size: 2.8vw; }
+            .subtitle { font-size: 1.4vw; }
+            .timer-value { font-size: 2.2vw; }
+            .character-container { width: 4.5vw; height: 4.5vw; }
+            .score-display { font-size: 1.1vw; }
+        }
+        
         /* Ultra-wide screens (4K, 8K) */
         @media (min-width: 2560px) {
             .main-title { font-size: 4rem; }
             .subtitle { font-size: 2.2rem; }
             .date-venue { font-size: 1.4rem; }
-            .team-card-main { padding: 25px; font-size: 1.2rem; }
+            .team-card-main { padding: 25px; font-size: 1.2rem; min-height: 250px; }
             .character-container { width: 100px; height: 100px; }
             .among-us-character { width: 120px; height: 120px; }
             .progress-container { margin: 40px 0; }
             .timer-value { font-size: 4rem; }
+            .score-display { font-size: 2rem; }
         }
         
         /* Large desktop screens */
@@ -962,18 +1031,20 @@
             .main-title { font-size: 3.2rem; }
             .subtitle { font-size: 1.8rem; }
             .date-venue { font-size: 1.1rem; }
-            .team-card-main { padding: 20px; }
+            .team-card-main { padding: 20px; min-height: 220px; }
             .character-container { width: 85px; height: 85px; }
             .among-us-character { width: 100px; height: 100px; }
+            .score-display { font-size: 1.8rem; }
         }
         
         /* Standard desktop screens */
         @media (min-width: 1440px) and (max-width: 1919px) {
             .main-title { font-size: 2.8rem; }
             .subtitle { font-size: 1.6rem; }
-            .team-card-main { padding: 18px; }
+            .team-card-main { padding: 18px; min-height: 200px; }
             .character-container { width: 75px; height: 75px; }
             .among-us-character { width: 90px; height: 90px; }
+            .score-display { font-size: 1.6rem; }
         }
         
         /* Medium desktop screens */
@@ -981,9 +1052,10 @@
             .main-title { font-size: 2.4rem; }
             .subtitle { font-size: 1.4rem; }
             .teams-grid-main { gap: 15px; }
-            .team-card-main { padding: 15px; }
+            .team-card-main { padding: 15px; min-height: 180px; }
             .character-container { width: 70px; height: 70px; }
             .among-us-character { width: 80px; height: 80px; }
+            .score-display { font-size: 1.4rem; }
         }
         
         /* Small desktop / Large laptop */
@@ -993,9 +1065,10 @@
             .date-venue { font-size: 0.9rem; }
             .character-container { width: 60px; height: 60px; }
             .among-us-character { width: 70px; height: 70px; }
-            .team-card-main { padding: 12px; font-size: 0.9rem; }
+            .team-card-main { padding: 12px; font-size: 0.9rem; min-height: 160px; }
             .teams-grid-main { gap: 12px; }
             .timer-value { font-size: 2.5rem; }
+            .score-display { font-size: 1.2rem; }
         }
         
         /* Tablet landscape */
@@ -1012,6 +1085,7 @@
             .team-card-main { 
                 padding: 10px; 
                 font-size: 0.8rem;
+                min-height: 140px;
             }
             .character-container { width: 50px; height: 50px; }
             .among-us-character { width: 60px; height: 60px; }
@@ -1021,6 +1095,7 @@
                 top: 15px;
             }
             .timer-value { font-size: 2rem; }
+            .score-display { font-size: 1rem; }
             .console-toggle { 
                 top: 15px; 
                 right: 15px; 
@@ -1043,6 +1118,7 @@
             .team-card-main { 
                 padding: 8px; 
                 font-size: 0.7rem;
+                min-height: 120px;
             }
             .character-container { width: 40px; height: 40px; }
             .among-us-character { width: 50px; height: 50px; }
@@ -1054,6 +1130,7 @@
                 margin: 10px 0;
             }
             .timer-value { font-size: 1.8rem; }
+            .score-display { font-size: 0.9rem; padding: 4px 8px; }
             .console-toggle { 
                 position: static;
                 display: block;
@@ -1077,12 +1154,14 @@
             .team-card-main { 
                 padding: 6px; 
                 font-size: 0.6rem;
+                min-height: 100px;
             }
             .character-container { width: 30px; height: 30px; }
             .among-us-character { width: 40px; height: 40px; }
             .progress-container { margin: 10px 8px; }
             .progress-track { height: 6px; }
             .timer-value { font-size: 1.5rem; }
+            .score-display { font-size: 0.8rem; padding: 3px 6px; }
         }
         
         /* Mobile portrait */
@@ -1109,9 +1188,11 @@
             .team-card-main { 
                 padding: 8px; 
                 font-size: 0.7rem;
+                min-height: 80px;
                 display: flex;
+                flex-direction: column;
                 align-items: center;
-                gap: 8px;
+                gap: 6px;
             }
             .character-container { 
                 width: 35px; 
@@ -1119,6 +1200,7 @@
                 flex-shrink: 0;
             }
             .among-us-character { width: 45px; height: 45px; }
+            .score-display { font-size: 0.8rem; padding: 3px 6px; position: relative; top: auto; right: auto; margin-top: 4px; }
             .progress-container { 
                 margin: 10px 8px;
                 order: -1; /* Move progress to top on mobile */
@@ -1178,7 +1260,7 @@
 <body>
     <!-- Console Window Button -->
     <button class="console-toggle" id="consoleToggle" onclick="openConsoleWindow()">
-        ⚙️
+        <i class="ri-settings-3-line"></i>
     </button>
     
     <!-- Background Pattern -->
@@ -1459,13 +1541,13 @@
             gameState.consoleWindow = window.open(consoleUrl, 'AmongUsConsole', windowFeatures);
             
             if (gameState.consoleWindow) {
-                toggleBtn.textContent = '⚙️';
+                toggleBtn.innerHTML = '<i class="ri-settings-3-line"></i>';
                 toggleBtn.classList.add('has-console');
                 
                 // Check if window is closed
                 const checkClosed = setInterval(() => {
                     if (gameState.consoleWindow.closed) {
-                        toggleBtn.textContent = '⚙️';
+                        toggleBtn.innerHTML = '<i class="ri-settings-3-line"></i>';
                         toggleBtn.classList.remove('has-console');
                         gameState.consoleWindow = null;
                         clearInterval(checkClosed);

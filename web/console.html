@@ -4,1167 +4,299 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz Bowl Console - Moderator Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'mono': ['SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Droid Sans Mono', 'Consolas', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-            background: #fafafa;
-            color: #2d3748;
-            height: 100vh;
-            overflow: hidden;
-            font-size: 13px;
-            line-height: 1.4;
-        }
-        
-        /* Header */
-        .header {
-            background: white;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 12px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .header-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #1a202c;
-        }
-        
-        .header-status {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 12px;
-            color: #718096;
-        }
-        
-        .status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #e53e3e;
-        }
-        
-        .status-dot.connected {
-            background: #38a169;
-        }
-        
-        .close-btn {
-            background: #f7fafc;
-            border: 1px solid #e2e8f0;
-            color: #4a5568;
-            border-radius: 4px;
-            padding: 4px 8px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 500;
-        }
-        
-        .close-btn:hover {
-            background: #edf2f7;
-        }
-        
-        /* Main Layout */
-        .main-layout {
-            display: grid;
-            grid-template-columns: 1fr 400px;
-            height: calc(100vh - 45px);
-            gap: 1px;
-            background: #e2e8f0;
-        }
-        
-        /* Settings Panel */
-        .settings-panel {
-            background: white;
-            display: grid;
-            grid-template-rows: auto auto 1fr;
-            gap: 1px;
-        }
-        
-        /* Arduino & Timer Row */
-        .top-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1px;
-            background: #e2e8f0;
-        }
-        
-        /* Section Base Styles */
-        .section {
-            background: white;
-            padding: 16px;
-        }
-        
-        .section-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: #4a5568;
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        /* Arduino Section */
-        .arduino-section {
-            border-right: 1px solid #e2e8f0;
-        }
-        
-        .connection-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-        
-        .port-select {
-            flex: 1;
-            padding: 6px 8px;
-            border: 1px solid #e2e8f0;
-            border-radius: 3px;
-            font-size: 12px;
-            background: white;
-        }
-        
-        .connect-btn {
-            background: #4299e1;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            padding: 6px 12px;
-            font-size: 11px;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        
-        .connect-btn:hover {
-            background: #3182ce;
-        }
-        
-        /* Timer Section */
-        .timer-display {
-            font-size: 32px;
-            font-weight: 700;
-            text-align: center;
-            font-family: 'SF Mono', monospace;
-            color: #2d3748;
-            margin-bottom: 12px;
-            line-height: 1;
-        }
-        
-        .timer-controls {
-            display: grid;
-            grid-template-columns: 60px 1fr 60px;
-            gap: 6px;
-            align-items: center;
-        }
-        
-        .timer-input {
-            padding: 4px 6px;
-            border: 1px solid #e2e8f0;
-            border-radius: 3px;
-            text-align: center;
-            font-size: 11px;
-        }
-        
-        .timer-btn {
-            background: #68d391;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            padding: 4px 8px;
-            font-size: 10px;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        
-        .timer-btn:hover {
-            background: #48bb78;
-        }
-        
-        .timer-btn.stop {
-            background: #fc8181;
-        }
-        
-        .timer-btn.stop:hover {
-            background: #f56565;
-        }
-        
-        /* Question Set Section - Improved */
-        .question-section {
-            border-bottom: 1px solid #e2e8f0;
-            padding: 20px;
-            background: white;
-        }
-        
-        .question-controls {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 16px;
-        }
-        
-        .question-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        
-        .question-label {
-            font-size: 11px;
-            font-weight: 600;
-            color: #4a5568;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .question-row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-        
-        .question-input {
-            padding: 8px 12px;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            font-size: 13px;
-            flex: 1;
-        }
-        
-        .question-input:focus {
-            border-color: #4299e1;
-            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
-            outline: none;
-        }
-        
-        .challenge-section {
-            background: #f7fafc;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 16px;
-        }
-        
-        .challenge-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-        
-        .challenge-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: #4a5568;
-        }
-        
-        .challenge-toggle {
-            background: #e2e8f0;
-            border: none;
-            border-radius: 6px;
-            padding: 8px 16px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            color: #4a5568;
-            transition: all 0.2s ease;
-        }
-        
-        .challenge-toggle.active {
-            background: #f6ad55;
-            color: white;
-            box-shadow: 0 2px 4px rgba(246, 173, 85, 0.3);
-        }
-        
-        .challenge-description {
-            font-size: 10px;
-            color: #718096;
-            line-height: 1.4;
-        }
-        
-        .subjects-section {
-            margin-top: 16px;
-        }
-        
-        .subjects-label {
-            font-size: 11px;
-            font-weight: 600;
-            color: #4a5568;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
-        }
-        
-        .subjects-row {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-        }
-        
-        .subject-btn {
-            background: #edf2f7;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 10px 12px;
-            font-size: 11px;
-            font-weight: 500;
-            cursor: pointer;
-            color: #4a5568;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
-        .subject-btn:hover {
-            background: #e2e8f0;
-            border-color: #cbd5e0;
-        }
-        
-        .subject-btn.active {
-            background: #4299e1;
-            color: white;
-            border-color: #3182ce;
-            box-shadow: 0 2px 4px rgba(66, 153, 225, 0.3);
-        }
-        
-        /* Teams Section */
-        .teams-section {
-            overflow-y: auto;
-            padding: 16px;
-        }
-        
-        .teams-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-        }
-        
-        .team-card {
-            background: #f7fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 12px;
-        }
-        
-        .team-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        
-        .team-name-input {
-            font-size: 12px;
-            font-weight: 600;
-            border: none;
-            background: transparent;
-            color: #2d3748;
-            flex: 1;
-            margin-right: 8px;
-        }
-        
-        .team-score {
-            font-size: 18px;
-            font-weight: 700;
-            color: #2d3748;
-            min-width: 40px;
-            text-align: center;
-        }
-        
-        .team-controls {
-            display: flex;
-            gap: 4px;
-            margin-bottom: 8px;
-        }
-        
-        .score-btn {
-            flex: 1;
-            padding: 4px 8px;
-            border: none;
-            border-radius: 3px;
-            font-size: 10px;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        
-        .score-btn.plus {
-            background: #c6f6d5;
-            color: #22543d;
-        }
-        
-        .score-btn.minus {
-            background: #fed7d7;
-            color: #742a2a;
-        }
-        
-        .score-btn.reset {
-            background: #e2e8f0;
-            color: #4a5568;
-        }
-        
-        .team-color {
-            margin-bottom: 8px;
-        }
-        
-        .color-label {
-            font-size: 10px;
-            font-weight: 600;
-            color: #4a5568;
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .color-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
-        }
-        
-        .color-option {
-            position: relative;
-            border-radius: 6px;
-            border: 2px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            padding: 8px;
-            background: #f7fafc;
-        }
-        
-        .color-option:hover {
-            border-color: #cbd5e0;
-            transform: scale(1.05);
-        }
-        
-        .color-option.selected {
-            border-color: #4299e1;
-            background: #ebf8ff;
-            box-shadow: 0 2px 4px rgba(66, 153, 225, 0.2);
-        }
-        
-        .color-dot {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            margin: 0 auto 4px auto;
-            border: 2px solid rgba(255, 255, 255, 0.8);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-        }
-        
-        .color-name {
-            font-size: 9px;
-            font-weight: 500;
-            color: #4a5568;
-            text-align: center;
-            text-transform: capitalize;
-        }
-        
-        .color-option.selected .color-name {
-            color: #3182ce;
-            font-weight: 600;
-        }
-        
-        /* Action Cards */
-        .action-cards {
-            display: flex;
-            gap: 4px;
-        }
-        
         .action-card {
-            flex: 1;
-            padding: 4px 6px;
-            border: 1px solid #e2e8f0;
-            border-radius: 3px;
-            font-size: 9px;
-            font-weight: 600;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s ease;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
         }
         
         .action-card.angel {
-            background: #3182ce;
-            color: white;
-        }
-        
-        .action-card.angel.used {
-            background: #e2e8f0;
-            color: #a0aec0;
-            cursor: not-allowed;
+            background-image: url('assets/cards/card-angel.png');
         }
         
         .action-card.devil {
-            background: #e53e3e;
-            color: white;
-        }
-        
-        .action-card.devil.used {
-            background: #e2e8f0;
-            color: #a0aec0;
-            cursor: not-allowed;
+            background-image: url('assets/cards/card-devil.png');
         }
         
         .action-card.cross {
-            background: #e2e8f0;
-            color: #a0aec0;
+            background-image: url('assets/cards/card-cross.png');
         }
         
-        .action-card.cross.active {
-            background: #805ad5;
-            color: white;
+        .tab-content {
+            display: none;
         }
         
-        /* Logs Panel */
-        .logs-panel {
-            background: white;
-            display: flex;
-            flex-direction: column;
+        .tab-content.active {
+            display: block;
         }
         
-        .logs-header {
-            background: #f7fafc;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 12px 16px;
-            font-weight: 600;
-            font-size: 12px;
-            color: #4a5568;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         
-        .logs-controls {
-            display: flex;
-            gap: 6px;
-        }
-        
-        .log-btn {
-            background: #edf2f7;
-            border: none;
-            border-radius: 3px;
-            padding: 4px 8px;
-            font-size: 10px;
-            font-weight: 500;
-            cursor: pointer;
-            color: #4a5568;
-        }
-        
-        .log-btn:hover {
-            background: #e2e8f0;
-        }
-        
-        .logs-content {
-            flex: 1;
-            padding: 16px;
-            overflow-y: auto;
-            background: white;
-            font-family: 'SF Mono', monospace;
-            font-size: 11px;
-            line-height: 1.6;
-        }
-        
-        .log-entry {
-            margin-bottom: 8px;
-            padding: 6px 8px;
-            border-radius: 4px;
-            background: #f8f9fa;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .log-entry.success {
-            background: #f0fff4;
-            border-left: 3px solid #38a169;
-        }
-        
-        .log-entry.error {
-            background: #fffaf0;
-            border-left: 3px solid #e53e3e;
-        }
-        
-        .log-entry.warning {
-            background: #fffbf0;
-            border-left: 3px solid #d69e2e;
-        }
-        
-        .log-content {
-            flex: 1;
-        }
-        
-        .log-timestamp {
-            color: #718096;
-            font-size: 10px;
-            margin-right: 8px;
-        }
-        
-        .log-message {
-            color: #2d3748;
-        }
-        
-        .undo-btn {
-            background: #fed7d7;
-            border: none;
-            border-radius: 3px;
-            padding: 2px 6px;
-            font-size: 9px;
-            font-weight: 500;
-            cursor: pointer;
-            color: #742a2a;
-            margin-left: 8px;
-        }
-        
-        .undo-btn:hover {
-            background: #fc8181;
-            color: white;
-        }
-        
-        .undo-btn:disabled {
-            background: #f7fafc;
-            color: #a0aec0;
-            cursor: not-allowed;
-        }
-        
-        /* Quick Actions */
-        .quick-actions {
-            background: #f7fafc;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 8px 16px;
-            display: flex;
-            gap: 8px;
-        }
-        
-        .quick-btn {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 3px;
-            padding: 6px 12px;
-            font-size: 11px;
-            font-weight: 500;
-            cursor: pointer;
-            color: #4a5568;
-        }
-        
-        .quick-btn:hover {
-            background: #edf2f7;
-        }
-        
-        .quick-btn.primary {
-            background: #4299e1;
-            color: white;
-            border-color: #4299e1;
-        }
-        
-        .quick-btn.primary:hover {
-            background: #3182ce;
-        }
-        
-        .quick-btn.danger {
-            background: #fc8181;
-            color: white;
-            border-color: #fc8181;
-        }
-        
-        .quick-btn.danger:hover {
-            background: #f56565;
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
         }
     </style>
 </head>
-<body>
+<body class="bg-gray-50 font-['Inter'] text-gray-800 h-screen overflow-hidden flex flex-col">
     <!-- Header -->
-    <div class="header">
-        <div class="header-title">Quiz Bowl Console</div>
-        <div class="header-status">
-            <div class="status-dot" id="connectionStatus"></div>
-            <span id="connectionText">Disconnected</span>
-            <button class="close-btn" onclick="window.close()">Close</button>
+    <header class="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <h1 class="text-xl font-bold text-gray-900">Quiz Bowl Console</h1>
+                <div class="flex items-center space-x-2 text-sm text-gray-600">
+                    <div id="connectionStatus" class="w-2 h-2 bg-red-500 rounded-full"></div>
+                    <span id="connectionText">Disconnected</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="resetGame()" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors duration-200">
+                    Reset Game
+                </button>
+                <button onclick="window.close()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors duration-200">
+                    Close
+                </button>
+            </div>
         </div>
-    </div>
-    
-    <!-- Quick Actions -->
-    <div class="quick-actions">
-        <button class="quick-btn primary" onclick="startTimer()">Start Timer</button>
-        <button class="quick-btn danger" onclick="clearBuzzers()">Clear Buzzers</button>
-        <button class="quick-btn" onclick="resetGame()">Reset Game</button>
-        <button class="quick-btn" onclick="exportLogs()">Export Logs</button>
-    </div>
-    
-    <!-- Main Layout -->
-    <div class="main-layout">
-        <!-- Settings Panel -->
-        <div class="settings-panel">
-            <!-- Arduino & Timer Row -->
-            <div class="top-row">
-                <!-- Arduino Section -->
-                <div class="section arduino-section">
-                    <div class="section-title">Arduino Connection</div>
-                    <div class="connection-row">
-                        <div class="status-dot" id="arduinoStatus"></div>
-                        <span id="arduinoText">Not Connected</span>
-                    </div>
-                    <div class="connection-row">
-                        <select class="port-select" id="portSelect">
-                            <option value="">Select Port</option>
-                        </select>
-                        <button class="connect-btn" onclick="toggleConnection()">Connect</button>
-                    </div>
-                </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="bg-white border-b border-gray-200 px-6">
+        <div class="flex space-x-8">
+            <button onclick="switchTab('settings')" id="settingsTab" class="py-4 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600 whitespace-nowrap">
+                Settings
+            </button>
+            <button onclick="switchTab('logs')" id="logsTab" class="py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap">
+                Logs
+            </button>
+        </div>
+    </nav>
+
+    <!-- Tab Content -->
+    <div class="flex-1 overflow-hidden">
+        <!-- Settings Tab -->
+        <div id="settingsContent" class="tab-content active h-full overflow-y-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6 min-h-fit">
                 
-                <!-- Timer Section -->
-                <div class="section">
-                    <div class="section-title">Timer Control</div>
-                    <div class="timer-display" id="timerDisplayConsole">0:00</div>
-                    <div class="timer-controls">
-                        <input type="number" class="timer-input" id="timerInput" value="15" min="1" max="300">
-                        <div style="display: flex; gap: 4px;">
-                            <button class="timer-btn" onclick="startTimer()">Start</button>
-                            <button class="timer-btn stop" onclick="stopTimer()">Stop</button>
-                            <button class="timer-btn" onclick="resetTimer()">Reset</button>
-                        </div>
-                        <button class="timer-btn" onclick="setTimer()">Set</button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Question Set Section -->
-            <div class="section question-section">
-                <div class="section-title">Question Set Management</div>
-                
-                <div class="question-controls">
-                    <div class="question-group">
-                        <div class="question-label">Current Set</div>
-                        <div class="question-row">
-                            <select class="question-input" id="questionSetSelect">
-                                <option value="1">Set 1</option>
-                                <option value="2">Set 2</option>
-                                <option value="3">Set 3</option>
-                                <option value="4">Set 4</option>
-                                <option value="5">Set 5</option>
-                                <option value="6">Set 6</option>
-                                <option value="7">Set 7</option>
-                                <option value="8">Set 8</option>
-                            </select>
-                            <select class="question-input" id="questionNumber">
-                                <option value="1">Q1</option>
-                                <option value="2">Q2</option>
-                                <option value="3">Q3</option>
-                                <option value="4">Q4</option>
-                            </select>
+                <!-- Connection & Timer Section -->
+                <div class="lg:col-span-1 space-y-6">
+                    <!-- Arduino Connection -->
+                    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                            </svg>
+                            Arduino Connection
+                        </h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center space-x-2 text-sm">
+                                <div id="arduinoStatus" class="w-2 h-2 bg-red-500 rounded-full"></div>
+                                <span id="arduinoText" class="text-gray-600">Not Connected</span>
+                            </div>
+                            <div class="flex space-x-2">
+                                <select id="portSelect" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                                    <option value="">Select Port</option>
+                                </select>
+                                <button onclick="toggleConnection()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 text-sm">
+                                    Connect
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="question-group">
-                        <div class="question-label">Set Title</div>
-                        <input type="text" placeholder="Enter set title..." class="question-input" id="questionSetTitle">
+
+                    <!-- Timer Control -->
+                    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Timer Control
+                        </h3>
+                        <div class="text-center space-y-4">
+                            <div id="timerDisplayConsole" class="text-4xl font-bold font-mono text-gray-800">0:00</div>
+                            <div class="grid grid-cols-3 gap-2 items-center">
+                                <input type="number" id="timerInput" value="15" min="1" max="300" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-sm">
+                                <div class="flex space-x-1">
+                                    <button onclick="startTimer()" class="flex-1 px-2 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded text-xs">Start</button>
+                                    <button onclick="stopTimer()" class="flex-1 px-2 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded text-xs">Stop</button>
+                                </div>
+                                <button onclick="setTimer()" class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg text-sm">Set</button>
+                            </div>
+                            <button onclick="resetTimer()" class="w-full px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg text-sm">Reset Timer</button>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="challenge-section">
-                    <div class="challenge-header">
-                        <div class="challenge-title">Challenge Multiplier</div>
-                        <button class="challenge-toggle" id="challengeToggle" onclick="toggleChallenge()">2x OFF</button>
-                    </div>
-                    <div class="challenge-description">
-                        When enabled, follow-up questions (Q2-Q4) are worth 2x points but first wrong answer gives -2 and ends the set.
-                    </div>
-                </div>
-                
-                <div class="subjects-section">
-                    <div class="subjects-label">Subject</div>
-                    <div class="subjects-row">
-                        <button class="subject-btn" onclick="selectSubject('biology')" data-subject="biology">
-                            🧬 Biology
-                        </button>
-                        <button class="subject-btn" onclick="selectSubject('chemistry')" data-subject="chemistry">
-                            ⚗️ Chemistry
-                        </button>
-                        <button class="subject-btn" onclick="selectSubject('physics')" data-subject="physics">
-                            ⚛️ Physics
-                        </button>
-                        <button class="subject-btn" onclick="selectSubject('general')" data-subject="general">
-                            🌍 General
+
+                    <!-- Challenge Mode -->
+                    <div class="bg-gradient-to-r from-orange-400 to-pink-500 rounded-xl shadow-lg p-6 text-white">
+                        <h3 class="text-lg font-semibold mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            Challenge Mode
+                        </h3>
+                        <p class="text-sm text-orange-100 mb-4">Follow-up questions worth 2x points. First wrong answer gives -2 and ends the set.</p>
+                        <button onclick="toggleChallenge()" id="challengeToggle" class="w-full px-4 py-2 bg-white/20 hover:bg-white/30 text-white font-medium rounded-lg transition-all duration-200 backdrop-blur-sm">
+                            2x OFF
                         </button>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Teams Section -->
-            <div class="section teams-section">
-                <div class="section-title">Team Management</div>
-                <div class="teams-grid">
-                    <!-- Team 1 -->
-                    <div class="team-card">
-                        <div class="team-header">
-                            <input type="text" class="team-name-input" id="teamNameInput-1" value="Team 1" onchange="updateTeamName(1)">
-                            <div class="team-score" id="teamScoreConsole-1">0</div>
-                        </div>
-                        <div class="team-controls">
-                            <button class="score-btn plus" onclick="adjustScore(1, 1)">+1</button>
-                            <button class="score-btn minus" onclick="adjustScore(1, -1)">-1</button>
-                            <button class="score-btn reset" onclick="resetScore(1)">Reset</button>
-                        </div>
-                        <div class="team-color">
-                            <div class="color-label">Team Color</div>
-                            <div class="color-grid">
-                                <div class="color-option selected" onclick="changeTeamColor(1, 'red')" data-color="red">
-                                    <div class="color-dot" style="background: #D71E22;"></div>
-                                    <div class="color-name">Red</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(1, 'blue')" data-color="blue">
-                                    <div class="color-dot" style="background: #1D3CE9;"></div>
-                                    <div class="color-name">Blue</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(1, 'lime')" data-color="lime">
-                                    <div class="color-dot" style="background: #5BFE4B;"></div>
-                                    <div class="color-name">Lime</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(1, 'orange')" data-color="orange">
-                                    <div class="color-dot" style="background: #FF8D1C;"></div>
-                                    <div class="color-name">Orange</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(1, 'purple')" data-color="purple">
-                                    <div class="color-dot" style="background: #783DD2;"></div>
-                                    <div class="color-name">Purple</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(1, 'cyan')" data-color="cyan">
-                                    <div class="color-dot" style="background: #44FFF7;"></div>
-                                    <div class="color-name">Cyan</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(1, 'pink')" data-color="pink">
-                                    <div class="color-dot" style="background: #FF69B4;"></div>
-                                    <div class="color-name">Pink</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(1, 'yellow')" data-color="yellow">
-                                    <div class="color-dot" style="background: #FFD700;"></div>
-                                    <div class="color-name">Yellow</div>
-                                </div>
+
+                <!-- Question Management Section -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Question Set Grid -->
+                    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Question Set Management
+                        </h3>
+                        
+                        <div class="grid grid-cols-4 gap-4 mb-6">
+                            <div class="text-center">
+                                <div class="text-sm font-medium text-gray-700 mb-2">Biology</div>
+                                <button onclick="selectSubject('biology')" data-subject="biology" class="subject-btn w-full px-3 py-2 text-xs font-medium rounded-lg border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200">
+                                    🧬 Biology
+                                </button>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-sm font-medium text-gray-700 mb-2">Chemistry</div>
+                                <button onclick="selectSubject('chemistry')" data-subject="chemistry" class="subject-btn w-full px-3 py-2 text-xs font-medium rounded-lg border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200">
+                                    ⚗️ Chemistry
+                                </button>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-sm font-medium text-gray-700 mb-2">Physics</div>
+                                <button onclick="selectSubject('physics')" data-subject="physics" class="subject-btn w-full px-3 py-2 text-xs font-medium rounded-lg border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200">
+                                    ⚛️ Physics
+                                </button>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-sm font-medium text-gray-700 mb-2">General</div>
+                                <button onclick="selectSubject('general')" data-subject="general" class="subject-btn w-full px-3 py-2 text-xs font-medium rounded-lg border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200">
+                                    🌍 General
+                                </button>
                             </div>
                         </div>
-                        <div class="action-cards">
-                            <div class="action-card angel" onclick="toggleActionCard(1, 'angel')" id="angelCard-1">ANGEL</div>
-                            <div class="action-card devil" onclick="activateDevil(1)" id="devilCard-1">DEVIL</div>
-                            <div class="action-card cross" id="crossCard-1">CROSS</div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="bg-gray-50">
+                                        <th class="px-4 py-3 text-left font-medium text-gray-700 rounded-tl-lg">Set</th>
+                                        <th class="px-4 py-3 text-center font-medium text-gray-700">Q1 (Toss-up)</th>
+                                        <th class="px-4 py-3 text-center font-medium text-gray-700">Q2 (Follow-up)</th>
+                                        <th class="px-4 py-3 text-center font-medium text-gray-700">Q3 (Follow-up)</th>
+                                        <th class="px-4 py-3 text-center font-medium text-gray-700 rounded-tr-lg">Q4 (Follow-up)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="questionTableBody" class="divide-y divide-gray-200">
+                                    <!-- Question sets will be populated here -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                    
-                    <!-- Team 2 -->
-                    <div class="team-card">
-                        <div class="team-header">
-                            <input type="text" class="team-name-input" id="teamNameInput-2" value="Team 2" onchange="updateTeamName(2)">
-                            <div class="team-score" id="teamScoreConsole-2">0</div>
-                        </div>
-                        <div class="team-controls">
-                            <button class="score-btn plus" onclick="adjustScore(2, 1)">+1</button>
-                            <button class="score-btn minus" onclick="adjustScore(2, -1)">-1</button>
-                            <button class="score-btn reset" onclick="resetScore(2)">Reset</button>
-                        </div>
-                        <div class="team-color">
-                            <div class="color-label">Team Color</div>
-                            <div class="color-grid">
-                                <div class="color-option" onclick="changeTeamColor(2, 'red')" data-color="red">
-                                    <div class="color-dot" style="background: #D71E22;"></div>
-                                    <div class="color-name">Red</div>
-                                </div>
-                                <div class="color-option selected" onclick="changeTeamColor(2, 'blue')" data-color="blue">
-                                    <div class="color-dot" style="background: #1D3CE9;"></div>
-                                    <div class="color-name">Blue</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(2, 'lime')" data-color="lime">
-                                    <div class="color-dot" style="background: #5BFE4B;"></div>
-                                    <div class="color-name">Lime</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(2, 'orange')" data-color="orange">
-                                    <div class="color-dot" style="background: #FF8D1C;"></div>
-                                    <div class="color-name">Orange</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(2, 'purple')" data-color="purple">
-                                    <div class="color-dot" style="background: #783DD2;"></div>
-                                    <div class="color-name">Purple</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(2, 'cyan')" data-color="cyan">
-                                    <div class="color-dot" style="background: #44FFF7;"></div>
-                                    <div class="color-name">Cyan</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(2, 'pink')" data-color="pink">
-                                    <div class="color-dot" style="background: #FF69B4;"></div>
-                                    <div class="color-name">Pink</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(2, 'yellow')" data-color="yellow">
-                                    <div class="color-dot" style="background: #FFD700;"></div>
-                                    <div class="color-name">Yellow</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="action-cards">
-                            <div class="action-card angel" onclick="toggleActionCard(2, 'angel')" id="angelCard-2">ANGEL</div>
-                            <div class="action-card devil" onclick="activateDevil(2)" id="devilCard-2">DEVIL</div>
-                            <div class="action-card cross" id="crossCard-2">CROSS</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Team 3 -->
-                    <div class="team-card">
-                        <div class="team-header">
-                            <input type="text" class="team-name-input" id="teamNameInput-3" value="Team 3" onchange="updateTeamName(3)">
-                            <div class="team-score" id="teamScoreConsole-3">0</div>
-                        </div>
-                        <div class="team-controls">
-                            <button class="score-btn plus" onclick="adjustScore(3, 1)">+1</button>
-                            <button class="score-btn minus" onclick="adjustScore(3, -1)">-1</button>
-                            <button class="score-btn reset" onclick="resetScore(3)">Reset</button>
-                        </div>
-                        <div class="team-color">
-                            <div class="color-label">Team Color</div>
-                            <div class="color-grid">
-                                <div class="color-option" onclick="changeTeamColor(3, 'red')" data-color="red">
-                                    <div class="color-dot" style="background: #D71E22;"></div>
-                                    <div class="color-name">Red</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(3, 'blue')" data-color="blue">
-                                    <div class="color-dot" style="background: #1D3CE9;"></div>
-                                    <div class="color-name">Blue</div>
-                                </div>
-                                <div class="color-option selected" onclick="changeTeamColor(3, 'lime')" data-color="lime">
-                                    <div class="color-dot" style="background: #5BFE4B;"></div>
-                                    <div class="color-name">Lime</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(3, 'orange')" data-color="orange">
-                                    <div class="color-dot" style="background: #FF8D1C;"></div>
-                                    <div class="color-name">Orange</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(3, 'purple')" data-color="purple">
-                                    <div class="color-dot" style="background: #783DD2;"></div>
-                                    <div class="color-name">Purple</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(3, 'cyan')" data-color="cyan">
-                                    <div class="color-dot" style="background: #44FFF7;"></div>
-                                    <div class="color-name">Cyan</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(3, 'pink')" data-color="pink">
-                                    <div class="color-dot" style="background: #FF69B4;"></div>
-                                    <div class="color-name">Pink</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(3, 'yellow')" data-color="yellow">
-                                    <div class="color-dot" style="background: #FFD700;"></div>
-                                    <div class="color-name">Yellow</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="action-cards">
-                            <div class="action-card angel" onclick="toggleActionCard(3, 'angel')" id="angelCard-3">ANGEL</div>
-                            <div class="action-card devil" onclick="activateDevil(3)" id="devilCard-3">DEVIL</div>
-                            <div class="action-card cross" id="crossCard-3">CROSS</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Team 4 -->
-                    <div class="team-card">
-                        <div class="team-header">
-                            <input type="text" class="team-name-input" id="teamNameInput-4" value="Team 4" onchange="updateTeamName(4)">
-                            <div class="team-score" id="teamScoreConsole-4">0</div>
-                        </div>
-                        <div class="team-controls">
-                            <button class="score-btn plus" onclick="adjustScore(4, 1)">+1</button>
-                            <button class="score-btn minus" onclick="adjustScore(4, -1)">-1</button>
-                            <button class="score-btn reset" onclick="resetScore(4)">Reset</button>
-                        </div>
-                        <div class="team-color">
-                            <div class="color-label">Team Color</div>
-                            <div class="color-grid">
-                                <div class="color-option" onclick="changeTeamColor(4, 'red')" data-color="red">
-                                    <div class="color-dot" style="background: #D71E22;"></div>
-                                    <div class="color-name">Red</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(4, 'blue')" data-color="blue">
-                                    <div class="color-dot" style="background: #1D3CE9;"></div>
-                                    <div class="color-name">Blue</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(4, 'lime')" data-color="lime">
-                                    <div class="color-dot" style="background: #5BFE4B;"></div>
-                                    <div class="color-name">Lime</div>
-                                </div>
-                                <div class="color-option selected" onclick="changeTeamColor(4, 'orange')" data-color="orange">
-                                    <div class="color-dot" style="background: #FF8D1C;"></div>
-                                    <div class="color-name">Orange</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(4, 'purple')" data-color="purple">
-                                    <div class="color-dot" style="background: #783DD2;"></div>
-                                    <div class="color-name">Purple</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(4, 'cyan')" data-color="cyan">
-                                    <div class="color-dot" style="background: #44FFF7;"></div>
-                                    <div class="color-name">Cyan</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(4, 'pink')" data-color="pink">
-                                    <div class="color-dot" style="background: #FF69B4;"></div>
-                                    <div class="color-name">Pink</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(4, 'yellow')" data-color="yellow">
-                                    <div class="color-dot" style="background: #FFD700;"></div>
-                                    <div class="color-name">Yellow</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="action-cards">
-                            <div class="action-card angel" onclick="toggleActionCard(4, 'angel')" id="angelCard-4">ANGEL</div>
-                            <div class="action-card devil" onclick="activateDevil(4)" id="devilCard-4">DEVIL</div>
-                            <div class="action-card cross" id="crossCard-4">CROSS</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Team 5 -->
-                    <div class="team-card">
-                        <div class="team-header">
-                            <input type="text" class="team-name-input" id="teamNameInput-5" value="Team 5" onchange="updateTeamName(5)">
-                            <div class="team-score" id="teamScoreConsole-5">0</div>
-                        </div>
-                        <div class="team-controls">
-                            <button class="score-btn plus" onclick="adjustScore(5, 1)">+1</button>
-                            <button class="score-btn minus" onclick="adjustScore(5, -1)">-1</button>
-                            <button class="score-btn reset" onclick="resetScore(5)">Reset</button>
-                        </div>
-                        <div class="team-color">
-                            <div class="color-label">Team Color</div>
-                            <div class="color-grid">
-                                <div class="color-option" onclick="changeTeamColor(5, 'red')" data-color="red">
-                                    <div class="color-dot" style="background: #D71E22;"></div>
-                                    <div class="color-name">Red</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(5, 'blue')" data-color="blue">
-                                    <div class="color-dot" style="background: #1D3CE9;"></div>
-                                    <div class="color-name">Blue</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(5, 'lime')" data-color="lime">
-                                    <div class="color-dot" style="background: #5BFE4B;"></div>
-                                    <div class="color-name">Lime</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(5, 'orange')" data-color="orange">
-                                    <div class="color-dot" style="background: #FF8D1C;"></div>
-                                    <div class="color-name">Orange</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(5, 'purple')" data-color="purple">
-                                    <div class="color-dot" style="background: #783DD2;"></div>
-                                    <div class="color-name">Purple</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(5, 'cyan')" data-color="cyan">
-                                    <div class="color-dot" style="background: #44FFF7;"></div>
-                                    <div class="color-name">Cyan</div>
-                                </div>
-                                <div class="color-option selected" onclick="changeTeamColor(5, 'pink')" data-color="pink">
-                                    <div class="color-dot" style="background: #FF69B4;"></div>
-                                    <div class="color-name">Pink</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(5, 'yellow')" data-color="yellow">
-                                    <div class="color-dot" style="background: #FFD700;"></div>
-                                    <div class="color-name">Yellow</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="action-cards">
-                            <div class="action-card angel" onclick="toggleActionCard(5, 'angel')" id="angelCard-5">ANGEL</div>
-                            <div class="action-card devil" onclick="activateDevil(5)" id="devilCard-5">DEVIL</div>
-                            <div class="action-card cross" id="crossCard-5">CROSS</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Team 6 -->
-                    <div class="team-card">
-                        <div class="team-header">
-                            <input type="text" class="team-name-input" id="teamNameInput-6" value="Team 6" onchange="updateTeamName(6)">
-                            <div class="team-score" id="teamScoreConsole-6">0</div>
-                        </div>
-                        <div class="team-controls">
-                            <button class="score-btn plus" onclick="adjustScore(6, 1)">+1</button>
-                            <button class="score-btn minus" onclick="adjustScore(6, -1)">-1</button>
-                            <button class="score-btn reset" onclick="resetScore(6)">Reset</button>
-                        </div>
-                        <div class="team-color">
-                            <div class="color-label">Team Color</div>
-                            <div class="color-grid">
-                                <div class="color-option" onclick="changeTeamColor(6, 'red')" data-color="red">
-                                    <div class="color-dot" style="background: #D71E22;"></div>
-                                    <div class="color-name">Red</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(6, 'blue')" data-color="blue">
-                                    <div class="color-dot" style="background: #1D3CE9;"></div>
-                                    <div class="color-name">Blue</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(6, 'lime')" data-color="lime">
-                                    <div class="color-dot" style="background: #5BFE4B;"></div>
-                                    <div class="color-name">Lime</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(6, 'orange')" data-color="orange">
-                                    <div class="color-dot" style="background: #FF8D1C;"></div>
-                                    <div class="color-name">Orange</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(6, 'purple')" data-color="purple">
-                                    <div class="color-dot" style="background: #783DD2;"></div>
-                                    <div class="color-name">Purple</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(6, 'cyan')" data-color="cyan">
-                                    <div class="color-dot" style="background: #44FFF7;"></div>
-                                    <div class="color-name">Cyan</div>
-                                </div>
-                                <div class="color-option" onclick="changeTeamColor(6, 'pink')" data-color="pink">
-                                    <div class="color-dot" style="background: #FF69B4;"></div>
-                                    <div class="color-name">Pink</div>
-                                </div>
-                                <div class="color-option selected" onclick="changeTeamColor(6, 'yellow')" data-color="yellow">
-                                    <div class="color-dot" style="background: #FFD700;"></div>
-                                    <div class="color-name">Yellow</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="action-cards">
-                            <div class="action-card angel" onclick="toggleActionCard(6, 'angel')" id="angelCard-6">ANGEL</div>
-                            <div class="action-card devil" onclick="activateDevil(6)" id="devilCard-6">DEVIL</div>
-                            <div class="action-card cross" id="crossCard-6">CROSS</div>
+
+                    <!-- Teams Management -->
+                    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                            Team Management
+                        </h3>
+                        <div id="teamsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <!-- Teams will be populated here -->
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Logs Panel -->
-        <div class="logs-panel">
-            <div class="logs-header">
-                System Logs
-                <div class="logs-controls">
-                    <button class="log-btn" onclick="clearLogs()">Clear</button>
-                    <button class="log-btn" onclick="exportLogs()">Export</button>
+
+        <!-- Logs Tab -->
+        <div id="logsContent" class="tab-content h-full flex flex-col">
+            <div class="bg-white border-b border-gray-200 px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        System Logs
+                    </h3>
+                    <div class="flex space-x-2">
+                        <button onclick="clearLogs()" class="px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg text-sm transition-colors duration-200">
+                            Clear
+                        </button>
+                        <button onclick="exportLogs()" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition-colors duration-200">
+                            Export
+                        </button>
+                    </div>
                 </div>
             </div>
-            <div class="logs-content" id="logsContent">
-                <div class="log-entry">
-                    <div class="log-content">
-                        <span class="log-timestamp">[00:00:00]</span>
-                        <span class="log-message">Console initialized - Ready for moderation</span>
+            <div id="logsContentArea" class="flex-1 p-6 overflow-auto bg-gray-50 font-mono text-sm space-y-2">
+                <div class="bg-white rounded-lg p-3 border border-gray-200 flex justify-between items-center">
+                    <div>
+                        <span class="text-gray-500 text-xs">[00:00:00]</span>
+                        <span class="text-gray-700 ml-2">Console initialized - Ready for moderation</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Keyboard Shortcuts Info -->
+    <div id="shortcutsInfo" class="fixed bottom-4 right-4 bg-gray-900 text-white p-4 rounded-xl shadow-2xl opacity-0 transition-opacity duration-300 pointer-events-none z-50 font-mono text-xs">
+        <h4 class="text-green-400 font-semibold mb-3">Keyboard Shortcuts</h4>
+        <div class="space-y-1">
+            <div><span class="text-yellow-400 font-semibold">1-6:</span> Buzz team 1-6</div>
+            <div><span class="text-yellow-400 font-semibold">S:</span> Start/Stop timer</div>
+            <div><span class="text-yellow-400 font-semibold">Q:</span> Reset timer</div>
+            <div><span class="text-yellow-400 font-semibold">R:</span> Reset game</div>
+            <div><span class="text-yellow-400 font-semibold">←/→:</span> Navigate questions</div>
+            <div><span class="text-yellow-400 font-semibold">H:</span> Toggle this help</div>
+        </div>
+    </div>
+
     <script>
+        // Predefined question sets with themes and titles
+        const questionSets = {
+            1: { theme: 'Biology', title: 'Cell Biology & Genetics' },
+            2: { theme: 'Chemistry', title: 'Organic Chemistry Basics' },
+            3: { theme: 'Physics', title: 'Classical Mechanics' },
+            4: { theme: 'General', title: 'World Geography' },
+            5: { theme: 'Biology', title: 'Human Anatomy' },
+            6: { theme: 'Chemistry', title: 'Chemical Reactions' },
+            7: { theme: 'Physics', title: 'Electricity & Magnetism' },
+            8: { theme: 'General', title: 'Literature & Arts' }
+        };
+
         // Game state management
         const gameState = {
             teams: {
-                1: { name: 'Team 1', score: 0, color: 'red', cards: { angel: false, devil: false, cross: false, angelUsed: false, devilUsed: false } },
-                2: { name: 'Team 2', score: 0, color: 'blue', cards: { angel: false, devil: false, cross: false, angelUsed: false, devilUsed: false } },
-                3: { name: 'Team 3', score: 0, color: 'lime', cards: { angel: false, devil: false, cross: false, angelUsed: false, devilUsed: false } },
-                4: { name: 'Team 4', score: 0, color: 'orange', cards: { angel: false, devil: false, cross: false, angelUsed: false, devilUsed: false } },
-                5: { name: 'Team 5', score: 0, color: 'pink', cards: { angel: false, devil: false, cross: false, angelUsed: false, devilUsed: false } },
-                6: { name: 'Team 6', score: 0, color: 'yellow', cards: { angel: false, devil: false, cross: false, angelUsed: false, devilUsed: false } }
+                1: { name: 'Team A', score: 0, color: 'red', cards: { angel: false, devil: false, cross: false, angelUsed: false, devilUsed: false } },
+                2: { name: 'Team B', score: 0, color: 'blue', cards: { angel: false, devil: false, cross: false, angelUsed: false, devilUsed: false } },
+                3: { name: 'Team C', score: 0, color: 'lime', cards: { angel: false, devil: false, cross: false, angelUsed: false, devilUsed: false } },
+                4: { name: 'Team D', score: 0, color: 'orange', cards: { angel: false, devil: false, cross: false, angelUsed: false, devilUsed: false } },
+                5: { name: 'Team E', score: 0, color: 'pink', cards: { angel: false, devil: false, cross: false, angelUsed: false, devilUsed: false } },
+                6: { name: 'Team F', score: 0, color: 'yellow', cards: { angel: false, devil: false, cross: false, angelUsed: false, devilUsed: false } }
             },
             currentQuestionSet: 1,
             currentQuestionNumber: 1,
@@ -1172,12 +304,339 @@
             timerRunning: false,
             challenge2x: false,
             currentSubject: null,
-            actionHistory: [], // For undo functionality
+            actionHistory: [],
             availableColors: ['red', 'blue', 'lime', 'orange', 'purple', 'cyan', 'pink', 'yellow']
+        };
+
+        // Color definitions
+        const colorDefinitions = {
+            red: '#EF4444',
+            blue: '#3B82F6',
+            lime: '#84CC16',
+            orange: '#F97316',
+            purple: '#8B5CF6',
+            cyan: '#06B6D4',
+            pink: '#EC4899',
+            yellow: '#EAB308'
         };
 
         // Initialize Socket.IO connection
         const socket = io();
+
+        // Tab management
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active state from all tabs
+            document.querySelectorAll('[id$="Tab"]').forEach(tab => {
+                tab.classList.remove('border-blue-500', 'text-blue-600');
+                tab.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName + 'Content').classList.add('active');
+            
+            // Add active state to selected tab
+            const activeTab = document.getElementById(tabName + 'Tab');
+            activeTab.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            activeTab.classList.add('border-blue-500', 'text-blue-600');
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            // Ignore if user is typing in an input field
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                return;
+            }
+            
+            const key = event.key.toLowerCase();
+            
+            switch(key) {
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                case '6':
+                    event.preventDefault();
+                    buzzTeam(parseInt(key));
+                    break;
+                case 's':
+                    event.preventDefault();
+                    startTimer();
+                    break;
+                case 'q':
+                    event.preventDefault();
+                    resetTimer();
+                    break;
+                case 'r':
+                    event.preventDefault();
+                    resetGame();
+                    break;
+                case 'arrowleft':
+                    event.preventDefault();
+                    navigateQuestion(-1);
+                    break;
+                case 'arrowright':
+                    event.preventDefault();
+                    navigateQuestion(1);
+                    break;
+                case 'h':
+                    event.preventDefault();
+                    toggleShortcutsInfo();
+                    break;
+            }
+        });
+
+        // Initialize question table
+        function initializeQuestionTable() {
+            const tableBody = document.getElementById('questionTableBody');
+            tableBody.innerHTML = '';
+            
+            for (let set = 1; set <= 8; set++) {
+                const row = document.createElement('tr');
+                const setData = questionSets[set];
+                row.className = 'hover:bg-gray-50';
+                
+                row.innerHTML = `
+                    <td class="px-4 py-3 border-b border-gray-200">
+                        <div class="font-medium text-gray-900">Set ${set}</div>
+                        <div class="text-xs text-gray-500">${setData.theme}</div>
+                        <input type="text" value="${setData.title}" onchange="updateSetTitle(${set}, this.value)" 
+                               class="mt-1 w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent">
+                    </td>
+                    <td class="px-4 py-3 text-center border-b border-gray-200">
+                        <button class="question-cell w-full px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200" 
+                                data-set="${set}" data-question="1" onclick="selectQuestion(${set}, 1)">Q1</button>
+                    </td>
+                    <td class="px-4 py-3 text-center border-b border-gray-200">
+                        <button class="question-cell w-full px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200" 
+                                data-set="${set}" data-question="2" onclick="selectQuestion(${set}, 2)">Q2</button>
+                    </td>
+                    <td class="px-4 py-3 text-center border-b border-gray-200">
+                        <button class="question-cell w-full px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200" 
+                                data-set="${set}" data-question="3" onclick="selectQuestion(${set}, 3)">Q3</button>
+                    </td>
+                    <td class="px-4 py-3 text-center border-b border-gray-200">
+                        <button class="question-cell w-full px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200" 
+                                data-set="${set}" data-question="4" onclick="selectQuestion(${set}, 4)">Q4</button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            }
+            
+            updateQuestionTable();
+        }
+
+        // Initialize teams grid
+        function initializeTeamsGrid() {
+            const teamsGrid = document.getElementById('teamsGrid');
+            teamsGrid.innerHTML = '';
+            
+            for (let teamId = 1; teamId <= 6; teamId++) {
+                const team = gameState.teams[teamId];
+                const teamCard = createTeamCard(teamId, team);
+                teamsGrid.appendChild(teamCard);
+            }
+        }
+
+        // Create team card
+        function createTeamCard(teamId, team) {
+            const card = document.createElement('div');
+            card.className = 'bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all duration-200';
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex-1">
+                        <input type="text" class="team-name-input w-full text-sm font-semibold bg-transparent border-none text-gray-900 focus:ring-1 focus:ring-blue-500 rounded px-1" 
+                               id="teamNameInput-${teamId}" value="${team.name}" onchange="updateTeamName(${teamId})">
+                        <div class="team-color-display flex items-center mt-1 text-xs text-gray-600 cursor-pointer hover:text-blue-600 transition-colors duration-200" 
+                             id="colorDisplay-${teamId}" onclick="toggleColorDropdown(${teamId})">
+                            <div class="w-3 h-3 rounded-full mr-2 border" style="background: ${colorDefinitions[team.color]};"></div>
+                            <span style="text-transform: capitalize;">${team.color}</span>
+                            <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                        <div class="color-dropdown relative mt-2 hidden" id="colorDropdown-${teamId}">
+                            <div class="absolute z-10 w-40 bg-white rounded-lg shadow-lg border border-gray-200 p-2">
+                                <div class="grid grid-cols-4 gap-1" id="colorGrid-${teamId}">
+                                    <!-- Color options will be populated -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-bold text-gray-900" id="teamScoreConsole-${teamId}">${team.score}</div>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                    <button onclick="adjustScore(${teamId}, 1)" class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg text-xs transition-colors duration-200">+1</button>
+                    <button onclick="adjustScore(${teamId}, -1)" class="px-3 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg text-xs transition-colors duration-200">-1</button>
+                    <button onclick="resetScore(${teamId})" class="px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg text-xs transition-colors duration-200">Reset</button>
+                </div>
+                
+                <div class="flex justify-center space-x-2">
+                    <div class="action-card angel w-6 h-8 cursor-pointer hover:scale-110 transition-transform duration-200 opacity-100" 
+                         onclick="toggleActionCard(${teamId}, 'angel')" id="angelCard-${teamId}"></div>
+                    <div class="action-card devil w-6 h-8 cursor-pointer hover:scale-110 transition-transform duration-200 opacity-100" 
+                         onclick="activateDevil(${teamId})" id="devilCard-${teamId}"></div>
+                    <div class="action-card cross w-6 h-8 opacity-40 grayscale" id="crossCard-${teamId}"></div>
+                </div>
+            `;
+            
+            // Populate color options
+            setTimeout(() => populateColorOptions(teamId), 0);
+            
+            return card;
+        }
+
+        // Populate color options
+        function populateColorOptions(teamId) {
+            const colorGrid = document.getElementById(`colorGrid-${teamId}`);
+            if (!colorGrid) return;
+            
+            colorGrid.innerHTML = '';
+            
+            gameState.availableColors.forEach(color => {
+                const isUsed = Object.values(gameState.teams).some(team => 
+                    team.color === color && gameState.teams[teamId].color !== color
+                );
+                
+                const option = document.createElement('div');
+                option.className = `w-6 h-6 rounded-full border-2 border-white shadow-sm cursor-pointer hover:scale-110 transition-transform duration-200 ${isUsed ? 'opacity-50 cursor-not-allowed' : ''}`;
+                option.style.background = colorDefinitions[color];
+                option.onclick = () => !isUsed && changeTeamColor(teamId, color);
+                
+                colorGrid.appendChild(option);
+            });
+        }
+
+        // Navigation and selection functions
+        function selectQuestion(set, question) {
+            gameState.currentQuestionSet = set;
+            gameState.currentQuestionNumber = question;
+            updateQuestionTable();
+            updateQuestionProgress();
+            
+            // Auto-select subject based on set
+            const setData = questionSets[set];
+            if (setData.theme.toLowerCase() !== 'general') {
+                selectSubject(setData.theme.toLowerCase());
+            }
+        }
+
+        function navigateQuestion(direction) {
+            let newSet = gameState.currentQuestionSet;
+            let newQuestion = gameState.currentQuestionNumber + direction;
+            
+            if (newQuestion > 4) {
+                newSet++;
+                newQuestion = 1;
+            } else if (newQuestion < 1) {
+                newSet--;
+                newQuestion = 4;
+            }
+            
+            if (newSet > 8) {
+                newSet = 1;
+                newQuestion = 1;
+            } else if (newSet < 1) {
+                newSet = 8;
+                newQuestion = 4;
+            }
+            
+            selectQuestion(newSet, newQuestion);
+        }
+
+        function updateQuestionTable() {
+            // Remove current class from all cells
+            document.querySelectorAll('.question-cell').forEach(cell => {
+                cell.classList.remove('bg-blue-500', 'text-white', 'border-blue-500');
+                cell.classList.add('border-gray-300', 'hover:border-blue-500', 'hover:bg-blue-50');
+            });
+            
+            // Add current class to selected cell
+            const currentCell = document.querySelector(
+                `.question-cell[data-set="${gameState.currentQuestionSet}"][data-question="${gameState.currentQuestionNumber}"]`
+            );
+            if (currentCell) {
+                currentCell.classList.remove('border-gray-300', 'hover:border-blue-500', 'hover:bg-blue-50');
+                currentCell.classList.add('bg-blue-500', 'text-white', 'border-blue-500');
+            }
+        }
+
+        function updateSetTitle(set, title) {
+            questionSets[set].title = title;
+            addLog(`Set ${set} title updated: "${title}"`, 'info');
+        }
+
+        // Team management functions
+        function buzzTeam(teamId) {
+            socket.emit('buzzer_pressed', { teamId: teamId });
+            addLog(`Team ${teamId} buzzed in! (Keyboard shortcut)`, 'success');
+        }
+
+        function toggleColorDropdown(teamId) {
+            const dropdown = document.getElementById(`colorDropdown-${teamId}`);
+            const isActive = !dropdown.classList.contains('hidden');
+            
+            // Close all other dropdowns
+            document.querySelectorAll('.color-dropdown').forEach(d => d.classList.add('hidden'));
+            
+            if (!isActive) {
+                dropdown.classList.remove('hidden');
+                populateColorOptions(teamId);
+            }
+        }
+
+        function changeTeamColor(teamId, color) {
+            // Check if color is already used by another team
+            const usedByTeam = Object.keys(gameState.teams).find(id => 
+                id != teamId && gameState.teams[id].color === color
+            );
+            
+            if (usedByTeam) {
+                addLog(`Color ${color} is already used by Team ${usedByTeam}`, 'warning');
+                return;
+            }
+            
+            const oldColor = gameState.teams[teamId].color;
+            gameState.teams[teamId].color = color;
+            
+            // Update UI
+            const colorDisplay = document.getElementById(`colorDisplay-${teamId}`);
+            colorDisplay.innerHTML = `
+                <div class="w-3 h-3 rounded-full mr-2 border" style="background: ${colorDefinitions[color]};"></div>
+                <span style="text-transform: capitalize;">${color}</span>
+                <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            `;
+            
+            // Close dropdown
+            document.getElementById(`colorDropdown-${teamId}`).classList.add('hidden');
+            
+            // Update all color dropdowns to reflect new availability
+            for (let i = 1; i <= 6; i++) {
+                populateColorOptions(i);
+            }
+            
+            socket.emit('team_update', {
+                teamId: teamId,
+                updates: { color: color }
+            });
+            
+            addLog(`Team ${teamId} color: ${oldColor} → ${color}`, 'info', {
+                type: 'color_change',
+                teamId: teamId,
+                oldColor: oldColor,
+                newColor: color
+            });
+        }
 
         // Action cards functionality
         function toggleActionCard(teamId, cardType) {
@@ -1228,7 +687,7 @@
                 // Mark devil card as used
                 gameState.teams[teamId].cards.devilUsed = true;
                 const devilCard = document.getElementById(`devilCard-${teamId}`);
-                devilCard.classList.add('used');
+                devilCard.classList.add('opacity-40', 'grayscale');
                 
                 // Apply devil attack (penalty to target team)
                 gameState.teams[targetTeamId].score = Math.max(0, gameState.teams[targetTeamId].score - 1);
@@ -1237,7 +696,8 @@
                 // Activate cross protection for target team
                 gameState.teams[targetTeamId].cards.cross = true;
                 const crossCard = document.getElementById(`crossCard-${targetTeamId}`);
-                crossCard.classList.add('active');
+                crossCard.classList.remove('opacity-40', 'grayscale');
+                crossCard.classList.add('opacity-100');
                 
                 addLog(`Team ${teamId} devil attacked Team ${targetTeamId} (-1 point, cross activated)`, 'error', {
                     type: 'devil_attack',
@@ -1254,7 +714,6 @@
             }
         }
 
-        // Team management functions
         function updateTeamName(teamId) {
             const name = document.getElementById(`teamNameInput-${teamId}`).value;
             const oldName = gameState.teams[teamId].name;
@@ -1289,8 +748,7 @@
                 gameState.teams[teamId].cards.angelUsed = true;
                 
                 const angelCard = document.getElementById(`angelCard-${teamId}`);
-                angelCard.classList.remove('active');
-                angelCard.classList.add('used');
+                angelCard.classList.add('opacity-40', 'grayscale');
                 
                 addLog(`Team ${teamId} angel protection used - no penalty applied`, 'success', {
                     type: 'angel_protection',
@@ -1346,49 +804,6 @@
             });
         }
 
-        function changeTeamColor(teamId, color) {
-            // Check if color is already used by another team
-            const usedByTeam = Object.keys(gameState.teams).find(id => 
-                id != teamId && gameState.teams[id].color === color
-            );
-            
-            if (usedByTeam) {
-                addLog(`Color ${color} is already used by Team ${usedByTeam}`, 'warning');
-                return;
-            }
-            
-            const oldColor = gameState.teams[teamId].color;
-            gameState.teams[teamId].color = color;
-            
-            // Update color selection UI
-            const teamCard = document.getElementById(`teamNameInput-${teamId}`).closest('.team-card');
-            const colorOptions = teamCard.querySelectorAll('.color-option');
-            colorOptions.forEach(option => {
-                option.classList.remove('selected');
-                if (option.dataset.color === color) {
-                    option.classList.add('selected');
-                }
-            });
-            
-            socket.emit('team_update', {
-                teamId: teamId,
-                updates: { color: color }
-            });
-            
-            // Update character animation on main display
-            socket.emit('character_update', {
-                teamId: teamId,
-                color: color
-            });
-            
-            addLog(`Team ${teamId} color: ${oldColor} → ${color}`, 'info', {
-                type: 'color_change',
-                teamId: teamId,
-                oldColor: oldColor,
-                newColor: color
-            });
-        }
-
         // Timer controls
         function setTimer() {
             const value = parseInt(document.getElementById('timerInput').value);
@@ -1438,7 +853,13 @@
             gameState.challenge2x = !gameState.challenge2x;
             const challengeToggle = document.getElementById('challengeToggle');
             challengeToggle.textContent = gameState.challenge2x ? '2x ON' : '2x OFF';
-            challengeToggle.classList.toggle('active', gameState.challenge2x);
+            if (gameState.challenge2x) {
+                challengeToggle.classList.add('bg-white/30');
+                challengeToggle.classList.remove('bg-white/20');
+            } else {
+                challengeToggle.classList.add('bg-white/20');
+                challengeToggle.classList.remove('bg-white/30');
+            }
             
             socket.emit('challenge_update', { enabled: gameState.challenge2x });
             addLog(`2x Challenge ${gameState.challenge2x ? 'enabled' : 'disabled'}`, 'info');
@@ -1449,8 +870,14 @@
             gameState.currentSubject = subject;
             
             const buttons = document.querySelectorAll('.subject-btn');
-            buttons.forEach(btn => btn.classList.remove('active'));
-            document.querySelector(`[data-subject="${subject}"]`).classList.add('active');
+            buttons.forEach(btn => {
+                btn.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-600');
+                btn.classList.add('border-gray-300', 'hover:border-blue-500', 'hover:bg-blue-50');
+            });
+            
+            const activeBtn = document.querySelector(`[data-subject="${subject}"]`);
+            activeBtn.classList.remove('border-gray-300', 'hover:border-blue-500', 'hover:bg-blue-50');
+            activeBtn.classList.add('border-blue-500', 'bg-blue-50', 'text-blue-600');
             
             updateQuestionProgress();
             
@@ -1458,12 +885,9 @@
         }
 
         function updateQuestionProgress() {
-            const setNumber = parseInt(document.getElementById('questionSetSelect').value);
-            const questionNumber = parseInt(document.getElementById('questionNumber').value);
-            const title = document.getElementById('questionSetTitle').value;
-            
-            gameState.currentQuestionSet = setNumber;
-            gameState.currentQuestionNumber = questionNumber;
+            const setNumber = gameState.currentQuestionSet;
+            const questionNumber = gameState.currentQuestionNumber;
+            const setData = questionSets[setNumber];
             
             // Calculate progress position (8 sets × 4 questions = 32 total positions)
             const totalPosition = ((setNumber - 1) * 4) + questionNumber;
@@ -1473,20 +897,13 @@
             socket.emit('progress_update', {
                 setNumber: setNumber,
                 questionNumber: questionNumber,
-                title: title,
-                subject: gameState.currentSubject,
+                title: setData.title,
+                subject: gameState.currentSubject || setData.theme.toLowerCase(),
                 progressPercentage: progressPercentage,
                 animateRun: true
             });
             
-            addLog(`Progress: Set ${setNumber} Q${questionNumber} (${progressPercentage.toFixed(1)}%)`, 'info');
-        }
-
-        // Add event listeners for question set changes
-        function initializeQuestionListeners() {
-            document.getElementById('questionSetSelect').addEventListener('change', updateQuestionProgress);
-            document.getElementById('questionNumber').addEventListener('change', updateQuestionProgress);
-            document.getElementById('questionSetTitle').addEventListener('input', updateQuestionProgress);
+            addLog(`Progress: Set ${setNumber} Q${questionNumber} - ${setData.title} (${progressPercentage.toFixed(1)}%)`, 'info');
         }
 
         // Other functions
@@ -1496,7 +913,7 @@
         }
 
         function resetGame() {
-            if (confirm('Reset entire game? This will clear all scores and action cards.')) {
+            if (confirm('Reset entire game? This will clear all scores, action cards, and return to Set 1 Q1.')) {
                 Object.keys(gameState.teams).forEach(teamId => {
                     gameState.teams[teamId].score = 0;
                     gameState.teams[teamId].cards = { angel: false, devil: false, cross: false, angelUsed: false, devilUsed: false };
@@ -1507,14 +924,31 @@
                     const devilCard = document.getElementById(`devilCard-${teamId}`);
                     const crossCard = document.getElementById(`crossCard-${teamId}`);
                     
-                    angelCard.className = 'action-card angel';
-                    devilCard.className = 'action-card devil';
-                    crossCard.className = 'action-card cross';
+                    angelCard.className = 'action-card angel w-6 h-8 cursor-pointer hover:scale-110 transition-transform duration-200 opacity-100';
+                    devilCard.className = 'action-card devil w-6 h-8 cursor-pointer hover:scale-110 transition-transform duration-200 opacity-100';
+                    crossCard.className = 'action-card cross w-6 h-8 opacity-40 grayscale';
                 });
+                
+                // Reset question position
+                gameState.currentQuestionSet = 1;
+                gameState.currentQuestionNumber = 1;
+                gameState.challenge2x = false;
+                gameState.currentSubject = null;
+                
+                // Reset UI
+                document.getElementById('challengeToggle').textContent = '2x OFF';
+                document.getElementById('challengeToggle').classList.add('bg-white/20');
+                document.getElementById('challengeToggle').classList.remove('bg-white/30');
+                document.querySelectorAll('.subject-btn').forEach(btn => {
+                    btn.classList.remove('border-blue-500', 'bg-blue-50', 'text-blue-600');
+                    btn.classList.add('border-gray-300', 'hover:border-blue-500', 'hover:bg-blue-50');
+                });
+                
+                updateQuestionTable();
                 clearBuzzers();
                 resetTimer();
                 gameState.actionHistory = [];
-                addLog('Game completely reset', 'success');
+                addLog('Game completely reset to defaults', 'success');
             }
         }
 
@@ -1527,27 +961,68 @@
             }
         }
 
+        function toggleShortcutsInfo() {
+            const info = document.getElementById('shortcutsInfo');
+            if (info.style.opacity === '1' || info.classList.contains('opacity-100')) {
+                info.style.opacity = '0';
+                info.classList.remove('opacity-100');
+                info.classList.add('opacity-0');
+            } else {
+                info.style.opacity = '1';
+                info.classList.remove('opacity-0');
+                info.classList.add('opacity-100');
+                setTimeout(() => {
+                    info.style.opacity = '0';
+                    info.classList.remove('opacity-100');
+                    info.classList.add('opacity-0');
+                }, 3000);
+            }
+        }
+
         // Logging system with undo functionality
         function addLog(message, type = 'info', undoData = null) {
             const timestamp = new Date().toLocaleTimeString();
             const logEntry = document.createElement('div');
-            logEntry.className = `log-entry ${type}`;
+            
+            let bgColor = 'bg-white';
+            let borderColor = 'border-gray-200';
+            let textColor = 'text-gray-700';
+            
+            switch(type) {
+                case 'success':
+                    bgColor = 'bg-green-50';
+                    borderColor = 'border-green-200';
+                    textColor = 'text-green-800';
+                    break;
+                case 'error':
+                    bgColor = 'bg-red-50';
+                    borderColor = 'border-red-200';
+                    textColor = 'text-red-800';
+                    break;
+                case 'warning':
+                    bgColor = 'bg-yellow-50';
+                    borderColor = 'border-yellow-200';
+                    textColor = 'text-yellow-800';
+                    break;
+            }
+            
+            logEntry.className = `${bgColor} rounded-lg p-3 border ${borderColor} flex justify-between items-center`;
             
             let undoButton = '';
             if (undoData) {
                 gameState.actionHistory.push(undoData);
-                undoButton = `<button class="undo-btn" onclick="undoAction(${gameState.actionHistory.length - 1})">UNDO</button>`;
+                undoButton = `<button onclick="undoAction(${gameState.actionHistory.length - 1})" class="ml-3 px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 font-medium rounded text-xs transition-colors duration-200">UNDO</button>`;
             }
             
             logEntry.innerHTML = `
-                <div class="log-content">
-                    <span class="log-timestamp">[${timestamp}]</span>
-                    <span class="log-message">${message}</span>
+                <div>
+                    <span class="text-gray-500 text-xs">[${timestamp}]</span>
+                    <span class="${textColor} ml-2">${message}</span>
                 </div>
                 ${undoButton}
             `;
             
-            const logsContent = document.getElementById('logsContent');
+            const logsContent = document.getElementById('logsContentArea');
             logsContent.appendChild(logEntry);
             logsContent.scrollTop = logsContent.scrollHeight;
         }
@@ -1585,23 +1060,28 @@
                     gameState.teams[action.targetId].score += 1; // Restore the point
                     gameState.teams[action.targetId].cards.cross = false; // Remove cross protection
                     document.getElementById(`teamScoreConsole-${action.targetId}`).textContent = gameState.teams[action.targetId].score;
-                    document.getElementById(`crossCard-${action.targetId}`).classList.remove('active');
+                    const crossCard = document.getElementById(`crossCard-${action.targetId}`);
+                    crossCard.classList.remove('opacity-100');
+                    crossCard.classList.add('opacity-40', 'grayscale');
                     addLog(`Undid devil attack: Team ${action.targetId} restored, cross removed`, 'warning');
                     break;
             }
             
             // Disable the undo button
-            const undoButtons = document.querySelectorAll('.undo-btn');
+            const undoButtons = document.querySelectorAll('button[onclick^="undoAction"]');
             undoButtons[actionIndex].disabled = true;
             undoButtons[actionIndex].textContent = 'UNDONE';
+            undoButtons[actionIndex].classList.remove('hover:bg-red-200');
+            undoButtons[actionIndex].classList.add('opacity-50', 'cursor-not-allowed');
         }
 
         function clearLogs() {
-            document.getElementById('logsContent').innerHTML = `
-                <div class="log-entry">
-                    <div class="log-content">
-                        <span class="log-timestamp">[${new Date().toLocaleTimeString()}]</span>
-                        <span class="log-message">Logs cleared</span>
+            const logsContent = document.getElementById('logsContentArea');
+            logsContent.innerHTML = `
+                <div class="bg-white rounded-lg p-3 border border-gray-200 flex justify-between items-center">
+                    <div>
+                        <span class="text-gray-500 text-xs">[${new Date().toLocaleTimeString()}]</span>
+                        <span class="text-gray-700 ml-2">Logs cleared</span>
                     </div>
                 </div>
             `;
@@ -1609,7 +1089,7 @@
         }
 
         function exportLogs() {
-            const logs = document.getElementById('logsContent').innerText;
+            const logs = document.getElementById('logsContentArea').innerText;
             const blob = new Blob([logs], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1643,16 +1123,20 @@
         });
 
         socket.on('arduino_connected', (data) => {
-            document.getElementById('connectionStatus').classList.add('connected');
-            document.getElementById('arduinoStatus').classList.add('connected');
+            document.getElementById('connectionStatus').classList.remove('bg-red-500');
+            document.getElementById('connectionStatus').classList.add('bg-green-500');
+            document.getElementById('arduinoStatus').classList.remove('bg-red-500');
+            document.getElementById('arduinoStatus').classList.add('bg-green-500');
             document.getElementById('connectionText').textContent = 'Connected';
             document.getElementById('arduinoText').textContent = `Port: ${data.port}`;
             addLog(`Arduino connected: ${data.port}`, 'success');
         });
 
         socket.on('arduino_disconnected', () => {
-            document.getElementById('connectionStatus').classList.remove('connected');
-            document.getElementById('arduinoStatus').classList.remove('connected');
+            document.getElementById('connectionStatus').classList.remove('bg-green-500');
+            document.getElementById('connectionStatus').classList.add('bg-red-500');
+            document.getElementById('arduinoStatus').classList.remove('bg-green-500');
+            document.getElementById('arduinoStatus').classList.add('bg-red-500');
             document.getElementById('connectionText').textContent = 'Disconnected';
             document.getElementById('arduinoText').textContent = 'Not Connected';
             addLog('Arduino disconnected', 'error');
@@ -1677,6 +1161,15 @@
             addLog(data.message, data.type);
         });
 
+        // Close color dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.team-color-display') && !event.target.closest('.color-dropdown')) {
+                document.querySelectorAll('.color-dropdown').forEach(dropdown => {
+                    dropdown.classList.add('hidden');
+                });
+            }
+        });
+
         // Initialize console
         document.addEventListener('DOMContentLoaded', function() {
             // Request ports on load
@@ -1685,16 +1178,20 @@
             // Initialize timer display
             document.getElementById('timerDisplayConsole').textContent = formatTime(gameState.timerValue);
             
-            // Initialize question listeners
-            initializeQuestionListeners();
+            // Initialize question table and teams
+            initializeQuestionTable();
+            initializeTeamsGrid();
             
             // Send initial progress state
             updateQuestionProgress();
             
-            addLog('Console ready for moderation', 'success');
+            // Show shortcuts info briefly on load
+            setTimeout(() => toggleShortcutsInfo(), 1000);
+            
+            addLog('Console ready for moderation - Press H for keyboard shortcuts', 'success');
         });
 
-        console.log('Quiz Bowl Console - Clean Moderator Interface');
+        console.log('Quiz Bowl Console - Enhanced Moderator Interface with Tailwind CSS');
     </script>
 </body>
 </html> 
