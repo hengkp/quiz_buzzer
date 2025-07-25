@@ -4,2497 +4,340 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Among Us Quiz Bowl - Unified Interface</title>
+    
+    <!-- External Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="set_progress_white.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Sarabun', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #e3f2fd 0%, #f8f9fa 50%, #e8f5e8 100%);
-            min-height: 100vh;
-            color: #1a1a1a;
-            overflow: hidden;
-            position: relative;
-        }
-        
-        /* Animated background elements */
-        .bg-pattern {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                radial-gradient(circle at 25% 25%, rgba(120, 61, 210, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 75% 75%, rgba(91, 254, 75, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 50% 50%, rgba(255, 141, 28, 0.08) 0%, transparent 50%);
-            animation: float 20s ease-in-out infinite;
-            z-index: 0;
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(1deg); }
-        }
-        
-        /* Console Window Button */
-        .console-toggle {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1002;
-            background: rgba(0, 122, 255, 0.9);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            padding: 12px 20px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            backdrop-filter: blur(20px);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
-        }
-        
-        .console-toggle:hover {
-            background: rgba(0, 122, 255, 1);
-            transform: translateY(-2px);
-        }
-        
-        .console-toggle.has-console {
-            background: rgba(52, 199, 89, 0.9);
-        }
-        
-        /* Main Container */
-        .main-container {
-            position: relative;
-            z-index: 1;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-        }
-        
-        /* Console Header */
-        .console-header {
-            background: linear-gradient(135deg, #007AFF 0%, #0056CC 100%);
-            color: white;
-            padding: 20px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .console-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-        
-        .console-close {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            border-radius: 8px;
-            padding: 8px 16px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-        
-        .console-close:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-        
-        /* Console Content */
-        .console-content {
-            flex: 1;
-            display: flex;
-            overflow: hidden;
-        }
-        
-        .console-main {
-            flex: 2;
-            padding: 20px;
-            overflow-y: auto;
-        }
-        
-        .console-logs {
-            flex: 1;
-            background: #1e1e1e;
-            color: #f5f5f5;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        /* Control Sections */
-        .control-section {
-            background: #f9f9f9;
-            border-radius: 12px;
-            margin-bottom: 16px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-        
-        .section-header {
-            background: #f0f0f0;
-            padding: 16px 20px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            user-select: none;
-            transition: all 0.2s ease;
-        }
-        
-        .section-header:hover {
-            background: #e8e8e8;
-        }
-        
-        .section-header.active {
-            background: #007AFF;
-            color: white;
-        }
-        
-        .section-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .section-icon {
-            font-size: 1.2rem;
-        }
-        
-        .section-arrow {
-            font-size: 0.8rem;
-            transition: transform 0.3s ease;
-        }
-        
-        .section-arrow.expanded {
-            transform: rotate(180deg);
-        }
-        
-        .section-content {
-            padding: 20px;
-            max-height: 0;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-        
-        .section-content.expanded {
-            max-height: 500px;
-        }
-        
-        /* Quick Actions */
-        .quick-actions {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .quick-btn {
-            background: #007AFF;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 16px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            flex: 1;
-            min-width: 120px;
-        }
-        
-        .quick-btn:hover {
-            background: #0056CC;
-            transform: translateY(-1px);
-        }
-        
-        .quick-btn.danger {
-            background: #ff3b30;
-        }
-        
-        .quick-btn.danger:hover {
-            background: #d70015;
-        }
-        
-        .quick-btn.success {
-            background: #34c759;
-        }
-        
-        .quick-btn.success:hover {
-            background: #248a3d;
-        }
-        
-        /* Team Grid */
-        .teams-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 16px;
-        }
-        
-        .team-card {
-            background: white;
-            border-radius: 12px;
-            padding: 16px;
-            border: 2px solid #e5e5e7;
-            transition: all 0.2s ease;
-        }
-        
-        .team-card:hover {
-            border-color: #007AFF;
-            box-shadow: 0 4px 16px rgba(0, 122, 255, 0.1);
-        }
-        
-        .team-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
-        
-        .team-name-input {
-            flex: 1;
-            padding: 8px 12px;
-            border: 1px solid #d2d2d7;
-            border-radius: 6px;
-            font-size: 0.95rem;
-            font-weight: 500;
-            margin-right: 10px;
-        }
-        
-        .team-score {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #007AFF;
-            min-width: 60px;
-            text-align: center;
-        }
-        
-        .team-controls {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 12px;
-        }
-        
-        .control-btn {
-            flex: 1;
-            padding: 6px 8px;
-            border: none;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .control-btn.score-plus {
-            background: #34c759;
-            color: white;
-        }
-        
-        .control-btn.score-minus {
-            background: #ff3b30;
-            color: white;
-        }
-        
-        .control-btn.score-reset {
-            background: #f2f2f7;
-            color: #007AFF;
-        }
-        
-        /* Color Picker */
-        .color-section {
-            margin-top: 12px;
-        }
-        
-        .color-trigger {
-            background: #f2f2f7;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            width: 100%;
-            font-size: 0.9rem;
-            color: #007AFF;
-            font-weight: 500;
-        }
-        
-        .color-picker {
-            display: none;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            margin-top: 8px;
-        }
-        
-        .color-picker.visible {
-            display: grid;
-        }
-        
-        .color-option {
-            width: 100%;
-            height: 40px;
-            border-radius: 8px;
-            border: 3px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .color-option:hover {
-            transform: scale(1.1);
-        }
-        
-        .color-option.selected {
-            border-color: #007AFF;
-            box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3);
-        }
-        
-        /* Timer Section */
-        .timer-display {
-            font-size: 3rem;
-            font-weight: 700;
-            text-align: center;
-            font-family: 'SF Mono', monospace;
-            color: #007AFF;
-            margin-bottom: 16px;
-        }
-        
-        .timer-controls {
-            display: grid;
-            grid-template-columns: 1fr 2fr 1fr;
-            gap: 12px;
-            align-items: center;
-        }
-        
-        .timer-input {
-            padding: 10px;
-            border: 1px solid #d2d2d7;
-            border-radius: 6px;
-            text-align: center;
-            font-size: 1rem;
-        }
-        
-        /* Logs Panel */
-        .logs-header {
-            background: #2d2d30;
-            padding: 16px 20px;
-            font-weight: 600;
-            border-bottom: 1px solid #3a3a3c;
-        }
-        
-        .logs-content {
-            flex: 1;
-            padding: 16px 20px;
-            overflow-y: auto;
-            font-family: 'SF Mono', monospace;
-            font-size: 0.85rem;
-            line-height: 1.5;
-        }
-        
-        .log-entry {
-            margin-bottom: 8px;
-            padding: 6px 10px;
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.05);
-        }
-        
-        .log-entry.success {
-            border-left: 3px solid #34c759;
-        }
-        
-        .log-entry.error {
-            border-left: 3px solid #ff3b30;
-        }
-        
-        .log-entry.warning {
-            border-left: 3px solid #ff9500;
-        }
-        
-        .log-timestamp {
-            color: #888;
-            font-size: 0.75rem;
-        }
-        
-        /* Original Main Display Styles */
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .main-title {
-            font-size: 2.8rem;
-            font-weight: 700;
-            color: #2c3e50;
-            line-height: 1.3;
-            margin-bottom: 10px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        
-        .subtitle {
-            font-size: 1.6rem;
-            font-weight: 500;
-            color: #34495e;
-            line-height: 1.4;
-        }
-        
-        .date-venue {
-            font-size: 1.3rem;
-            font-weight: 400;
-            color: #7f8c8d;
-            margin-top: 8px;
-        }
-        
-        /* Mario-Style Progress Section */
-        .progress-section {
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 30px;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            height: 350px;
-        }
-        
-        .question-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        
-        .question-info {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            flex: 1;
-        }
-        
-        .question-set-title {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #2c3e50;
-            margin-bottom: 8px;
-            text-align: center;
-        }
-        
-        .question-subject {
-            font-size: 3rem;
-            text-align: center;
-        }
-        
-        .timer-display-main {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-width: 120px;
-        }
-        
-        .timer-label {
-            font-size: 1rem;
-            color: #7f8c8d;
-            margin-bottom: 5px;
-        }
-        
-        .timer-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #e74c3c;
-            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-            background: rgba(231, 76, 60, 0.1);
-            padding: 10px 15px;
-            border-radius: 12px;
-            border: 2px solid rgba(231, 76, 60, 0.2);
-        }
-        
-        /* Mario Game Area */
-        .mario-game-area {
-            flex: 1;
-            position: relative;
-            background: linear-gradient(to bottom, #87CEEB 0%, #87CEEB 70%, #8B4513 70%, #8B4513 100%);
-            border-radius: 15px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-        
-        .sky-area {
-            height: 70%;
-            position: relative;
-            background: linear-gradient(to bottom, #87CEEB 0%, #98D8E8 100%);
-        }
-        
-        .ground-area {
-            height: 30%;
-            background: linear-gradient(to bottom, #8B4513 0%, #654321 100%);
-            position: relative;
-        }
-        
-        .ground-surface {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 8px;
-            background: linear-gradient(to bottom, #90EE90 0%, #32CD32 100%);
-        }
-        
-        .game-scene {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 200%;
-            height: 100%;
-            transition: transform 1.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .question-blocks {
-            position: absolute;
-            top: 30%;
-            left: 0;
-            width: 100%;
-            height: 40%;
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-            padding: 0 5%;
-        }
-        
-        .question-block {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(145deg, #FFD700, #FFA500);
-            border: 3px solid #FF8C00;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #8B4513;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            position: relative;
-        }
-        
-        .question-block.current {
-            background: linear-gradient(145deg, #FF6B6B, #FF5252);
-            border-color: #E53E3E;
-            color: white;
-            animation: glow 1s ease-in-out infinite alternate;
-        }
-        
-        @keyframes glow {
-            0% { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); }
-            100% { box-shadow: 0 4px 8px rgba(255, 107, 107, 0.6), 0 0 20px rgba(255, 107, 107, 0.3); }
-        }
-        
-        .question-block.completed {
-            background: linear-gradient(145deg, #4CAF50, #45A049);
-            border-color: #388E3C;
-            color: white;
-        }
-        
-        /* Character Container */
-        .character-container-main {
-            position: absolute;
-            bottom: 30%;
-            left: 45%;
-            transform: translateX(-50%);
-            z-index: 20;
-        }
-        
-        .main-character {
-            width: 80px;
-            height: 80px;
-            position: relative;
-        }
-        
-        .among-us-character {
-            width: 100%;
-            height: 100%;
-        }
-        
-        /* Challenge Indicator */
-        .challenge-indicator {
-            position: absolute;
-            top: -30px;
-            right: -20px;
-            width: 40px;
-            height: 50px;
-            background-image: url('assets/cards/card-challenge.png');
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            opacity: 0;
-            transform: scale(0.8);
-            transition: all 0.3s ease;
-        }
-        
-        .challenge-indicator.active {
-            opacity: 1;
-            transform: scale(1);
-        }
-        
-        /* Score Indicators */
-        .score-indicator {
-            position: absolute;
-            top: -50px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 30;
-            pointer-events: none;
-        }
-        
-        .score-popup {
-            background-image: url('assets/score/dollar-plus.png');
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            width: 40px;
-            height: 40px;
-            position: relative;
-            opacity: 0;
-            transform: translateY(20px) scale(0.8);
-            transition: all 0.5s ease;
-        }
-        
-        .score-popup.minus {
-            background-image: url('assets/score/dollar-minus.png');
-        }
-        
-        .score-popup.show {
-            opacity: 1;
-            transform: translateY(-20px) scale(1.2);
-        }
-        
-        .score-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: white;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
-        }
-        
-        /* Clouds for decoration */
-        .cloud {
-            position: absolute;
-            background: white;
-            border-radius: 50px;
-            opacity: 0.8;
-        }
-        
-        .cloud:before,
-        .cloud:after {
-            content: '';
-            position: absolute;
-            background: white;
-            border-radius: 50px;
-        }
-        
-        .cloud1 {
-            width: 80px;
-            height: 30px;
-            top: 15%;
-            left: 20%;
-            animation: float-cloud 20s infinite linear;
-        }
-        
-        .cloud1:before {
-            width: 30px;
-            height: 30px;
-            top: -15px;
-            left: 10px;
-        }
-        
-        .cloud1:after {
-            width: 40px;
-            height: 25px;
-            top: -10px;
-            right: 10px;
-        }
-        
-        .cloud2 {
-            width: 60px;
-            height: 25px;
-            top: 25%;
-            right: 15%;
-            animation: float-cloud 25s infinite linear reverse;
-        }
-        
-        .cloud2:before {
-            width: 25px;
-            height: 25px;
-            top: -12px;
-            left: 8px;
-        }
-        
-        .cloud2:after {
-            width: 30px;
-            height: 20px;
-            top: -8px;
-            right: 8px;
-        }
-        
-        @keyframes float-cloud {
-            0% { transform: translateX(-100px); }
-            100% { transform: translateX(calc(100vw + 100px)); }
-        }
-        
-        .teams-grid-main {
-            flex: 1;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(2, 1fr);
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .team-card-main {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: visible;
-            min-height: 200px;
-        }
-        
-        .team-card-main.buzzing {
-            transform: scale(1.05);
-            box-shadow: 0 0 30px rgba(var(--team-color), 0.6);
-            border-color: rgb(var(--team-color));
-        }
-        
-        .team-name-main {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 12px;
-            text-align: center;
-        }
-        
-        .character-section {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 12px;
-            width: 100%;
-        }
-        
-        .rank-badge {
-            position: absolute;
-            top: -5px;
-            left: 5px;
-            width: 35px;
-            height: 35px;
-            z-index: 5;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        .rank-badge.visible {
-            opacity: 1;
-        }
-        
-        .character-container {
-            width: 100px;
-            height: 100px;
-            position: relative;
-            flex-shrink: 0;
-        }
-        
-        .among-us-lottie {
-            width: 100%;
-            height: 100%;
-        }
-        
-        .buzzing-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        .buzzing-overlay.active {
-            opacity: 1;
-        }
-        
-        .score-display {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #2c3e50;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 6px 10px;
-            border-radius: 12px;
-            border: 2px solid rgba(var(--team-color), 0.3);
-            min-width: 50px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            z-index: 10;
-        }
-        
-        .action-cards {
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-        }
-        
-        .action-card {
-            width: 30px;
-            height: 40px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            transition: all 0.3s ease;
-            position: relative;
-            cursor: pointer;
-        }
-        
-        .action-card:hover {
-            transform: scale(1.1);
-        }
-        
-        /* Angel and Devil cards: Colored by default, gray when used */
-        .action-card.angel,
-        .action-card.devil {
-            opacity: 1;
-            filter: grayscale(0%);
-        }
-        
-        .action-card.angel.used,
-        .action-card.devil.used {
-            opacity: 0.4;
-            filter: grayscale(100%);
-        }
-        
-        /* Cross card: Gray by default, colored when available (team was attacked) */
-        .action-card.cross {
-            opacity: 0.4;
-            filter: grayscale(100%);
-        }
-        
-        .action-card.cross.available {
-            opacity: 1;
-            filter: grayscale(0%);
-        }
-        
-        .action-card.cross.used {
-            opacity: 0.4;
-            filter: grayscale(100%);
-        }
-        
-        .action-card.angel {
-            background-image: url('assets/cards/card-angel.png');
-        }
-        
-        .action-card.devil {
-            background-image: url('assets/cards/card-devil.png');
-        }
-        
-        .action-card.cross {
-            background-image: url('assets/cards/card-cross.png');
-        }
-        
-        /* Team Colors */
-        .team-white { --team-color: 233, 247, 255; }
-        .team-lime { --team-color: 91, 254, 75; }
-        .team-purple { --team-color: 120, 61, 210; }
-        .team-orange { --team-color: 255, 141, 28; }
-        .team-cyan { --team-color: 68, 255, 247; }
-        .team-blue { --team-color: 29, 60, 233; }
-        .team-red { --team-color: 215, 30, 34; }
-        .team-pink { --team-color: 255, 99, 212; }
-        .team-yellow { --team-color: 255, 255, 103; }
-        
-        /* Enhanced Responsive Design */
-        
-        /* Common base styles for all screens */
-        .main-container {
-            height: 100vh;
-            width: 100vw;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        
-        /* Projector screens 4:3 aspect ratio */
-        @media screen and (aspect-ratio: 4/3) {
-            .teams-grid-main { 
-                grid-template-columns: repeat(3, 1fr);
-                grid-template-rows: repeat(2, 1fr);
-                gap: 1.5vw;
-            }
-            .team-card-main { 
-                padding: 1.2vw; 
-                min-height: 15vh;
-            }
-            .main-title { font-size: 3.5vw; }
-            .subtitle { font-size: 1.8vw; }
-            .timer-value { font-size: 3vw; }
-            .character-container { width: 6vw; height: 6vw; }
-            .score-display { font-size: 1.4vw; }
-        }
-        
-        /* Projector screens 16:10 aspect ratio */
-        @media screen and (aspect-ratio: 16/10) {
-            .teams-grid-main { 
-                grid-template-columns: repeat(3, 1fr);
-                grid-template-rows: repeat(2, 1fr);
-                gap: 1.2vw;
-            }
-            .team-card-main { 
-                padding: 1vw; 
-                min-height: 18vh;
-            }
-            .main-title { font-size: 3vw; }
-            .subtitle { font-size: 1.5vw; }
-            .timer-value { font-size: 2.5vw; }
-            .character-container { width: 5vw; height: 5vw; }
-            .score-display { font-size: 1.2vw; }
-        }
-        
-        /* Wide screens 16:9 aspect ratio */
-        @media screen and (aspect-ratio: 16/9) {
-            .teams-grid-main { 
-                grid-template-columns: repeat(3, 1fr);
-                grid-template-rows: repeat(2, 1fr);
-                gap: 1vw;
-            }
-            .team-card-main { 
-                padding: 0.8vw; 
-                min-height: 20vh;
-            }
-            .main-title { font-size: 2.8vw; }
-            .subtitle { font-size: 1.4vw; }
-            .timer-value { font-size: 2.2vw; }
-            .character-container { width: 4.5vw; height: 4.5vw; }
-            .score-display { font-size: 1.1vw; }
-        }
-        
-        /* Ultra-wide screens (4K, 8K) */
-        @media (min-width: 2560px) {
-            .main-title { font-size: 4rem; }
-            .subtitle { font-size: 2.2rem; }
-            .date-venue { font-size: 1.4rem; }
-            .team-card-main { padding: 25px; font-size: 1.2rem; min-height: 250px; }
-            .character-container { width: 100px; height: 100px; }
-            .among-us-character { width: 120px; height: 120px; }
-            .progress-container { margin: 40px 0; }
-            .timer-value { font-size: 4rem; }
-            .score-display { font-size: 2rem; }
-        }
-        
-        /* Large desktop screens */
-        @media (min-width: 1920px) and (max-width: 2559px) {
-            .main-title { font-size: 3.2rem; }
-            .subtitle { font-size: 1.8rem; }
-            .date-venue { font-size: 1.1rem; }
-            .team-card-main { padding: 20px; min-height: 220px; }
-            .character-container { width: 85px; height: 85px; }
-            .among-us-character { width: 100px; height: 100px; }
-            .score-display { font-size: 1.8rem; }
-        }
-        
-        /* Standard desktop screens */
-        @media (min-width: 1440px) and (max-width: 1919px) {
-            .main-title { font-size: 2.8rem; }
-            .subtitle { font-size: 1.6rem; }
-            .team-card-main { padding: 18px; min-height: 200px; }
-            .character-container { width: 75px; height: 75px; }
-            .among-us-character { width: 90px; height: 90px; }
-            .score-display { font-size: 1.6rem; }
-        }
-        
-        /* Medium desktop screens */
-        @media (min-width: 1200px) and (max-width: 1439px) {
-            .main-title { font-size: 2.4rem; }
-            .subtitle { font-size: 1.4rem; }
-            .teams-grid-main { gap: 15px; }
-            .team-card-main { padding: 15px; min-height: 180px; }
-            .character-container { width: 70px; height: 70px; }
-            .among-us-character { width: 80px; height: 80px; }
-            .score-display { font-size: 1.4rem; }
-        }
-        
-        /* Small desktop / Large laptop */
-        @media (min-width: 1024px) and (max-width: 1199px) {
-            .main-title { font-size: 2rem; }
-            .subtitle { font-size: 1.2rem; }
-            .date-venue { font-size: 0.9rem; }
-            .character-container { width: 60px; height: 60px; }
-            .among-us-character { width: 70px; height: 70px; }
-            .team-card-main { padding: 12px; font-size: 0.9rem; min-height: 160px; }
-            .teams-grid-main { gap: 12px; }
-            .timer-value { font-size: 2.5rem; }
-            .score-display { font-size: 1.2rem; }
-        }
-        
-        /* Tablet landscape */
-        @media (min-width: 768px) and (max-width: 1023px) {
-            .main-title { font-size: 1.8rem; }
-            .subtitle { font-size: 1rem; }
-            .date-venue { font-size: 0.8rem; }
-            .header { padding: 15px; }
-            .teams-grid-main { 
-                grid-template-columns: repeat(3, 1fr); 
-                gap: 10px;
-                padding: 15px;
-            }
-            .team-card-main { 
-                padding: 10px; 
-                font-size: 0.8rem;
-                min-height: 140px;
-            }
-            .character-container { width: 50px; height: 50px; }
-            .among-us-character { width: 60px; height: 60px; }
-            .progress-container { margin: 20px 15px; }
-            .timer-display-main { 
-                right: 15px; 
-                top: 15px;
-            }
-            .timer-value { font-size: 2rem; }
-            .score-display { font-size: 1rem; }
-            .console-toggle { 
-                top: 15px; 
-                right: 15px; 
-                font-size: 0.8rem;
-                padding: 8px 12px;
-            }
-        }
-        
-        /* Tablet portrait */
-        @media (min-width: 481px) and (max-width: 767px) {
-            .main-title { font-size: 1.5rem; }
-            .subtitle { font-size: 0.9rem; }
-            .date-venue { font-size: 0.7rem; }
-            .header { padding: 12px; }
-            .teams-grid-main { 
-                grid-template-columns: repeat(2, 1fr); 
-                gap: 8px;
-                padding: 12px;
-            }
-            .team-card-main { 
-                padding: 8px; 
-                font-size: 0.7rem;
-                min-height: 120px;
-            }
-            .character-container { width: 40px; height: 40px; }
-            .among-us-character { width: 50px; height: 50px; }
-            .progress-container { margin: 15px 12px; }
-            .progress-track { height: 8px; }
-            .timer-display-main { 
-                position: static;
-                text-align: center;
-                margin: 10px 0;
-            }
-            .timer-value { font-size: 1.8rem; }
-            .score-display { font-size: 0.9rem; padding: 4px 8px; }
-            .console-toggle { 
-                position: static;
-                display: block;
-                margin: 10px auto;
-                font-size: 0.7rem;
-                padding: 6px 10px;
-            }
-        }
-        
-        /* Mobile landscape */
-        @media (min-width: 320px) and (max-width: 480px) and (orientation: landscape) {
-            .main-title { font-size: 1.2rem; }
-            .subtitle { font-size: 0.8rem; }
-            .date-venue { font-size: 0.6rem; }
-            .header { padding: 8px; }
-            .teams-grid-main { 
-                grid-template-columns: repeat(3, 1fr); 
-                gap: 6px;
-                padding: 8px;
-            }
-            .team-card-main { 
-                padding: 6px; 
-                font-size: 0.6rem;
-                min-height: 100px;
-            }
-            .character-container { width: 30px; height: 30px; }
-            .among-us-character { width: 40px; height: 40px; }
-            .progress-container { margin: 10px 8px; }
-            .progress-track { height: 6px; }
-            .timer-value { font-size: 1.5rem; }
-            .score-display { font-size: 0.8rem; padding: 3px 6px; }
-        }
-        
-        /* Mobile portrait */
-        @media (max-width: 480px) and (orientation: portrait) {
-            body { overflow-y: auto; }
-            .main-title { 
-                font-size: 1.1rem; 
-                line-height: 1.2;
-            }
-            .subtitle { 
-                font-size: 0.7rem;
-                line-height: 1.2;
-            }
-            .date-venue { 
-                font-size: 0.6rem;
-                line-height: 1.2;
-            }
-            .header { padding: 8px; }
-            .teams-grid-main { 
-                grid-template-columns: 1fr; 
-                gap: 6px;
-                padding: 8px;
-            }
-            .team-card-main { 
-                padding: 8px; 
-                font-size: 0.7rem;
-                min-height: 80px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 6px;
-            }
-            .character-container { 
-                width: 35px; 
-                height: 35px;
-                flex-shrink: 0;
-            }
-            .among-us-character { width: 45px; height: 45px; }
-            .score-display { font-size: 0.8rem; padding: 3px 6px; position: relative; top: auto; right: auto; margin-top: 4px; }
-            .progress-container { 
-                margin: 10px 8px;
-                order: -1; /* Move progress to top on mobile */
-            }
-            .progress-track { height: 8px; }
-            .timer-display-main { 
-                position: static;
-                text-align: center;
-                margin: 8px 0;
-                order: -2; /* Move timer above progress */
-            }
-            .timer-value { font-size: 1.6rem; }
-            .console-toggle { 
-                position: fixed;
-                bottom: 10px;
-                right: 10px;
-                font-size: 0.7rem;
-                padding: 8px 12px;
-                z-index: 1000;
-            }
-            .main-container {
-                display: flex;
-                flex-direction: column;
-            }
-        }
-        
-        /* Ultra-small devices */
-        @media (max-width: 320px) {
-            .main-title { font-size: 0.9rem; }
-            .subtitle { font-size: 0.6rem; }
-            .date-venue { font-size: 0.5rem; }
-            .team-card-main { font-size: 0.6rem; }
-            .character-container { width: 25px; height: 25px; }
-            .among-us-character { width: 35px; height: 35px; }
-            .timer-value { font-size: 1.4rem; }
-        }
-        
-        /* Print styles */
-        @media print {
-            .console-toggle,
-            .timer-display-main,
-            .among-us-character {
-                display: none;
-            }
-            body {
-                background: white;
-                color: black;
-            }
-            .main-title,
-            .subtitle,
-            .date-venue {
-                color: black;
-            }
-        }
-    </style>
+    
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="css/among_us.css">
 </head>
 <body>
-    <!-- Console Window Button -->
-    <button class="console-toggle" id="consoleToggle" onclick="openConsoleWindow()">
-        <i class="ri-settings-3-line"></i>
-    </button>
     
-    <!-- Background Pattern -->
-    <div class="bg-pattern"></div>
-    
-    <!-- Main Display Container -->
+    <!-- Main Container -->
     <div class="main-container" id="mainContainer">
-        <!-- Header Section -->
+
+        <!-- Background Animation -->
+        <lottie-player 
+            class="background-animation"
+            src="assets/animations/background_space.json"
+            background="transparent"
+            speed="0.5"
+            loop
+            autoplay>
+        </lottie-player>
+
+        <!-- Background Animation 2 -->
+        <lottie-player 
+            class="background-animation-2"
+            src="assets/animations/background_orbit.json"
+            background="transparent"
+            speed="0.5"
+            loop
+            autoplay>
+        </lottie-player>
+
+                
+        <!-- Header -->
         <div class="header">
-            <div class="main-title">National Science Day Competition @RERU</div>
-            <div class="subtitle">High School Quiz Bowl Championship</div>
-            <div class="date-venue">August 21, 2025 | Faculty of Liberal Arts and Sciences, Roi Et Rajabhat University</div>
+            Final Quiz Bowl Science Day 2025 @RERU
         </div>
+
+        <!-- Question Set -->
+        <div class="question-set-line">
+            <span class="question-subject" id="subjectIcon">🧬</span>
+            <span class="question-set-title" id="currentQuestionSet">Question Set 1</span>
+        </div>
+
+        <!-- Timer -->
+        <div class="timer-value" id="timerDisplay">0:00</div>
         
-        <!-- Mario-Style Progress Section -->
-        <div class="progress-section">
-            <div class="question-header">
-                <div class="question-info">
-                    <div class="question-set-title" id="currentQuestionSet">Question Set 1</div>
-                    <div class="question-subject" id="subjectIcon">🧬</div>
+        <!-- Console Toggle Cloud -->
+        <button class="cloud cloud1" id="consoleToggle" onclick="openConsoleWindow()">
+            <i class="ri-settings-3-line"></i>
+        </button>
+
+        <!-- Fullscreen Toggle Button -->
+        <button class="cloud cloud2" id="fullscreenToggle" onclick="toggleFullscreen()">
+            <i class="ri-fullscreen-line" id="fullscreenIcon"></i>
+        </button>
+
+        <!-- Character -->
+        <div class="character-container-main">
+            <lottie-player 
+                class="main-character"
+                id="progressCharacter"
+                src="assets/animations/among_us_idle.json"
+                background="transparent"
+                speed="1"
+                loop
+                autoplay>
+            </lottie-player>
+            
+            <!-- Action Card and Challenge Indicator Panel -->
+            <div class="character-action-panel" id="characterActionPanel">
+                <div class="character-action-icon angel active" id="mainCharacterAngel"></div>
+                <div class="character-action-icon devil" id="mainCharacterDevil"></div>
+                <div class="character-action-icon cross" id="mainCharacterCross"></div>
+                <div class="character-action-icon challenge" id="mainCharacterChallenge"></div>
+            </div>
+            
+            <!-- Score indicator -->
+            <div class="score-indicator" id="scoreIndicator">
+                <div class="score-popup show" id="scorePopup">
+                    <div class="score-text" id="scoreText">+1</div>
                 </div>
-                
-                <div class="timer-display-main">
-                    <div class="timer-label">Timer</div>
-                    <div class="timer-value" id="timerDisplay">0:00</div>
+            </div>
+        
+        </div>
+            
+        <!-- Planet Progress -->
+        <div class="planet-blocks" id="planetBlocks">
+            <lottie-player 
+                class="planet-block earth current"
+                id="earth"
+                src="assets/animations/space_earth.json"
+                background="transparent"
+                speed="1"
+                loop
+                autoplay>
+            </lottie-player>
+            <lottie-player 
+                class="planet-block moon "
+                id="moon"
+                src="assets/animations/space_moon.json"
+                background="transparent"
+                speed="1"
+                loop
+                autoplay>
+            </lottie-player>
+            <lottie-player 
+                class="planet-block venus "
+                id="venus"
+                src="assets/animations/space_venus.json"
+                background="transparent"
+                speed="1"
+                loop
+                autoplay>
+            </lottie-player>
+            <lottie-player 
+                class="planet-block jupiter "
+                id="jupiter"
+                src="assets/animations/space_jupiter.json"
+                background="transparent"
+                speed="1"
+                loop
+                autoplay>
+            </lottie-player>
+        </div>
+            
+        <!-- Question Blocks Progress -->
+        <div class="question-block" id="questionBlock">
+            
+            <lottie-player 
+                class="question-block-star"
+                id="questionBlockStar"
+                src="assets/animations/space_star.json"
+                background="transparent"
+                speed="1"
+                loop
+                autoplay>
+            </lottie-player>
+            <div class="question-block-number" id="questionBlockNumber">1</div>
+        </div>
+
+        <div class="team-area" id="teamArea">
+            <!-- Team A -->
+            <div class="team-card" style="top: 0%; left: 6%; z-index: 21;" data-team-id="1">
+                <div class="team-name" id="teamName1">Team A</div>
+                <div class="team-content">
+                    <img class="team-rank active" id="teamRanking1" src="assets/rankings/ranking-badge.png">
+                    <lottie-player 
+                        class="team-character"
+                        id="teamCharacter1"
+                        src="assets/animations/among_us_idle.json"
+                        background="transparent"
+                        speed="1"
+                        loop
+                        autoplay>
+                    </lottie-player>
+                    <div class="team-score" id="teamScore1">0</div>
+                </div>
+                <div class="team-actions">
+                    <div class="team-action-card angel active" id="teamAngel1"></div>
+                    <div class="team-action-card devil active" id="teamDevil1"></div>
+                    <div class="team-action-card cross" id="teamCross1"></div>
                 </div>
             </div>
             
-            <div class="mario-game-area">
-                <div class="sky-area">
-                    <!-- Floating clouds for decoration -->
-                    <div class="cloud cloud1"></div>
-                    <div class="cloud cloud2"></div>
+            <!-- Team B -->
+            <div class="team-card" style="top: 10%; left: 0%; z-index: 22;" data-team-id="2">
+                <div class="team-name" id="teamName2">Team B</div>
+                <div class="team-content">
+                    <img class="team-rank active" id="teamRanking2" src="assets/rankings/ranking-badge.png">
+                    <lottie-player 
+                        class="team-character"
+                        id="teamCharacter2"
+                        src="assets/animations/among_us_idle.json"
+                        background="transparent"
+                        speed="1"
+                        loop
+                        autoplay>
+                    </lottie-player>
+                    <div class="team-score" id="teamScore2">0</div>
                 </div>
-                
-                <div class="game-scene" id="gameScene">
-                    <!-- Question blocks representing progress -->
-                    <div class="question-blocks">
-                        <div class="question-block" data-set="1">1</div>
-                        <div class="question-block" data-set="2">2</div>
-                        <div class="question-block" data-set="3">3</div>
-                        <div class="question-block" data-set="4">4</div>
-                        <div class="question-block" data-set="5">5</div>
-                        <div class="question-block" data-set="6">6</div>
-                        <div class="question-block" data-set="7">7</div>
-                        <div class="question-block" data-set="8">8</div>
-                    </div>
-                    
-                    <!-- Character container with indicators -->
-                    <div class="character-container-main">
-                        <div class="main-character">
-                            <!-- Challenge indicator -->
-                            <div class="challenge-indicator" id="challengeIndicator"></div>
-                            
-                            <!-- Score indicators -->
-                            <div class="score-indicator">
-                                <div class="score-popup" id="scorePopup">
-                                    <div class="score-text" id="scoreText">+1</div>
-                                </div>
-                            </div>
-                            
-                            <!-- Among Us character -->
-                            <lottie-player 
-                                class="among-us-character"
-                                id="progressCharacter"
-                                src="assets/animations/Among Us - Idle.json"
-                                background="transparent"
-                                speed="1"
-                                loop
-                                autoplay>
-                            </lottie-player>
-                        </div>
-                    </div>
+                <div class="team-actions">
+                    <div class="team-action-card angel active" id="teamAngel2"></div>
+                    <div class="team-action-card devil active" id="teamDevil2"></div>
+                    <div class="team-action-card cross" id="teamCross2"></div>
                 </div>
-                
-                <div class="ground-area">
-                    <div class="ground-surface"></div>
+            </div>
+            
+            
+            <!-- Team C -->
+            <div class="team-card" style="top: 12%; left: 16%; z-index: 23;" data-team-id="3">
+                <div class="team-name" id="teamName3">Team C</div>
+                <div class="team-content">
+                    <img class="team-rank active" id="teamRanking3" src="assets/rankings/ranking-badge.png">
+                    <lottie-player 
+                        class="team-character"
+                        id="teamCharacter3"
+                        src="assets/animations/among_us_idle.json"
+                        background="transparent"
+                        speed="1"
+                        loop
+                        autoplay>
+                    </lottie-player>
+                    <div class="team-score" id="teamScore3">0</div>
+                </div>
+                <div class="team-actions">
+                    <div class="team-action-card angel active" id="teamAngel3"></div>
+                    <div class="team-action-card devil active" id="teamDevil3"></div>
+                    <div class="team-action-card cross" id="teamCross3"></div>
+                </div>
+            </div>
+            
+            
+            <!-- Team D -->
+            <div class="team-card" style="top: -17%; left: 40%; z-index: 24;" data-team-id="4">
+                <div class="team-name" id="teamName4">Team D</div>
+                <div class="team-content">
+                    <img class="team-rank active" id="teamRanking4" src="assets/rankings/ranking-badge.png">
+                    <lottie-player 
+                        class="team-character"
+                        id="teamCharacter4"
+                        src="assets/animations/among_us_idle.json"
+                        background="transparent"
+                        speed="1"
+                        loop
+                        autoplay>
+                    </lottie-player>
+                    <div class="team-score" id="teamScore4">0</div>
+                </div>
+                <div class="team-actions">
+                    <div class="team-action-card angel active" id="teamAngel4"></div>
+                    <div class="team-action-card devil active" id="teamDevil4"></div>
+                    <div class="team-action-card cross" id="teamCross4"></div>    
+                </div>
+            </div>
+            
+            
+            <!-- Team E -->
+            <div class="team-card" style="top: -55%; left: 64%; z-index: 25;" data-team-id="5">
+                <div class="team-name" id="teamName5">Team E</div>
+                <div class="team-content">
+                    <img class="team-rank active" id="teamRanking5" src="assets/rankings/ranking-badge.png">
+                    <lottie-player 
+                        class="team-character"
+                        id="teamCharacter5"
+                        src="assets/animations/among_us_idle.json"
+                        background="transparent"
+                        speed="1"
+                        loop
+                        autoplay>
+                    </lottie-player>
+                    <div class="team-score" id="teamScore5">0</div>
+                </div>
+                <div class="team-actions">
+                    <div class="team-action-card angel active" id="teamAngel5"></div>
+                    <div class="team-action-card devil active" id="teamDevil5"></div>
+                    <div class="team-action-card cross" id="teamCross5"></div>
+                </div>
+            </div>
+            
+            
+            <!-- Team F -->
+            <div class="team-card" style="top: -106%; left: 83%; z-index: 26;" data-team-id="6">
+                <div class="team-name" id="teamName6">Team F</div>
+                <div class="team-content">
+                    <img class="team-rank active" id="teamRanking6" src="assets/rankings/ranking-badge.png">
+                    <lottie-player 
+                        class="team-character"
+                        id="teamCharacter6"
+                        src="assets/animations/among_us_idle.json"
+                        background="transparent"
+                        speed="1"
+                        loop
+                        autoplay>
+                    </lottie-player>
+                    <div class="team-score" id="teamScore6">0</div>
+                </div>
+                <div class="team-actions">
+                    <div class="team-action-card angel active" id="teamAngel6"></div>
+                    <div class="team-action-card devil active" id="teamDevil6"></div>
+                    <div class="team-action-card cross" id="teamCross6"></div>
                 </div>
             </div>
         </div>
-        
-        <!-- Teams Grid -->
-        <div class="teams-grid-main">
-            <!-- Team 1 -->
-            <div class="team-card-main team-red" id="team-1">
-                <div class="team-name-main" id="teamName-1">Team 1</div>
-                <div class="character-section">
-                    <img class="rank-badge" id="rankBadge-1" src="assets/rankings/ranking-1st.png">
-                    <div class="character-container">
-                        <lottie-player 
-                            class="among-us-lottie"
-                            id="teamCharacter-1"
-                            src="assets/animations/Among Us - Idle.json"
-                            background="transparent"
-                            speed="1"
-                            loop
-                            autoplay>
-                        </lottie-player>
-                        <div class="buzzing-overlay" id="buzzingOverlay-1"></div>
-                    </div>
-                </div>
-                <div class="score-display" id="teamScore-1">0</div>
-                <div class="action-cards">
-                    <div class="action-card angel" id="angelCard-1"></div>
-                    <div class="action-card devil" id="devilCard-1"></div>
-                    <div class="action-card cross" id="crossCard-1"></div>
-                </div>
-            </div>
-            
-            <!-- Team 2 -->
-            <div class="team-card-main team-blue" id="team-2">
-                <div class="team-name-main" id="teamName-2">Team 2</div>
-                <div class="character-section">
-                    <img class="rank-badge" id="rankBadge-2" src="assets/rankings/ranking-2nd.png">
-                    <div class="character-container">
-                        <lottie-player 
-                            class="among-us-lottie"
-                            id="teamCharacter-2"
-                            src="assets/animations/Among Us - Idle.json"
-                            background="transparent"
-                            speed="1"
-                            loop
-                            autoplay>
-                        </lottie-player>
-                        <div class="buzzing-overlay" id="buzzingOverlay-2"></div>
-                    </div>
-                </div>
-                <div class="score-display" id="teamScore-2">0</div>
-                <div class="action-cards">
-                    <div class="action-card angel" id="angelCard-2"></div>
-                    <div class="action-card devil" id="devilCard-2"></div>
-                    <div class="action-card cross" id="crossCard-2"></div>
-                </div>
-            </div>
-            
-            <!-- Team 3 -->
-            <div class="team-card-main team-lime" id="team-3">
-                <div class="team-name-main" id="teamName-3">Team 3</div>
-                <div class="character-section">
-                    <img class="rank-badge" id="rankBadge-3" src="assets/rankings/ranking-3rd.png">
-                    <div class="character-container">
-                        <lottie-player 
-                            class="among-us-lottie"
-                            id="teamCharacter-3"
-                            src="assets/animations/Among Us - Idle.json"
-                            background="transparent"
-                            speed="1"
-                            loop
-                            autoplay>
-                        </lottie-player>
-                        <div class="buzzing-overlay" id="buzzingOverlay-3"></div>
-                    </div>
-                </div>
-                <div class="score-display" id="teamScore-3">0</div>
-                <div class="action-cards">
-                    <div class="action-card angel" id="angelCard-3"></div>
-                    <div class="action-card devil" id="devilCard-3"></div>
-                    <div class="action-card cross" id="crossCard-3"></div>
-                </div>
-            </div>
-            
-            <!-- Team 4 -->
-            <div class="team-card-main team-orange" id="team-4">
-                <div class="team-name-main" id="teamName-4">Team 4</div>
-                <div class="character-section">
-                    <img class="rank-badge" id="rankBadge-4" src="assets/rankings/ranking-1st.png">
-                    <div class="character-container">
-                        <lottie-player 
-                            class="among-us-lottie"
-                            id="teamCharacter-4"
-                            src="assets/animations/Among Us - Idle.json"
-                            background="transparent"
-                            speed="1"
-                            loop
-                            autoplay>
-                        </lottie-player>
-                        <div class="buzzing-overlay" id="buzzingOverlay-4"></div>
-                    </div>
-                </div>
-                <div class="score-display" id="teamScore-4">0</div>
-                <div class="action-cards">
-                    <div class="action-card angel" id="angelCard-4"></div>
-                    <div class="action-card devil" id="devilCard-4"></div>
-                    <div class="action-card cross" id="crossCard-4"></div>
-                </div>
-            </div>
-            
-            <!-- Team 5 -->
-            <div class="team-card-main team-purple" id="team-5">
-                <div class="team-name-main" id="teamName-5">Team 5</div>
-                <div class="character-section">
-                    <img class="rank-badge" id="rankBadge-5" src="assets/rankings/ranking-2nd.png">
-                    <div class="character-container">
-                        <lottie-player 
-                            class="among-us-lottie"
-                            id="teamCharacter-5"
-                            src="assets/animations/Among Us - Idle.json"
-                            background="transparent"
-                            speed="1"
-                            loop
-                            autoplay>
-                        </lottie-player>
-                        <div class="buzzing-overlay" id="buzzingOverlay-5"></div>
-                    </div>
-                </div>
-                <div class="score-display" id="teamScore-5">0</div>
-                <div class="action-cards">
-                    <div class="action-card angel" id="angelCard-5"></div>
-                    <div class="action-card devil" id="devilCard-5"></div>
-                    <div class="action-card cross" id="crossCard-5"></div>
-                </div>
-            </div>
-            
-            <!-- Team 6 -->
-            <div class="team-card-main team-cyan" id="team-6">
-                <div class="team-name-main" id="teamName-6">Team 6</div>
-                <div class="character-section">
-                    <img class="rank-badge" id="rankBadge-6" src="assets/rankings/ranking-3rd.png">
-                    <div class="character-container">
-                        <lottie-player 
-                            class="among-us-lottie"
-                            id="teamCharacter-6"
-                            src="assets/animations/Among Us - Idle.json"
-                            background="transparent"
-                            speed="1"
-                            loop
-                            autoplay>
-                        </lottie-player>
-                        <div class="buzzing-overlay" id="buzzingOverlay-6"></div>
-                    </div>
-                </div>
-                <div class="score-display" id="teamScore-6">0</div>
-                <div class="action-cards">
-                    <div class="action-card angel" id="angelCard-6"></div>
-                    <div class="action-card devil" id="devilCard-6"></div>
-                    <div class="action-card cross" id="crossCard-6"></div>
-                </div>
-            </div>
+
+        <!-- Buzzing Card as a modal at center of the screen -->
+        <div id="teamBuzzingModal" class="buzzing-modal">
+            <img id="teamBuzzingCard" class="buzzing-modal-card" src="assets/buzzing/buzzing-white.png">
         </div>
     </div>
-
-
-
+    
+    <script src="js/game-state.js"></script>
+    <script src="js/socket-manager.js"></script>
+    
+    <script src="js/character-colors.js"></script>
+    <script src="js/character-controller.js"></script>
+    
+    <script src="js/buzzing-system.js"></script>
+    
+    <script src="js/hotkeys.js"></script>
+    <script src="js/fullscreen.js"></script>
+    
+    <script src="js/main-page.js"></script>
+    
     <script>
-        // Game state management
-        const gameState = {
-            teams: {
-                1: { name: 'Team 1', score: 0, color: 'red', cards: { angel: false, devil: false, cross: false }, rank: 0, wasAttacked: false },
-                2: { name: 'Team 2', score: 0, color: 'blue', cards: { angel: false, devil: false, cross: false }, rank: 0, wasAttacked: false },
-                3: { name: 'Team 3', score: 0, color: 'lime', cards: { angel: false, devil: false, cross: false }, rank: 0, wasAttacked: false },
-                4: { name: 'Team 4', score: 0, color: 'orange', cards: { angel: false, devil: false, cross: false }, rank: 0, wasAttacked: false },
-                5: { name: 'Team 5', score: 0, color: 'pink', cards: { angel: false, devil: false, cross: false }, rank: 0, wasAttacked: false },
-                6: { name: 'Team 6', score: 0, color: 'yellow', cards: { angel: false, devil: false, cross: false }, rank: 0, wasAttacked: false }
-            },
-            currentQuestionSet: 1,
-            currentQuestionNumber: 1,
-            timerValue: 15,
-            timerRunning: false,
-            buzzingTeam: null,
-            challenge2x: false,
-            consoleWindow: null
-        };
-
-        // Console window management
-        function openConsoleWindow() {
-            const toggleBtn = document.getElementById('consoleToggle');
-            
-            if (gameState.consoleWindow && !gameState.consoleWindow.closed) {
-                // Focus existing console window
-                gameState.consoleWindow.focus();
-                return;
-            }
-            
-            // Open new console window
-            const consoleUrl = '/console';
-            const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,status=yes,location=yes,toolbar=no,menubar=no';
-            
-            gameState.consoleWindow = window.open(consoleUrl, 'AmongUsConsole', windowFeatures);
-            
-            if (gameState.consoleWindow) {
-                toggleBtn.innerHTML = '<i class="ri-settings-3-line"></i>';
-                toggleBtn.classList.add('has-console');
-                
-                // Check if window is closed
-                const checkClosed = setInterval(() => {
-                    if (gameState.consoleWindow.closed) {
-                        toggleBtn.innerHTML = '<i class="ri-settings-3-line"></i>';
-                        toggleBtn.classList.remove('has-console');
-                        gameState.consoleWindow = null;
-                        clearInterval(checkClosed);
-                    }
-                }, 1000);
-            }
-        }
-
-        // Initialize Socket.IO connection
-        const socket = io();
-
-        // Color mapping for dynamic Lottie coloring
-        const teamColors = {
-            'white': '#FFFFFF',
-            'lime': '#5BFE4B',
-            'purple': '#783DD2',
-            'orange': '#FF8D1C',
-            'cyan': '#44FFF7',
-            'blue': '#1D3CE9',
-            'red': '#D71E22',
-            'pink': '#FF69B4',
-            'yellow': '#FFD700'
-        };
-
-        // Timer functionality
-        let timerInterval;
-        
-        function formatTime(seconds) {
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        function updateTimer() {
-            if (gameState.timerRunning && gameState.timerValue > 0) {
-                gameState.timerValue--;
-                document.getElementById('timerDisplay').textContent = formatTime(gameState.timerValue);
-                document.getElementById('timerDisplayConsole').textContent = formatTime(gameState.timerValue);
-                
-                if (gameState.timerValue === 0) {
-                    gameState.timerRunning = false;
-                    socket.emit('timer_ended');
-                }
-            }
-        }
-
-        // Team management functions
-        function updateTeamDisplay(teamId) {
-            const team = gameState.teams[teamId];
-            const teamElement = document.getElementById(`team-${teamId}`);
-            
-            if (!teamElement) {
-                console.warn(`⚠️ Team element not found for team ${teamId}`);
-                return;
-            }
-            
-            // Update team name
-            const teamNameElement = document.getElementById(`teamName-${teamId}`);
-            if (teamNameElement) {
-                teamNameElement.textContent = team.name;
-            }
-            
-            // Update score (main display only, console elements don't exist here)
-            const teamScoreElement = document.getElementById(`teamScore-${teamId}`);
-            if (teamScoreElement) {
-                teamScoreElement.textContent = team.score;
-            }
-            
-            // Update team color class
-            teamElement.className = `team-card-main team-${team.color}`;
-            
-            // Update action cards with new logic
-            // Angel and Devil: colored by default, gray when used
-            ['angel', 'devil'].forEach(cardType => {
-                const cardElement = document.getElementById(`${cardType}Card-${teamId}`);
-                if (cardElement) {
-                    if (team.cards[cardType]) {
-                        cardElement.classList.add('used');
-                    } else {
-                        cardElement.classList.remove('used');
-                    }
-                }
-            });
-            
-            // Cross: gray by default, colored when team was attacked and not used
-            const crossElement = document.getElementById(`crossCard-${teamId}`);
-            if (crossElement) {
-                crossElement.classList.remove('used', 'available');
-                
-                if (team.cards.cross) {
-                    // Cross card has been used
-                    crossElement.classList.add('used');
-                } else if (team.wasAttacked) {
-                    // Team was attacked, cross card is available
-                    crossElement.classList.add('available');
-                }
-                // If team wasn't attacked and cross not used, card stays gray (default state)
-            }
-            
-            // Update rank badge
-            const rankBadge = document.getElementById(`rankBadge-${teamId}`);
-            if (team.rank > 0 && team.rank <= 3) {
-                rankBadge.src = `assets/rankings/ranking-${team.rank === 1 ? '1st' : team.rank === 2 ? '2nd' : '3rd'}.png`;
-                rankBadge.classList.add('visible');
+        // Initialize main page when everything is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.MainPageApp) {
+                const app = new MainPageApp();
+                app.init();
             } else {
-                rankBadge.classList.remove('visible');
-            }
-
-            // Update Lottie character color
-            updateCharacterColor(teamId, team.color);
-        }
-
-        // Animation cache for loaded JSON files
-        const animationCache = {};
-        
-        // Color mapping for different team colors
-        function getTeamColors(color) {
-            const colorMap = {
-                'red': {
-                    primary: [0.843, 0.118, 0.216, 1],     // Main body color
-                    secondary: [0.545, 0.094, 0.157, 1],   // Shadow/dark areas
-                    light: [0.969, 0.8, 0.8, 1]           // Light areas (not visor - keeps default)
-                },
-                'blue': {
-                    primary: [0.114, 0.235, 0.914, 1],
-                    secondary: [0.078, 0.161, 0.627, 1],
-                    light: [0.8, 0.9, 0.996, 1]
-                },
-                'lime': {
-                    primary: [0.357, 0.996, 0.294, 1],
-                    secondary: [0.235, 0.667, 0.196, 1],
-                    light: [0.9, 0.996, 0.9, 1]
-                },
-                'orange': {
-                    primary: [1.0, 0.553, 0.110, 1],
-                    secondary: [0.667, 0.369, 0.073, 1],
-                    light: [0.996, 0.92, 0.8, 1]
-                },
-                'purple': {
-                    primary: [0.471, 0.239, 0.824, 1],
-                    secondary: [0.314, 0.161, 0.549, 1],
-                    light: [0.9, 0.8, 0.996, 1]
-                },
-                'cyan': {
-                    primary: [0.267, 1.0, 0.969, 1],
-                    secondary: [0.180, 0.667, 0.647, 1],
-                    light: [0.8, 0.996, 0.996, 1]
-                },
-                'pink': {
-                    primary: [1.0, 0.412, 0.706, 1],
-                    secondary: [0.667, 0.275, 0.471, 1],
-                    light: [0.996, 0.8, 0.92, 1]
-                },
-                'yellow': {
-                    primary: [1.0, 0.843, 0.0, 1],
-                    secondary: [0.667, 0.561, 0.0, 1],
-                    light: [0.996, 0.996, 0.8, 1]
-                },
-                'white': {
-                    primary: [0.969, 0.996, 0.996, 1],
-                    secondary: [0.667, 0.725, 0.725, 1],
-                    light: [0.996, 0.996, 0.996, 1]
-                }
-            };
-            return colorMap[color] || colorMap['red'];
-        }
-
-        async function loadAnimationData(animationSrc) {
-            if (animationCache[animationSrc]) {
-                return JSON.parse(JSON.stringify(animationCache[animationSrc]));
-            }
-            
-            try {
-                const response = await fetch(animationSrc);
-                const data = await response.json();
-                animationCache[animationSrc] = data;
-                return JSON.parse(JSON.stringify(data));
-            } catch (error) {
-                console.error('Error loading animation:', error);
-                return null;
-            }
-        }
-
-        function replaceColorsInLayer(layer, teamColors) {
-            if (layer.shapes) {
-                layer.shapes.forEach(shape => {
-                    if (shape.it) {
-                        shape.it.forEach(item => {
-                            if (item.ty === 'fl' && item.c && item.c.k) {
-                                const currentColor = item.c.k;
-                                
-                                // Check if this is the main character color (red body)
-                                if (isMainCharacterColor(currentColor)) {
-                                    item.c.k = teamColors.primary;
-                                }
-                                // Check if this is the shadow/dark color (NOT visor shadow - visor shadow stays original)
-                                else if (isShadowColor(currentColor)) {
-                                    item.c.k = teamColors.secondary;
-                                }
-                                // Check if this is a light reflection color (NOT visor or visor shadow - they stay original)
-                                else if (isLightColor(currentColor)) {
-                                    item.c.k = teamColors.light;
-                                }
-                            }
-                        });
-                    }
-                    
-                    // Recursively handle nested groups
-                    if (shape.shapes) {
-                        replaceColorsInLayer(shape, teamColors);
-                    }
-                });
-            }
-            
-            return layer;
-        }
-
-        function colorDistance(color1, color2) {
-            // Calculate Euclidean distance between two colors
-            const dr = color1[0] - color2[0];
-            const dg = color1[1] - color2[1];
-            const db = color1[2] - color2[2];
-            return Math.sqrt(dr * dr + dg * dg + db * db);
-        }
-
-        function isMainCharacterColor(color) {
-            // Original main character colors from the JSON
-            const originalMain = [0.784, 0.125, 0.055, 1]; // Main red body
-            // Note: We keep the visor color as default, so we don't include it here
-            
-            return colorDistance(color, originalMain) < 0.1;
-        }
-
-        function isShadowColor(color) {
-            // Original shadow/dark colors from the JSON
-            const originalShadow = [0.545, 0.094, 0.157, 1]; // Dark red shadow
-            const originalVisorShadow = [0.278, 0.38, 0.424, 1]; // Dark blue visor shadow - keep this original
-            
-            // Don't change the visor shadow color
-            if (colorDistance(color, originalVisorShadow) < 0.1) {
-                return false;
-            }
-            
-            return colorDistance(color, originalShadow) < 0.1;
-        }
-
-        function isLightColor(color) {
-            // Original light reflection colors (but NOT the visor)
-            const originalLight = [0.969, 0.996, 0.996, 1]; // Very light reflection
-            const originalVisor = [0.576, 0.788, 0.855, 1]; // Light blue visor - keep this default
-            
-            // Don't change the visor color
-            if (colorDistance(color, originalVisor) < 0.1) {
-                return false;
-            }
-            
-            return colorDistance(color, originalLight) < 0.1 || 
-                   (color[0] > 0.95 && color[1] > 0.95 && color[2] > 0.95); // Very bright colors
-        }
-
-        async function updateCharacterColor(teamId, color) {
-            const character = document.getElementById(`teamCharacter-${teamId}`);
-            if (!character) {
-                console.warn(`⚠️ Character element not found for team ${teamId}`);
-                return false;
-            }
-
-            console.log(`🎯 Starting color update for Team ${teamId} to ${color}`);
-
-            // Check if lottie-player is ready
-            if (!character.load) {
-                console.warn(`⚠️ Lottie player not ready for team ${teamId}, retrying...`);
-                setTimeout(() => updateCharacterColor(teamId, color), 300);
-                return false;
-            }
-
-            // Clear any existing filters
-            character.style.filter = '';
-            
-            // Remove any color overlays
-            const existingOverlay = character.parentNode.querySelector('.color-overlay');
-            if (existingOverlay) {
-                existingOverlay.remove();
-                console.log(`🧹 Removed existing overlay for team ${teamId}`);
-            }
-
-            const currentSrc = character.getAttribute('src');
-            if (!currentSrc) {
-                console.warn(`⚠️ No animation source found for team ${teamId}`);
-                return false;
-            }
-
-            console.log(`📁 Loading animation data for team ${teamId} from: ${currentSrc}`);
-
-            try {
-                const teamColors = getTeamColors(color);
-                console.log(`🎨 Team ${teamId} color mapping:`, teamColors);
+                // Fallback initialization if main-page.js is not available
+                console.log('🔄 Using fallback initialization...');
                 
-                const animationData = await loadAnimationData(currentSrc);
-                
-                if (!animationData) {
-                    console.error(`❌ Failed to load animation data for team ${teamId}`);
-                    return false;
-                }
-
-                console.log(`✅ Animation data loaded for team ${teamId}`);
-
-                // Replace colors in all layers
-                if (animationData.layers) {
-                    console.log(`🔄 Processing ${animationData.layers.length} layers for team ${teamId}`);
-                    animationData.layers.forEach((layer, index) => {
-                        replaceColorsInLayer(layer, teamColors);
-                    });
-                }
-
-                // Create a data URL from the modified JSON
-                const dataUrl = 'data:application/json;base64,' + btoa(JSON.stringify(animationData));
-                
-                // Update the lottie player with the new colored animation
-                character.load(dataUrl);
-                console.log(`✅ Successfully applied ${color} color to Team ${teamId}`);
-                return true;
-                
-            } catch (error) {
-                console.error(`❌ Error applying color to team ${teamId}:`, error);
-                return false;
-            }
-        }
-
-        // Debug function to check current character states
-        function debugCharacterStates() {
-            console.log('🔍 Current character states:');
-            for (let teamId = 1; teamId <= 6; teamId++) {
-                const character = document.getElementById(`teamCharacter-${teamId}`);
-                const expectedColor = gameState.teams[teamId].color;
-                
-                if (!character) {
-                    console.log(`❌ Team ${teamId}: Element not found`);
-                } else if (!character.load) {
-                    console.log(`⚠️ Team ${teamId}: Lottie player not ready`);
-                } else {
-                    const currentSrc = character.getAttribute('src');
-                    console.log(`✅ Team ${teamId}: Ready (expected: ${expectedColor}, src: ${currentSrc})`);
-                }
-            }
-        }
-
-        // Enhanced initialization function for all team characters
-        async function initializeAllTeamCharacters() {
-            console.log('🚀 Initializing all team character colors...');
-            
-            // Debug current state before initialization
-            debugCharacterStates();
-            
-            // First, wait for all lottie players to be loaded
-            const waitForAllPlayers = () => {
-                return new Promise((resolve) => {
-                    const checkAllReady = () => {
-                        let allReady = true;
-                        for (let teamId = 1; teamId <= 6; teamId++) {
-                            const character = document.getElementById(`teamCharacter-${teamId}`);
-                            if (!character || !character.load) {
-                                allReady = false;
-                                break;
-                            }
-                        }
-                        
-                        if (allReady) {
-                            console.log('✅ All lottie players are ready!');
-                            resolve(true);
-                        } else {
-                            console.log('⏳ Waiting for all lottie players to be ready...');
-                            setTimeout(checkAllReady, 300);
-                        }
-                    };
-                    
-                    checkAllReady();
-                });
-            };
-            
-            // Wait for all players to be ready first
-            await waitForAllPlayers();
-            
-            // Now apply colors to all teams
-            const initPromises = [];
-            
-            for (let teamId = 1; teamId <= 6; teamId++) {
-                const color = gameState.teams[teamId].color;
-                console.log(`🎯 Team ${teamId} should be ${color}`);
-                
-                // Create a promise for each team initialization
-                const initPromise = new Promise(async (resolve) => {
-                    const success = await updateCharacterColor(teamId, color);
-                    if (!success) {
-                        // Retry once more after a delay
-                        console.log(`🔄 Retrying team ${teamId} color initialization...`);
-                        setTimeout(async () => {
-                            const retrySuccess = await updateCharacterColor(teamId, color);
-                            resolve(retrySuccess);
-                        }, 500);
-                    } else {
-                        resolve(success);
-                    }
-                });
-                
-                initPromises.push(initPromise);
-            }
-            
-            // Wait for all initializations to complete
-            const results = await Promise.all(initPromises);
-            const successCount = results.filter(Boolean).length;
-            
-            console.log(`🎉 Team character initialization complete: ${successCount}/6 teams successfully colored`);
-            
-            if (successCount < 6) {
-                console.warn(`⚠️ ${6 - successCount} teams failed to initialize. Attempting final fallback...`);
-                // Final retry for any failed teams
-                setTimeout(() => {
-                    for (let teamId = 1; teamId <= 6; teamId++) {
-                        if (!results[teamId - 1]) {
-                            console.log(`🔄 Final retry for team ${teamId} color initialization...`);
-                            updateCharacterColor(teamId, gameState.teams[teamId].color);
-                        }
-                    }
-                }, 2000);
-            }
-            
-            // Final debug check
-            setTimeout(() => {
-                console.log('🔍 Final character state check:');
-                debugCharacterStates();
-            }, 3000);
-        }
-
-        // Action card management functions
-        function attackTeam(teamId) {
-            if (gameState.teams[teamId]) {
-                gameState.teams[teamId].wasAttacked = true;
-                updateTeamDisplay(teamId);
-                console.log(`⚔️ Team ${teamId} was attacked! Cross card is now available.`);
-            }
-        }
-        
-        function useActionCard(teamId, cardType) {
-            if (gameState.teams[teamId] && gameState.teams[teamId].cards.hasOwnProperty(cardType)) {
-                if (cardType === 'cross' && !gameState.teams[teamId].wasAttacked) {
-                    console.log(`❌ Cannot use cross card for Team ${teamId} - team was not attacked`);
-                    return false;
-                }
-                
-                gameState.teams[teamId].cards[cardType] = true;
-                updateTeamDisplay(teamId);
-                console.log(`✨ Team ${teamId} used ${cardType} card!`);
-                return true;
-            }
-            return false;
-        }
-        
-        function resetActionCards(teamId = null) {
-            if (teamId) {
-                // Reset specific team
-                gameState.teams[teamId].cards = { angel: false, devil: false, cross: false };
-                gameState.teams[teamId].wasAttacked = false;
-                updateTeamDisplay(teamId);
-                console.log(`🔄 Reset action cards for Team ${teamId}`);
-            } else {
-                // Reset all teams
-                for (let i = 1; i <= 6; i++) {
-                    gameState.teams[i].cards = { angel: false, devil: false, cross: false };
-                    gameState.teams[i].wasAttacked = false;
-                    updateTeamDisplay(i);
-                }
-                console.log('🔄 Reset all action cards');
-            }
-        }
-
-        // Global functions for manual testing in browser console
-        window.debugCharacters = debugCharacterStates;
-        window.reinitializeCharacters = initializeAllTeamCharacters;
-        window.forceCharacterColors = forceTeamCharacterColors;
-        window.testTeamColor = (teamId, color) => {
-            console.log(`🧪 Testing team ${teamId} with color ${color}`);
-            updateCharacterColor(teamId, color);
-        };
-        
-        // Action card testing functions
-        window.attackTeam = attackTeam;
-        window.useActionCard = useActionCard;
-        window.resetActionCards = resetActionCards;
-        window.showActionCardStatus = showActionCardStatus;
-        function showActionCardStatus() {
-            console.log('📋 Action Card Status:');
-            for (let teamId = 1; teamId <= 6; teamId++) {
-                const team = gameState.teams[teamId];
-                console.log(`Team ${teamId} (${team.color}):`);
-                console.log(`  Angel: ${team.cards.angel ? '🟫 USED' : '🟩 AVAILABLE'}`);
-                console.log(`  Devil: ${team.cards.devil ? '🟫 USED' : '🟩 AVAILABLE'}`);
-                console.log(`  Cross: ${team.cards.cross ? '🟫 USED' : team.wasAttacked ? '🟨 AVAILABLE' : '⬜ UNAVAILABLE'}`);
-                console.log(`  Was Attacked: ${team.wasAttacked ? 'YES' : 'NO'}`);
-                console.log('');
-            }
-        }
-
-        window.testActionCards = () => {
-            console.log('🧪 Testing action cards:');
-            showActionCardStatus();
-            console.log('1. Attacking Team 1...');
-            attackTeam(1);
-            setTimeout(() => {
-                console.log('2. Team 1 uses angel card...');
-                useActionCard(1, 'angel');
-                setTimeout(() => {
-                    console.log('3. Team 1 uses cross card...');
-                    useActionCard(1, 'cross');
+                // Ensure characterController is initialized
+                if (window.characterController && !window.characterController.initialized) {
                     setTimeout(() => {
-                        console.log('4. Attacking Team 2...');
-                        attackTeam(2);
-                        setTimeout(() => {
-                            console.log('5. Team 2 uses devil card...');
-                            useActionCard(2, 'devil');
-                            setTimeout(() => {
-                                console.log('Final status:');
-                                showActionCardStatus();
-                            }, 1000);
-                        }, 1000);
-                    }, 1000);
-                }, 1000);
-            }, 1000);
-        };
-        
-        console.log('🎮 Available console functions:');
-        console.log('  CHARACTER FUNCTIONS:');
-        console.log('  • debugCharacters() - Check current character states');
-        console.log('  • reinitializeCharacters() - Re-run color initialization');
-        console.log('  • forceCharacterColors() - Force apply all team colors');
-        console.log('  • testTeamColor(teamId, color) - Test specific team color');
-        console.log('  ACTION CARD FUNCTIONS:');
-        console.log('  • attackTeam(teamId) - Attack a team (makes cross card available)');
-        console.log('  • useActionCard(teamId, "angel"/"devil"/"cross") - Use action card');
-        console.log('  • resetActionCards(teamId) - Reset cards for team (or all if no teamId)');
-        console.log('  • showActionCardStatus() - Show current status of all action cards');
-        console.log('  • testActionCards() - Run automated action card test');
-        console.log('  EXAMPLES:');
-        console.log('    attackTeam(1) - Attack team 1 (cross card becomes available)');
-        console.log('    useActionCard(1, "angel") - Team 1 uses angel card (turns gray)');
-        console.log('    showActionCardStatus() - See all card states');
-        console.log('    resetActionCards() - Reset all cards to default');
-
-        async function applyColorToLottiePlayer(player, color) {
-            // This is now handled by updateCharacterColor for better color control
-            const teamColors = getTeamColors(color);
-            const currentSrc = player.getAttribute('src');
-            
-            if (!currentSrc) return;
-
-            // Clear any existing filters
-            player.style.filter = '';
-            
-            // Remove any color overlays
-            const existingOverlay = player.parentNode.querySelector('.color-overlay');
-            if (existingOverlay) {
-                existingOverlay.remove();
-            }
-
-            const animationData = await loadAnimationData(currentSrc);
-            if (!animationData) return;
-
-            // Replace colors in all layers
-            if (animationData.layers) {
-                animationData.layers.forEach(layer => {
-                    replaceColorsInLayer(layer, teamColors);
-                });
-            }
-
-            // Create a data URL from the modified JSON
-            const dataUrl = 'data:application/json;base64,' + btoa(JSON.stringify(animationData));
-            
-            // Update the lottie player with the new colored animation
-            player.load(dataUrl);
-        }
-
-        // Buzzing animation
-        function showBuzzing(teamId) {
-            if (gameState.buzzingTeam) {
-                const prevTeam = document.getElementById(`team-${gameState.buzzingTeam}`);
-                const prevOverlay = document.getElementById(`buzzingOverlay-${gameState.buzzingTeam}`);
-                prevTeam.classList.remove('buzzing');
-                prevOverlay.classList.remove('active');
-            }
-
-            gameState.buzzingTeam = teamId;
-            const team = gameState.teams[teamId];
-            const teamElement = document.getElementById(`team-${teamId}`);
-            const buzzingOverlay = document.getElementById(`buzzingOverlay-${teamId}`);
-            
-            teamElement.classList.add('buzzing');
-            buzzingOverlay.style.backgroundImage = `url('assets/buzzing/buzzing-${team.color}.png')`;
-            buzzingOverlay.classList.add('active');
-
-            const character = document.getElementById(`teamCharacter-${teamId}`);
-            character.src = 'assets/animations/Among Us - Asks.json';
-
-            // Change progress character to winning team color
-            const progressCharacter = document.getElementById('progressCharacter');
-            applyColorToLottiePlayer(progressCharacter, team.color);
-
-            playSound('emergency-meeting-among-us.mp3');
-        }
-
-        function clearBuzzing() {
-            if (gameState.buzzingTeam) {
-                const teamElement = document.getElementById(`team-${gameState.buzzingTeam}`);
-                const buzzingOverlay = document.getElementById(`buzzingOverlay-${gameState.buzzingTeam}`);
-                const character = document.getElementById(`teamCharacter-${gameState.buzzingTeam}`);
+                        window.characterController.init();
+                        console.log('✅ Character controller initialized via fallback');
+                    }, 500);
+                }
                 
-                teamElement.classList.remove('buzzing');
-                buzzingOverlay.classList.remove('active');
-                character.src = 'assets/animations/Among Us - Idle.json';
-                
-                // Reset progress character to white
-                const progressCharacter = document.getElementById('progressCharacter');
-                applyColorToLottiePlayer(progressCharacter, 'white');
-                
-                gameState.buzzingTeam = null;
-            }
-        }
-
-        // Sound effects
-        function playSound(filename) {
-            const audio = new Audio(`assets/audio/${filename}`);
-            audio.play().catch(e => console.log('Audio play failed:', e));
-        }
-
-        // Mario-style progress tracking
-        function updateProgress(progressData = null) {
-            const character = document.getElementById('progressCharacter');
-            const gameScene = document.getElementById('gameScene');
-            
-            if (progressData) {
-                // Use provided progress data from console
-                gameState.currentQuestionSet = progressData.setNumber;
-                gameState.currentQuestionNumber = progressData.questionNumber;
-                
-                // Update display
-                document.getElementById('currentQuestionSet').textContent = progressData.title || `Question Set ${progressData.setNumber}`;
-                
-                // Update subject icon
-                updateSubjectIcon(progressData.subject || 'general');
-                
-                // Update question blocks
-                updateQuestionBlocks(progressData.setNumber);
-                
-                // Move scene (Mario-style character running)
-                const sceneOffset = ((progressData.setNumber - 1) / 8) * -100; // Move scene left as we progress
-                gameScene.style.transform = `translateX(${sceneOffset}%)`;
-                
-                // Animate if requested
-                if (progressData.animateRun) {
-                    character.src = 'assets/animations/Among Us - Run.json';
+                // Ensure hotkeys are initialized
+                if (window.hotkeysManager && !window.hotkeysManager.isListening) {
                     setTimeout(() => {
-                        character.src = 'assets/animations/Among Us - Idle.json';
-                    }, 2000);
-                }
-            } else {
-                // Calculate from current state
-                updateQuestionBlocks(gameState.currentQuestionSet);
-                const sceneOffset = ((gameState.currentQuestionSet - 1) / 8) * -100;
-                gameScene.style.transform = `translateX(${sceneOffset}%)`;
-            }
-        }
-        
-        // Update subject icon based on subject
-        function updateSubjectIcon(subject) {
-            const subjectIcon = document.getElementById('subjectIcon');
-            const icons = {
-                'biology': '🧬',
-                'chemistry': '⚗️',
-                'physics': '⚛️',
-                'general': '🌍'
-            };
-            subjectIcon.textContent = icons[subject] || '🌍';
-        }
-        
-        // Update question blocks to show progress
-        function updateQuestionBlocks(currentSet) {
-            const blocks = document.querySelectorAll('.question-block');
-            blocks.forEach((block, index) => {
-                const setNumber = index + 1;
-                block.classList.remove('current', 'completed');
-                
-                if (setNumber < currentSet) {
-                    block.classList.add('completed');
-                } else if (setNumber === currentSet) {
-                    block.classList.add('current');
-                }
-            });
-        }
-        
-        // Show challenge indicator
-        function showChallengeIndicator(show = true) {
-            const indicator = document.getElementById('challengeIndicator');
-            if (show) {
-                indicator.classList.add('active');
-            } else {
-                indicator.classList.remove('active');
-            }
-        }
-        
-        // Show score popup animation
-        function showScorePopup(score) {
-            const popup = document.getElementById('scorePopup');
-            const scoreText = document.getElementById('scoreText');
-            
-            // Clear any existing animation
-            popup.classList.remove('show', 'minus');
-            
-            // Set score text and style
-            const isPositive = score > 0;
-            scoreText.textContent = isPositive ? `+${score}` : `${score}`;
-            
-            if (!isPositive) {
-                popup.classList.add('minus');
-            }
-            
-            // Trigger animation
-            setTimeout(() => {
-                popup.classList.add('show');
-            }, 100);
-            
-            // Remove animation after delay
-            setTimeout(() => {
-                popup.classList.remove('show');
-            }, 2000);
-        }
-
-
-
-        // Socket event handlers
-        socket.on('team_update', (data) => {
-            gameState.teams[data.teamId] = { ...gameState.teams[data.teamId], ...data.updates };
-            updateTeamDisplay(data.teamId);
-        });
-
-        socket.on('buzzer_pressed', (data) => {
-            showBuzzing(data.teamId);
-        });
-
-        socket.on('clear_buzzers', () => {
-            clearBuzzing();
-        });
-
-        socket.on('timer_update', (data) => {
-            gameState.timerValue = data.value;
-            gameState.timerRunning = data.running;
-            document.getElementById('timerDisplay').textContent = formatTime(data.value);
-        });
-
-        socket.on('score_update', (data) => {
-            gameState.teams[data.teamId].score = data.score;
-            updateTeamDisplay(data.teamId);
-            
-            // Show score popup in Mario progress area
-            if (data.adjustment) {
-                showScorePopup(data.adjustment);
-            }
-            
-            if (data.correct) {
-                playSound('correct-duolingo.mp3');
-                const character = document.getElementById(`teamCharacter-${data.teamId}`);
-                character.src = 'assets/animations/Among Us - Nods.json';
-                setTimeout(() => {
-                    character.src = 'assets/animations/Among Us - Idle.json';
-                }, 3000);
-            } else {
-                playSound('incorrect-duolingo.mp3');
-                const character = document.getElementById(`teamCharacter-${data.teamId}`);
-                character.src = 'assets/animations/Among Us - Fears.json';
-                setTimeout(() => {
-                    character.src = 'assets/animations/Among Us - Idle.json';
-                }, 3000);
-            }
-        });
-
-        socket.on('question_set_update', (data) => {
-            gameState.currentQuestionSet = data.setNumber;
-            gameState.currentSubQuestion = data.subQuestion || 0;
-            
-            document.getElementById('currentQuestionSet').textContent = `Question Set ${data.setNumber}`;
-            document.getElementById('subjectName').textContent = data.subject || 'General';
-            
-            updateProgress();
-        });
-
-        socket.on('character_update', (data) => {
-            if (gameState.teams[data.teamId]) {
-                gameState.teams[data.teamId].color = data.color;
-                updateCharacterColor(data.teamId, data.color);
-                updateTeamDisplay(data.teamId);
-            }
-        });
-
-        socket.on('progress_update', (data) => {
-            updateProgress(data);
-        });
-
-        socket.on('challenge_update', (data) => {
-            gameState.challenge2x = data.enabled;
-            showChallengeIndicator(data.enabled);
-        });
-
-
-
-        // Keyboard shortcuts for testing
-        document.addEventListener('keydown', function(event) {
-            // Ignore if typing in an input field
-            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-                return;
-            }
-            
-            const key = event.key.toLowerCase();
-            
-            // Keys 1-6 for team buzz-in
-            if (key >= '1' && key <= '6') {
-                const teamId = parseInt(key);
-                if (gameState.teams[teamId]) {
-                    showBuzzing(teamId);
-                    socket.emit('test_buzzer', { teamId: teamId });
-                }
-                event.preventDefault();
-            }
-            
-            // 'R' key for reset buzzers
-            if (key === 'r') {
-                clearBuzzing();
-                socket.emit('clear_buzzers');
-                event.preventDefault();
-            }
-        });
-
-        // Force team character to display correct color immediately
-        function forceTeamCharacterColors() {
-            console.log('🔧 Force-applying team character colors...');
-            
-            for (let teamId = 1; teamId <= 6; teamId++) {
-                const character = document.getElementById(`teamCharacter-${teamId}`);
-                const color = gameState.teams[teamId].color;
-                
-                if (character && character.load) {
-                    console.log(`🔄 Force-updating Team ${teamId} to ${color}`);
-                    
-                    // Skip progress white integration for team characters
-                    const originalApplyColor = window.applyColorToLottiePlayer;
-                    if (originalApplyColor && character.id !== 'progressCharacter') {
-                        originalApplyColor(character, color);
-                    } else {
-                        updateCharacterColor(teamId, color);
-                    }
-                } else {
-                    console.log(`⏳ Team ${teamId} character not ready yet`);
-                }
-            }
-        }
-
-        // Initialize when DOM and lottie players are ready
-        function initializePage() {
-            console.log('🚀 Page initialization starting...');
-            
-            // Initialize timer
-            timerInterval = setInterval(updateTimer, 1000);
-
-            // Initialize all team displays
-            for (let i = 1; i <= 6; i++) {
-                updateTeamDisplay(i);
-            }
-            
-            // Multiple initialization attempts with different strategies
-            setTimeout(() => {
-                console.log('🎨 Starting team character color initialization (attempt 1)...');
-                initializeAllTeamCharacters();
-            }, 800);
-            
-            setTimeout(() => {
-                console.log('🔧 Force-applying team colors (attempt 2)...');
-                forceTeamCharacterColors();
-            }, 2000);
-            
-            setTimeout(() => {
-                console.log('🔧 Final color check (attempt 3)...');
-                forceTeamCharacterColors();
-            }, 4000);
-        }
-
-        // Ensure page is ready before initialization
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializePage);
-        } else if (document.readyState === 'interactive') {
-            // DOM is loaded but maybe not all resources
-            setTimeout(initializePage, 100);
-        } else {
-            // DOM is fully loaded
-            initializePage();
-        }
-
-        // Additional fallback using window.onload
-        window.addEventListener('load', () => {
-            console.log('🔄 Window fully loaded - final character color check...');
-            setTimeout(() => {
-                forceTeamCharacterColors();
-            }, 500);
-        });
-        
-        // Progress character initialization is now handled by set_progress_white.js
-        // This provides better color accuracy and visor preservation
-
-        // Handle console window messages
-        window.addEventListener('message', function(event) {
-            if (event.origin !== window.location.origin) return;
-            
-            // Handle commands from console window
-            if (event.data.type === 'console_command') {
-                const { command, data } = event.data;
-                
-                switch (command) {
-                    case 'start_timer':
-                        if (!gameState.timerRunning) {
-                            gameState.timerRunning = true;
-                            socket.emit('start_timer');
-                        }
-                        break;
-                    case 'clear_buzzers':
-                        socket.emit('clear_buzzers');
-                        clearBuzzing();
-                        break;
-                    // Add more commands as needed
+                        window.hotkeysManager.init();
+                        console.log('✅ Hotkeys initialized via fallback');
+                    }, 500);
                 }
             }
         });
-
-        // Suppress Chrome extension errors
-        window.addEventListener('error', function(e) {
-            if (e.message && e.message.includes('Extension context invalidated')) {
-                e.preventDefault();
-                return false;
-            }
-        });
-
-        console.log('Among Us Quiz Bowl Unified Interface initialized');
     </script>
 </body>
 </html> 

@@ -1,0 +1,88 @@
+/**
+ * Console Page - Complete CSS Styles
+ * Extracted from console.html for better organization
+ */
+
+/* ========== FONTS & BASE ========== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ========== TAILWIND CONFIG EXTENSIONS ========== */
+/* These styles work with Tailwind CSS classes used in console.html */
+
+/* ========== ACTION CARDS ========== */
+.action-card {
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.action-card.angel {
+    background-image: url('../assets/cards/card-angel.png');
+}
+
+.action-card.devil {
+    background-image: url('../assets/cards/card-devil.png');
+}
+
+.action-card.cross {
+    background-image: url('../assets/cards/card-cross.png');
+}
+
+/* ========== TAB SYSTEM ========== */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* ========== VISUAL EFFECTS ========== */
+.gradient-bg {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.glass-effect {
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ========== COLOR DROPDOWN SYSTEM ========== */
+.color-dropdown {
+    z-index: 50 !important;
+    min-width: 200px !important;
+    position: absolute !important;
+}
+
+.color-dropdown.hidden {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+.color-dropdown:not(.hidden) {
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* Ensure color grid is visible */
+.color-dropdown .grid {
+    min-height: 40px;
+}
+
+/* Color option improvements */
+.color-dropdown .relative {
+    min-width: 48px;
+    min-height: 48px;
+}
+
+/* ========== TEAM CARDS ========== */
+.team-card-console {
+    position: relative;
+    overflow: visible;
+}
+
+/* ========== DEBUG STYLES ========== */
+.color-dropdown.debug {
+    border: 2px solid red !important;
+    background: yellow !important;
+} 

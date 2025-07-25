@@ -381,12 +381,12 @@ game_state = {
     'connected_clients': 0,
     'arduino_connected': False,
     'teams': {
-        1: {'name': 'Team 1', 'score': 0, 'color': 'red', 'cards': {'angel': False, 'devil': False, 'cross': False}, 'rank': 0},
-        2: {'name': 'Team 2', 'score': 0, 'color': 'blue', 'cards': {'angel': False, 'devil': False, 'cross': False}, 'rank': 0},
-        3: {'name': 'Team 3', 'score': 0, 'color': 'lime', 'cards': {'angel': False, 'devil': False, 'cross': False}, 'rank': 0},
-        4: {'name': 'Team 4', 'score': 0, 'color': 'orange', 'cards': {'angel': False, 'devil': False, 'cross': False}, 'rank': 0},
-        5: {'name': 'Team 5', 'score': 0, 'color': 'purple', 'cards': {'angel': False, 'devil': False, 'cross': False}, 'rank': 0},
-        6: {'name': 'Team 6', 'score': 0, 'color': 'cyan', 'cards': {'angel': False, 'devil': False, 'cross': False}, 'rank': 0}
+        1: {'name': 'Team 1', 'score': 0, 'color': 'red', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0},
+        2: {'name': 'Team 2', 'score': 0, 'color': 'blue', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0},
+        3: {'name': 'Team 3', 'score': 0, 'color': 'lime', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0},
+        4: {'name': 'Team 4', 'score': 0, 'color': 'orange', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0},
+        5: {'name': 'Team 5', 'score': 0, 'color': 'purple', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0},
+        6: {'name': 'Team 6', 'score': 0, 'color': 'cyan', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0}
     },
     'timer': {
         'value': 15,
@@ -527,15 +527,6 @@ def index():
     except FileNotFoundError:
         return "<h1>Error: among_us.html not found</h1>", 404
 
-@app.route('/among_us')
-def among_us():
-    """Serve the unified Among Us interface"""
-    try:
-        with open('among_us.html', 'r') as f:
-            return f.read()
-    except FileNotFoundError:
-        return "<h1>Error: among_us.html not found</h1>", 404
-
 @app.route('/console')
 def console():
     """Serve the console window interface"""
@@ -586,7 +577,7 @@ def handle_disconnect_arduino():
     socketio.emit('log', {'message': 'Arduino disconnected'})
 
 @socketio.on('reset_buzzers')
-def handle_reset():
+def handle_reset(data=None):
     """Handle reset command - send to Arduino if connected"""
     logger.info('Reset command received')
     
@@ -630,18 +621,40 @@ def handle_simulate_buzzer(data):
 
 @socketio.on('admin_reset')
 def handle_admin_reset():
-    """Handle admin reset"""
-    logger.info('Admin reset')
+    """Handle admin reset - FIXED: Now clears card status"""
+    logger.info('Admin reset - clearing all game state including cards')
+    
+    # FIXED: Reset all team card states
+    for team_id in game_state['teams']:
+        game_state['teams'][team_id]['cards'] = {
+            'angel': False, 
+            'devil': False, 
+            'cross': False, 
+            'angelUsed': False, 
+            'devilUsed': False
+        }
+        logger.info(f'Cleared card status for Team {team_id}')
+    
+    # Clear challenge state
+    game_state['challenge_2x'] = False
+    game_state['winner'] = None
+    
+    # Broadcast card updates to all clients
+    socketio.emit('card_status_reset', {
+        'teams': game_state['teams'],
+        'challenge_2x': game_state['challenge_2x']
+    })
     
     if arduino.is_connected:
         # Send reset to real Arduino
         arduino.write('RESET\n')
-        socketio.emit('log', {'message': 'Admin reset sent to Arduino'})
+        socketio.emit('log', {'message': 'Admin reset sent to Arduino - Cards cleared'})
     else:
         # Simulate reset
-        game_state['winner'] = None
         socketio.emit('buzzer_data', 'READY')
-        socketio.emit('log', {'message': 'Admin reset (simulated)'})
+        socketio.emit('log', {'message': 'Admin reset (simulated) - Cards cleared'})
+    
+    logger.info('✅ Admin reset completed with card status clearing')
 
 @socketio.on('get_serial_ports')
 def handle_get_serial_ports():
@@ -862,6 +875,103 @@ def handle_action_card_used(data):
         
         action = "used" if used else "reset"
         add_log(f"Team {team_id} {card_type} card {action}")
+
+@socketio.on('card_update')
+def handle_card_update(data):
+    """Handle card status updates for real-time synchronization"""
+    team_id = data.get('teamId')
+    card_type = data.get('cardType')
+    active = data.get('active', False)
+    used = data.get('used', False)
+    
+    if team_id in game_state['teams']:
+        if card_type == 'angel':
+            if used:
+                game_state['teams'][team_id]['cards']['angelUsed'] = True
+                game_state['teams'][team_id]['cards']['angel'] = False
+            else:
+                game_state['teams'][team_id]['cards']['angel'] = active
+        elif card_type == 'devil':
+            if used:
+                game_state['teams'][team_id]['cards']['devilUsed'] = True
+        elif card_type == 'cross':
+            game_state['teams'][team_id]['cards']['cross'] = active
+        
+        # Broadcast to all clients
+        socketio.emit('card_update', {
+            'teamId': team_id,
+            'cardType': card_type,
+            'active': active,
+            'used': used
+        })
+        
+        action_text = "used" if used else ("activated" if active else "deactivated")
+        add_log(f"Team {team_id} {card_type} card {action_text}")
+
+@socketio.on('devil_attack')
+def handle_devil_attack(data):
+    """Handle devil attack between teams"""
+    attacker_id = data.get('attackerId')
+    target_id = data.get('targetId')
+    new_score = data.get('newScore')
+    
+    if attacker_id in game_state['teams'] and target_id in game_state['teams']:
+        # Mark devil as used for attacker
+        game_state['teams'][attacker_id]['cards']['devilUsed'] = True
+        
+        # Update target score
+        game_state['teams'][target_id]['score'] = new_score
+        
+        # Activate cross protection for target
+        game_state['teams'][target_id]['cards']['cross'] = True
+        
+        # Broadcast devil attack to all clients
+        socketio.emit('devil_attack', {
+            'attackerId': attacker_id,
+            'targetId': target_id,
+            'newScore': new_score
+        })
+        
+        # Broadcast card updates
+        socketio.emit('card_update', {
+            'teamId': attacker_id,
+            'cardType': 'devil',
+            'used': True
+        })
+        
+        socketio.emit('card_update', {
+            'teamId': target_id,
+            'cardType': 'cross',
+            'active': True
+        })
+        
+        # Broadcast score update
+        socketio.emit('score_update', {
+            'teamId': target_id,
+            'score': new_score,
+            'adjustment': -1,
+            'correct': False
+        })
+        
+        add_log(f"Team {attacker_id} devil attacked Team {target_id} (-1 point, cross activated)")
+
+@socketio.on('resolve_devil_challenge')
+def handle_resolve_devil_challenge(data):
+    """Handle devil challenge resolution"""
+    target_team_id = data.get('targetTeamId')
+    answered_correctly = data.get('answeredCorrectly', False)
+    
+    if target_team_id in game_state['teams']:
+        # Broadcast to all clients to resolve the challenge
+        socketio.emit('resolve_devil_challenge', {
+            'targetTeamId': target_team_id,
+            'answeredCorrectly': answered_correctly
+        })
+        
+        result = "correctly" if answered_correctly else "incorrectly"
+        add_log(f"Team {target_team_id} answered {result} to devil challenge")
+        
+        logger.info(f"✅ Devil challenge resolved: Team {target_team_id} answered {result}")
 
 @socketio.on('challenge_update')
 def handle_challenge_update(data):

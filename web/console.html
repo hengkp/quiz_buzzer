@@ -6,6 +6,11 @@
     <title>Quiz Bowl Console - Moderator Interface</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="js/hotkeys.js"></script>
+    
+    <!-- Console Stylesheet -->
+    <link rel="stylesheet" href="css/console.css">
+    
     <script>
         tailwind.config = {
             theme: {
@@ -17,55 +22,13 @@
             }
         }
     </script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
-        .action-card {
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-        }
-        
-        .action-card.angel {
-            background-image: url('assets/cards/card-angel.png');
-        }
-        
-        .action-card.devil {
-            background-image: url('assets/cards/card-devil.png');
-        }
-        
-        .action-card.cross {
-            background-image: url('assets/cards/card-cross.png');
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        .glass-effect {
-            backdrop-filter: blur(10px);
-            background: rgba(255, 255, 255, 0.1);
-        }
-    </style>
 </head>
-<body class="bg-gray-50 font-['Inter'] text-gray-800 h-screen overflow-hidden flex flex-col">
+<body class="bg-gray-50 font-['Inter'] text-gray-800 h-screen w-screen overflow-hidden flex flex-col m-0 p-0">
     <!-- Header -->
     <header class="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
         <div class="flex justify-between items-center">
             <div class="flex items-center space-x-4">
                 <h1 class="text-xl font-bold text-gray-900">Quiz Bowl Console</h1>
-                <div class="flex items-center space-x-2 text-sm text-gray-600">
-                    <div id="connectionStatus" class="w-2 h-2 bg-red-500 rounded-full"></div>
-                    <span id="connectionText">Disconnected</span>
-                </div>
             </div>
             <div class="flex items-center space-x-3">
                 <button onclick="resetGame()" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors duration-200">
@@ -107,17 +70,17 @@
                             Arduino Connection
                         </h3>
                         <div class="space-y-4">
-                            <div class="flex items-center space-x-2 text-sm">
-                                <div id="arduinoStatus" class="w-2 h-2 bg-red-500 rounded-full"></div>
-                                <span id="arduinoText" class="text-gray-600">Not Connected</span>
-                            </div>
-                            <div class="flex space-x-2">
-                                <select id="portSelect" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
-                                    <option value="">Select Port</option>
-                                </select>
-                                <button onclick="toggleConnection()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 text-sm">
-                                    Connect
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-2 text-sm">
+                                    <div id="arduinoStatus" class="w-3 h-3 bg-red-500 rounded-full"></div>
+                                    <span id="arduinoText" class="text-gray-700 font-medium">Disconnected</span>
+                                </div>
+                                <button id="connectBtn" onclick="toggleConnection()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-200 text-sm shadow-sm">
+                                    Connect Arduino
                                 </button>
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                Click "Connect Arduino" to select and connect to your Arduino device
                             </div>
                         </div>
                     </div>
@@ -152,7 +115,7 @@
                             </svg>
                             Challenge Mode
                         </h3>
-                        <p class="text-sm text-orange-100 mb-4">Follow-up questions worth 2x points. First wrong answer gives -2 and ends the set.</p>
+                        <p class="text-sm text-orange-100 mb-4">Follow-up questions worth 2x points. First wrong answer gives -1 and ends the set.</p>
                         <button onclick="toggleChallenge()" id="challengeToggle" class="w-full px-4 py-2 bg-white/20 hover:bg-white/30 text-white font-medium rounded-lg transition-all duration-200 backdrop-blur-sm">
                             2x OFF
                         </button>
@@ -169,33 +132,6 @@
                             </svg>
                             Question Set Management
                         </h3>
-                        
-                        <div class="grid grid-cols-4 gap-4 mb-6">
-                            <div class="text-center">
-                                <div class="text-sm font-medium text-gray-700 mb-2">Biology</div>
-                                <button onclick="selectSubject('biology')" data-subject="biology" class="subject-btn w-full px-3 py-2 text-xs font-medium rounded-lg border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200">
-                                    🧬 Biology
-                                </button>
-                            </div>
-                            <div class="text-center">
-                                <div class="text-sm font-medium text-gray-700 mb-2">Chemistry</div>
-                                <button onclick="selectSubject('chemistry')" data-subject="chemistry" class="subject-btn w-full px-3 py-2 text-xs font-medium rounded-lg border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200">
-                                    ⚗️ Chemistry
-                                </button>
-                            </div>
-                            <div class="text-center">
-                                <div class="text-sm font-medium text-gray-700 mb-2">Physics</div>
-                                <button onclick="selectSubject('physics')" data-subject="physics" class="subject-btn w-full px-3 py-2 text-xs font-medium rounded-lg border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200">
-                                    ⚛️ Physics
-                                </button>
-                            </div>
-                            <div class="text-center">
-                                <div class="text-sm font-medium text-gray-700 mb-2">General</div>
-                                <button onclick="selectSubject('general')" data-subject="general" class="subject-btn w-full px-3 py-2 text-xs font-medium rounded-lg border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200">
-                                    🌍 General
-                                </button>
-                            </div>
-                        </div>
 
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm">
@@ -268,10 +204,12 @@
         <div class="space-y-1">
             <div><span class="text-yellow-400 font-semibold">1-6:</span> Buzz team 1-6</div>
             <div><span class="text-yellow-400 font-semibold">S:</span> Start/Stop timer</div>
-            <div><span class="text-yellow-400 font-semibold">Q:</span> Reset timer</div>
-            <div><span class="text-yellow-400 font-semibold">R:</span> Reset game</div>
+            <div><span class="text-yellow-400 font-semibold">R:</span> Reset buzzers (synced with main)</div>
+            <div><span class="text-yellow-400 font-semibold">Q:</span> Reset entire game (synced with main)</div>
+            <div><span class="text-yellow-400 font-semibold">T:</span> Reset timer only</div>
             <div><span class="text-yellow-400 font-semibold">←/→:</span> Navigate questions</div>
             <div><span class="text-yellow-400 font-semibold">H:</span> Toggle this help</div>
+            <div class="text-green-400 text-xs pt-2">✅ Synced with main page + Arduino</div>
         </div>
     </div>
 
@@ -363,18 +301,24 @@
                 case '6':
                     event.preventDefault();
                     buzzTeam(parseInt(key));
+                    sendToMain('team_buzz', { teamId: parseInt(key) });
                     break;
                 case 's':
                     event.preventDefault();
                     startTimer();
                     break;
-                case 'q':
-                    event.preventDefault();
-                    resetTimer();
-                    break;
                 case 'r':
                     event.preventDefault();
+                    clearBuzzers(); // This will send reset to Arduino automatically
+                    break;
+                case 'q':
+                    event.preventDefault();
                     resetGame();
+                    sendToMain('reset_game', {});
+                    break;
+                case 't':
+                    event.preventDefault();
+                    resetTimer();
                     break;
                 case 'arrowleft':
                     event.preventDefault();
@@ -391,6 +335,44 @@
             }
         });
 
+        // Send hotkey events to main window
+        function sendToMain(eventType, data) {
+            if (window.opener && !window.opener.closed) {
+                window.opener.postMessage({
+                    type: 'hotkey_from_console',
+                    eventType: eventType,
+                    data: data
+                }, window.location.origin);
+            }
+        }
+
+        // Listen for messages from main window
+        window.addEventListener('message', function(event) {
+            if (event.origin !== window.location.origin) return;
+            
+            if (event.data.type === 'hotkey_from_main') {
+                const { eventType, data } = event.data;
+                handleHotkeyFromMain(eventType, data);
+            }
+        });
+
+        // Handle hotkeys received from main window
+        function handleHotkeyFromMain(eventType, data) {
+            switch (eventType) {
+                case 'team_buzz':
+                    // Visual feedback in console when main page buzzes
+                    addLog(`Team ${data.teamId} buzzed in! (Main page hotkey)`, 'success');
+                    break;
+                case 'reset_buzzers':
+                    addLog('Buzzers reset (Main page hotkey)', 'info');
+                    break;
+                case 'reset_game':
+                    resetGame();
+                    addLog('Game reset (Main page hotkey)', 'info');
+                    break;
+            }
+        }
+
         // Initialize question table
         function initializeQuestionTable() {
             const tableBody = document.getElementById('questionTableBody');
@@ -404,9 +386,16 @@
                 row.innerHTML = `
                     <td class="px-4 py-3 border-b border-gray-200">
                         <div class="font-medium text-gray-900">Set ${set}</div>
-                        <div class="text-xs text-gray-500">${setData.theme}</div>
+                        <select onchange="updateSetTheme(${set}, this.value)" 
+                                class="mt-1 w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent">
+                            <option value="Biology" ${setData.theme === 'Biology' ? 'selected' : ''}>🧬 Biology</option>
+                            <option value="Chemistry" ${setData.theme === 'Chemistry' ? 'selected' : ''}>⚗️ Chemistry</option>
+                            <option value="Physics" ${setData.theme === 'Physics' ? 'selected' : ''}>⚛️ Physics</option>
+                            <option value="General" ${setData.theme === 'General' ? 'selected' : ''}>🌍 General</option>
+                        </select>
                         <input type="text" value="${setData.title}" onchange="updateSetTitle(${set}, this.value)" 
-                               class="mt-1 w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent">
+                               class="mt-1 w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent" 
+                               placeholder="Question Set Title">
                     </td>
                     <td class="px-4 py-3 text-center border-b border-gray-200">
                         <button class="question-cell w-full px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200" 
@@ -447,28 +436,14 @@
         // Create team card
         function createTeamCard(teamId, team) {
             const card = document.createElement('div');
-            card.className = 'bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all duration-200';
+            card.className = 'bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all duration-200 team-card-console';
+            card.setAttribute('data-team', teamId);
             
             card.innerHTML = `
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex-1">
                         <input type="text" class="team-name-input w-full text-sm font-semibold bg-transparent border-none text-gray-900 focus:ring-1 focus:ring-blue-500 rounded px-1" 
                                id="teamNameInput-${teamId}" value="${team.name}" onchange="updateTeamName(${teamId})">
-                        <div class="team-color-display flex items-center mt-1 text-xs text-gray-600 cursor-pointer hover:text-blue-600 transition-colors duration-200" 
-                             id="colorDisplay-${teamId}" onclick="toggleColorDropdown(${teamId})">
-                            <div class="w-3 h-3 rounded-full mr-2 border" style="background: ${colorDefinitions[team.color]};"></div>
-                            <span style="text-transform: capitalize;">${team.color}</span>
-                            <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </div>
-                        <div class="color-dropdown relative mt-2 hidden" id="colorDropdown-${teamId}">
-                            <div class="absolute z-10 w-40 bg-white rounded-lg shadow-lg border border-gray-200 p-2">
-                                <div class="grid grid-cols-4 gap-1" id="colorGrid-${teamId}">
-                                    <!-- Color options will be populated -->
-                                </div>
-                            </div>
-                        </div>
                     </div>
                     <div class="text-2xl font-bold text-gray-900" id="teamScoreConsole-${teamId}">${team.score}</div>
                 </div>
@@ -479,40 +454,109 @@
                     <button onclick="resetScore(${teamId})" class="px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg text-xs transition-colors duration-200">Reset</button>
                 </div>
                 
-                <div class="flex justify-center space-x-2">
-                    <div class="action-card angel w-6 h-8 cursor-pointer hover:scale-110 transition-transform duration-200 opacity-100" 
+                <div class="flex justify-center items-center space-x-3">
+                    <div class="relative">
+                        <div class="w-10 h-10 rounded-full border-2 border-gray-400 cursor-pointer hover:scale-110 transition-transform duration-200" 
+                             style="background: ${colorDefinitions[team.color]};" 
+                             onclick="toggleColorDropdown(${teamId})" 
+                             id="colorCircle-${teamId}" 
+                             title="Change Color"></div>
+                        <div class="color-dropdown absolute z-50 mt-2 top-full left-0 hidden" id="colorDropdown-${teamId}">
+                            <div class="bg-white rounded-lg shadow-lg border border-gray-200 p-3">
+                                <div class="grid grid-cols-4 gap-2" id="colorGrid-${teamId}">
+                                    <!-- Color options will be populated -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="action-card angel w-10 h-12 cursor-pointer hover:scale-110 transition-transform duration-200 opacity-100" 
                          onclick="toggleActionCard(${teamId}, 'angel')" id="angelCard-${teamId}"></div>
-                    <div class="action-card devil w-6 h-8 cursor-pointer hover:scale-110 transition-transform duration-200 opacity-100" 
+                    <div class="action-card devil w-10 h-12 cursor-pointer hover:scale-110 transition-transform duration-200 opacity-100" 
                          onclick="activateDevil(${teamId})" id="devilCard-${teamId}"></div>
-                    <div class="action-card cross w-6 h-8 opacity-40 grayscale" id="crossCard-${teamId}"></div>
+                    <div class="action-card cross w-10 h-12 opacity-40 grayscale" id="crossCard-${teamId}"></div>
                 </div>
             `;
             
-            // Populate color options
+            // Populate color options with multiple attempts
             setTimeout(() => populateColorOptions(teamId), 0);
+            setTimeout(() => populateColorOptions(teamId), 100);
+            setTimeout(() => populateColorOptions(teamId), 500);
             
             return card;
         }
 
         // Populate color options
         function populateColorOptions(teamId) {
+            console.log(`🎨 Starting populateColorOptions for team ${teamId}`);
             const colorGrid = document.getElementById(`colorGrid-${teamId}`);
-            if (!colorGrid) return;
             
-            colorGrid.innerHTML = '';
+            if (!colorGrid) {
+                console.warn(`❌ Color grid not found for team ${teamId}`);
+                console.log(`🔍 Available grids:`, document.querySelectorAll('[id^="colorGrid-"]'));
+                return;
+            }
             
-            gameState.availableColors.forEach(color => {
+            console.log(`✅ Found color grid for team ${teamId}:`, colorGrid);
+            colorGrid.innerHTML = ''; // Clear existing options
+            
+            console.log(`🎨 Available colors:`, gameState.availableColors);
+            console.log(`🎨 Color definitions:`, colorDefinitions);
+            
+            if (!gameState.availableColors || gameState.availableColors.length === 0) {
+                console.error(`❌ No available colors defined!`);
+                return;
+            }
+            
+            gameState.availableColors.forEach((color, index) => {
+                console.log(`🎨 Processing color ${index + 1}/${gameState.availableColors.length}: ${color}`);
+                
                 const isUsed = Object.values(gameState.teams).some(team => 
                     team.color === color && gameState.teams[teamId].color !== color
                 );
                 
-                const option = document.createElement('div');
-                option.className = `w-6 h-6 rounded-full border-2 border-white shadow-sm cursor-pointer hover:scale-110 transition-transform duration-200 ${isUsed ? 'opacity-50 cursor-not-allowed' : ''}`;
-                option.style.background = colorDefinitions[color];
-                option.onclick = () => !isUsed && changeTeamColor(teamId, color);
+                const optionContainer = document.createElement('div');
+                optionContainer.className = 'relative';
                 
-                colorGrid.appendChild(option);
+                                                const option = document.createElement('div');
+                                option.className = `w-12 h-12 rounded-full border-2 border-white shadow-sm cursor-pointer hover:scale-110 transition-transform duration-200 ${isUsed ? 'cursor-not-allowed' : ''}`;
+                                
+                                const colorValue = colorDefinitions[color];
+                                if (!colorValue) {
+                                    console.error(`❌ No color definition found for: ${color}`);
+                                    return;
+                                }
+                                
+                                option.style.background = colorValue;
+                                option.onclick = () => !isUsed && changeTeamColor(teamId, color);
+                                option.title = color.charAt(0).toUpperCase() + color.slice(1) + (isUsed ? ' (Already Used)' : '');
+                                
+                                console.log(`✅ Created option for ${color}: ${colorValue}`);
+                                
+                                optionContainer.appendChild(option);
+                                
+                                if (isUsed) {
+                                    // Add black cross overlay for unavailable colors
+                                    const crossOverlay = document.createElement('div');
+                                    crossOverlay.className = 'absolute inset-0 flex items-center justify-center text-black font-bold text-xl pointer-events-none';
+                                    crossOverlay.innerHTML = '✕';
+                                    optionContainer.appendChild(crossOverlay);
+                                    console.log(`❌ Added cross overlay for used color: ${color}`);
+                                }
+                
+                colorGrid.appendChild(optionContainer);
             });
+            
+            const finalCount = colorGrid.children.length;
+            console.log(`✅ Added ${finalCount} color options for team ${teamId} (expected: ${gameState.availableColors.length})`);
+            
+            if (finalCount === 0) {
+                console.error(`❌ NO COLOR OPTIONS WERE ADDED! This is a critical error.`);
+                // Try to recreate the grid
+                setTimeout(() => {
+                    console.log(`🔄 Retrying color population for team ${teamId}`);
+                    populateColorOptions(teamId);
+                }, 500);
+            }
         }
 
         // Navigation and selection functions
@@ -522,11 +566,27 @@
             updateQuestionTable();
             updateQuestionProgress();
             
+            // Send progress update to main page for animation and scene movement
+            const progressData = {
+                setNumber: set,
+                questionNumber: question,
+                title: `Question Set ${set}`,
+                subject: questionSets[set] ? questionSets[set].theme.toLowerCase() : 'general'
+            };
+            
+            // Send to main window via postMessage for immediate animation
+            sendToMain('progress_update', progressData);
+            
+            // Also emit via socket for other connections
+            socket.emit('progress_update', progressData);
+            
             // Auto-select subject based on set
             const setData = questionSets[set];
             if (setData.theme.toLowerCase() !== 'general') {
                 selectSubject(setData.theme.toLowerCase());
             }
+            
+            addLog(`Selected: Set ${set}, Question ${question} - Character animation and scene movement triggered`, 'info');
         }
 
         function navigateQuestion(direction) {
@@ -574,6 +634,16 @@
             addLog(`Set ${set} title updated: "${title}"`, 'info');
         }
 
+        function updateSetTheme(set, theme) {
+            questionSets[set].theme = theme;
+            addLog(`Set ${set} theme updated: ${theme}`, 'info');
+            
+            // Update current question subject if this set is currently active
+            if (gameState.currentQuestionSet === set) {
+                selectSubject(theme.toLowerCase());
+            }
+        }
+
         // Team management functions
         function buzzTeam(teamId) {
             socket.emit('buzzer_pressed', { teamId: teamId });
@@ -581,15 +651,62 @@
         }
 
         function toggleColorDropdown(teamId) {
+            console.log(`🎨 Toggling color dropdown for team ${teamId}`);
             const dropdown = document.getElementById(`colorDropdown-${teamId}`);
+            const colorCircle = document.getElementById(`colorCircle-${teamId}`);
+            
+            console.log(`🔍 Dropdown element:`, dropdown);
+            console.log(`🔍 Color circle element:`, colorCircle);
+            
+            if (!dropdown) {
+                console.error(`❌ Color dropdown not found for team ${teamId}`);
+                console.log(`🔍 Available dropdowns:`, document.querySelectorAll('[id^="colorDropdown-"]'));
+                // Try to recreate the team card
+                setTimeout(() => {
+                    initializeTeamsGrid();
+                }, 100);
+                return;
+            }
+            
             const isActive = !dropdown.classList.contains('hidden');
+            console.log(`🔍 Dropdown was ${isActive ? 'visible' : 'hidden'}`);
+            console.log(`🔍 Dropdown classes before:`, dropdown.className);
             
             // Close all other dropdowns
-            document.querySelectorAll('.color-dropdown').forEach(d => d.classList.add('hidden'));
+            document.querySelectorAll('.color-dropdown').forEach(d => {
+                if (d !== dropdown) {
+                    d.classList.add('hidden');
+                    console.log(`🔒 Closed dropdown:`, d.id);
+                }
+            });
             
             if (!isActive) {
                 dropdown.classList.remove('hidden');
+                console.log(`✅ Opened dropdown for team ${teamId}`);
+                console.log(`🔍 Dropdown classes after:`, dropdown.className);
+                
+                // Force populate colors multiple times to ensure they appear
                 populateColorOptions(teamId);
+                setTimeout(() => populateColorOptions(teamId), 50);
+                setTimeout(() => populateColorOptions(teamId), 200);
+                
+                // Debug the population
+                setTimeout(() => {
+                    const colorGrid = document.getElementById(`colorGrid-${teamId}`);
+                    console.log(`🔍 Color grid:`, colorGrid);
+                    console.log(`🔍 Color grid children count: ${colorGrid ? colorGrid.children.length : 'N/A'}`);
+                    console.log(`🔍 Color grid HTML:`, colorGrid ? colorGrid.innerHTML : 'N/A');
+                    
+                    if (colorGrid && colorGrid.children.length === 0) {
+                        console.error(`❌ No color options populated for team ${teamId}`);
+                        console.log(`🔍 Available colors:`, gameState.availableColors);
+                        console.log(`🔍 Color definitions:`, colorDefinitions);
+                        populateColorOptions(teamId);
+                    }
+                }, 500);
+            } else {
+                dropdown.classList.add('hidden');
+                console.log(`🔒 Closed dropdown for team ${teamId}`);
             }
         }
 
@@ -608,14 +725,10 @@
             gameState.teams[teamId].color = color;
             
             // Update UI
-            const colorDisplay = document.getElementById(`colorDisplay-${teamId}`);
-            colorDisplay.innerHTML = `
-                <div class="w-3 h-3 rounded-full mr-2 border" style="background: ${colorDefinitions[color]};"></div>
-                <span style="text-transform: capitalize;">${color}</span>
-                <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-            `;
+            const colorCircle = document.getElementById(`colorCircle-${teamId}`);
+            if (colorCircle) {
+                colorCircle.style.background = colorDefinitions[color];
+            }
             
             // Close dropdown
             document.getElementById(`colorDropdown-${teamId}`).classList.add('hidden');
@@ -661,6 +774,46 @@
                     cardType: cardType,
                     active: gameState.teams[teamId].cards.angel
                 });
+                
+                // Update card display
+                updateActionCardDisplay(teamId);
+            }
+        }
+
+        // Update action card display
+        function updateActionCardDisplay(teamId) {
+            const team = gameState.teams[teamId];
+            
+            // Update angel card
+            const angelCard = document.getElementById(`angelCard-${teamId}`);
+            if (angelCard) {
+                if (team.cards.angelUsed) {
+                    angelCard.className = 'action-card angel w-10 h-12 opacity-40 grayscale cursor-not-allowed';
+                } else if (team.cards.angel) {
+                    angelCard.className = 'action-card angel w-10 h-12 cursor-pointer hover:scale-110 transition-transform duration-200 opacity-100 ring-2 ring-green-400';
+                } else {
+                    angelCard.className = 'action-card angel w-10 h-12 cursor-pointer hover:scale-110 transition-transform duration-200 opacity-100';
+                }
+            }
+            
+            // Update devil card
+            const devilCard = document.getElementById(`devilCard-${teamId}`);
+            if (devilCard) {
+                if (team.cards.devilUsed) {
+                    devilCard.className = 'action-card devil w-10 h-12 opacity-40 grayscale cursor-not-allowed';
+                } else {
+                    devilCard.className = 'action-card devil w-10 h-12 cursor-pointer hover:scale-110 transition-transform duration-200 opacity-100';
+                }
+            }
+            
+            // Update cross card
+            const crossCard = document.getElementById(`crossCard-${teamId}`);
+            if (crossCard) {
+                if (team.cards.cross) {
+                    crossCard.className = 'action-card cross w-10 h-12 opacity-100 ring-2 ring-blue-400';
+                } else {
+                    crossCard.className = 'action-card cross w-10 h-12 opacity-40 grayscale';
+                }
             }
         }
 
@@ -686,32 +839,45 @@
                 
                 // Mark devil card as used
                 gameState.teams[teamId].cards.devilUsed = true;
-                const devilCard = document.getElementById(`devilCard-${teamId}`);
-                devilCard.classList.add('opacity-40', 'grayscale');
                 
-                // Apply devil attack (penalty to target team)
-                gameState.teams[targetTeamId].score = Math.max(0, gameState.teams[targetTeamId].score - 1);
-                document.getElementById(`teamScoreConsole-${targetTeamId}`).textContent = gameState.teams[targetTeamId].score;
-                
-                // Activate cross protection for target team
-                gameState.teams[targetTeamId].cards.cross = true;
-                const crossCard = document.getElementById(`crossCard-${targetTeamId}`);
-                crossCard.classList.remove('opacity-40', 'grayscale');
-                crossCard.classList.add('opacity-100');
-                
-                addLog(`Team ${teamId} devil attacked Team ${targetTeamId} (-1 point, cross activated)`, 'error', {
+                // NEW: Instead of immediate score change, start challenge mode
+                addLog(`Team ${teamId} devil attacked Team ${targetTeamId} - CHALLENGE MODE activated!`, 'error', {
                     type: 'devil_attack',
                     attackerId: teamId,
-                    targetId: targetTeamId,
-                    scoreChange: -1
+                    targetId: targetTeamId
                 });
                 
+                addLog(`Team ${targetTeamId} must answer: Correct = Attacker -1, Target +1 | Wrong = Attacker +2, Target -1`, 'info');
+                
+                // Update card displays
+                updateActionCardDisplay(teamId);
+                
+                // Emit card updates for synchronization
+                socket.emit('card_update', {
+                    teamId: teamId,
+                    cardType: 'devil',
+                    used: true
+                });
+                
+                // Emit devil attack to start challenge mode (no immediate score change)
                 socket.emit('devil_attack', {
                     attackerId: teamId,
-                    targetId: targetTeamId,
-                    newScore: gameState.teams[targetTeamId].score
+                    targetId: targetTeamId
                 });
             }
+        }
+        
+        // NEW: Function to resolve devil challenge from console
+        function resolveDevilChallenge(targetTeamId, answeredCorrectly) {
+            console.log(`⚖️ CONSOLE: Resolving devil challenge for Team ${targetTeamId}, correct: ${answeredCorrectly}`);
+            
+            socket.emit('resolve_devil_challenge', {
+                targetTeamId: targetTeamId,
+                answeredCorrectly: answeredCorrectly
+            });
+            
+            const result = answeredCorrectly ? 'correctly (+1)' : 'incorrectly (-1)';
+            addLog(`Team ${targetTeamId} answered ${result} to devil challenge`, answeredCorrectly ? 'success' : 'error');
         }
 
         function updateTeamName(teamId) {
@@ -747,8 +913,8 @@
                 gameState.teams[teamId].cards.angel = false;
                 gameState.teams[teamId].cards.angelUsed = true;
                 
-                const angelCard = document.getElementById(`angelCard-${teamId}`);
-                angelCard.classList.add('opacity-40', 'grayscale');
+                // Update card display
+                updateActionCardDisplay(teamId);
                 
                 addLog(`Team ${teamId} angel protection used - no penalty applied`, 'success', {
                     type: 'angel_protection',
@@ -907,8 +1073,24 @@
         }
 
         // Other functions
-        function clearBuzzers() {
+        function clearBuzzers(skipArduinoReset = false) {
+            // Clear all buzzing states locally
+            for (let teamId = 1; teamId <= 6; teamId++) {
+                const teamCard = document.querySelector(`[data-team="${teamId}"]`);
+                if (teamCard) {
+                    teamCard.classList.remove('buzzing');
+                }
+            }
+            
+            // Send clear command to main page and other clients
             socket.emit('clear_buzzers');
+            sendToMain('clear_buzzers', {});
+            
+            // Only send reset to Arduino if not already coming from Arduino
+            if (!skipArduinoReset) {
+                sendResetToArduino();
+            }
+            
             addLog('All buzzers cleared', 'info');
         }
 
@@ -920,13 +1102,7 @@
                     document.getElementById(`teamScoreConsole-${teamId}`).textContent = '0';
                     
                     // Reset action card UI
-                    const angelCard = document.getElementById(`angelCard-${teamId}`);
-                    const devilCard = document.getElementById(`devilCard-${teamId}`);
-                    const crossCard = document.getElementById(`crossCard-${teamId}`);
-                    
-                    angelCard.className = 'action-card angel w-6 h-8 cursor-pointer hover:scale-110 transition-transform duration-200 opacity-100';
-                    devilCard.className = 'action-card devil w-6 h-8 cursor-pointer hover:scale-110 transition-transform duration-200 opacity-100';
-                    crossCard.className = 'action-card cross w-6 h-8 opacity-40 grayscale';
+                    updateActionCardDisplay(teamId);
                 });
                 
                 // Reset question position
@@ -949,17 +1125,15 @@
                 resetTimer();
                 gameState.actionHistory = [];
                 addLog('Game completely reset to defaults', 'success');
+                
+                // Refresh the console page after reset
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000); // 1 second delay to show the success message
             }
         }
 
-        function toggleConnection() {
-            const port = document.getElementById('portSelect').value;
-            if (port) {
-                socket.emit('connect_arduino', { port: port });
-            } else {
-                addLog('Please select a port first', 'error');
-            }
-        }
+
 
         function toggleShortcutsInfo() {
             const info = document.getElementById('shortcutsInfo');
@@ -1122,23 +1296,45 @@
             document.getElementById('timerDisplayConsole').textContent = formatTime(data.value);
         });
 
+        socket.on('card_update', (data) => {
+            const teamId = data.teamId;
+            if (gameState.teams[teamId]) {
+                // Update card state based on the data received
+                if (data.cardType === 'angel') {
+                    gameState.teams[teamId].cards.angel = data.active;
+                    if (data.used) {
+                        gameState.teams[teamId].cards.angelUsed = data.used;
+                    }
+                } else if (data.cardType === 'devil') {
+                    if (data.used) {
+                        gameState.teams[teamId].cards.devilUsed = data.used;
+                    }
+                    if (data.targetId) {
+                        gameState.teams[data.targetId].cards.cross = true;
+                    }
+                } else if (data.cardType === 'cross') {
+                    gameState.teams[teamId].cards.cross = data.active;
+                }
+                
+                // Update display
+                updateActionCardDisplay(teamId);
+                if (data.targetId) {
+                    updateActionCardDisplay(data.targetId);
+                }
+            }
+        });
+
         socket.on('arduino_connected', (data) => {
-            document.getElementById('connectionStatus').classList.remove('bg-red-500');
-            document.getElementById('connectionStatus').classList.add('bg-green-500');
             document.getElementById('arduinoStatus').classList.remove('bg-red-500');
             document.getElementById('arduinoStatus').classList.add('bg-green-500');
-            document.getElementById('connectionText').textContent = 'Connected';
-            document.getElementById('arduinoText').textContent = `Port: ${data.port}`;
+            document.getElementById('arduinoText').textContent = `Connected - Port: ${data.port}`;
             addLog(`Arduino connected: ${data.port}`, 'success');
         });
 
         socket.on('arduino_disconnected', () => {
-            document.getElementById('connectionStatus').classList.remove('bg-green-500');
-            document.getElementById('connectionStatus').classList.add('bg-red-500');
             document.getElementById('arduinoStatus').classList.remove('bg-green-500');
             document.getElementById('arduinoStatus').classList.add('bg-red-500');
-            document.getElementById('connectionText').textContent = 'Disconnected';
-            document.getElementById('arduinoText').textContent = 'Not Connected';
+            document.getElementById('arduinoText').textContent = 'Disconnected';
             addLog('Arduino disconnected', 'error');
         });
 
@@ -1163,17 +1359,229 @@
 
         // Close color dropdown when clicking outside
         document.addEventListener('click', function(event) {
-            if (!event.target.closest('.team-color-display') && !event.target.closest('.color-dropdown')) {
+            if (!event.target.closest('[id^="colorCircle-"]') && !event.target.closest('.color-dropdown')) {
                 document.querySelectorAll('.color-dropdown').forEach(dropdown => {
                     dropdown.classList.add('hidden');
                 });
             }
         });
 
+        // Arduino connection variables
+        let port = null;
+        let reader = null;
+        let writer = null;
+        let isConnected = false;
+
+        async function connectArduino() {
+            if ('serial' in navigator) {
+                try {
+                    addLog('Requesting Arduino port...', 'info');
+                    
+                    // Request port from user
+                    port = await navigator.serial.requestPort({
+                        filters: [
+                            { usbVendorId: 0x10C4 }, // Silicon Labs
+                            { usbVendorId: 0x1A86 }, // QinHeng Electronics  
+                            { usbVendorId: 0x0403 }, // FTDI
+                            { usbVendorId: 0x2341 }, // Arduino LLC
+                            { usbVendorId: 0x239A }, // Adafruit
+                            { usbVendorId: 0x303A }  // Espressif
+                        ]
+                    });
+                    
+                    addLog('Opening port...', 'info');
+                    
+                    // Open the port with proper settings
+                    await port.open({ 
+                        baudRate: 9600,
+                        dataBits: 8,
+                        stopBits: 1,
+                        parity: 'none',
+                        flowControl: 'none'
+                    });
+                    
+                    addLog('Setting up data streams...', 'info');
+                    
+                    // Set up writer first
+                    const textEncoder = new TextEncoderStream();
+                    const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
+                    writer = textEncoder.writable.getWriter();
+                    
+                    // Set up reader
+                    const textDecoder = new TextDecoderStream();
+                    const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+                    reader = textDecoder.readable.getReader();
+                    
+                    // Update connection state
+                    isConnected = true;
+                    updateConnectionUI();
+                    
+                    addLog('Arduino connected successfully', 'success');
+                    addLog('Waiting for Arduino messages...', 'info');
+                    
+                    // Start reading data
+                    readArduinoData();
+                    
+                    // Send initial test
+                    setTimeout(() => {
+                        sendResetToArduino();
+                    }, 1000);
+                    
+                } catch (error) {
+                    console.error('Connection failed:', error);
+                    addLog(`Connection failed: ${error.message}`, 'error');
+                    isConnected = false;
+                    updateConnectionUI();
+                }
+            } else {
+                addLog('Web Serial API not supported in this browser. Please use Chrome or Edge.', 'error');
+            }
+        }
+
+        async function disconnectArduino() {
+            try {
+                if (reader) {
+                    await reader.cancel();
+                    reader = null;
+                }
+                if (writer) {
+                    await writer.close();
+                    writer = null;
+                }
+                if (port) {
+                    await port.close();
+                    port = null;
+                }
+                
+                isConnected = false;
+                updateConnectionUI();
+                addLog('Arduino disconnected', 'info');
+                
+            } catch (error) {
+                console.error('Disconnect error:', error);
+                addLog(`Disconnect error: ${error.message}`, 'error');
+            }
+        }
+
+        function updateConnectionUI() {
+            const statusDot = document.getElementById('arduinoStatus');
+            const statusText = document.getElementById('arduinoText');
+            const connectBtn = document.getElementById('connectBtn');
+            
+            if (isConnected) {
+                statusDot.classList.remove('bg-red-500');
+                statusDot.classList.add('bg-green-500');
+                statusText.textContent = 'Connected';
+                connectBtn.textContent = 'Disconnect';
+                connectBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                connectBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+            } else {
+                statusDot.classList.remove('bg-green-500');
+                statusDot.classList.add('bg-red-500');
+                statusText.textContent = 'Disconnected';
+                connectBtn.textContent = 'Connect Arduino';
+                connectBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                connectBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            }
+        }
+
+        async function readArduinoData() {
+            let buffer = '';
+            
+            try {
+                while (isConnected && reader) {
+                    const { value, done } = await reader.read();
+                    if (done) {
+                        console.log('Arduino reader done');
+                        break;
+                    }
+                    
+                    // Accumulate data in buffer
+                    buffer += value;
+                    console.log('Raw Arduino data:', value);
+                    
+                    // Process complete lines
+                    let lines = buffer.split('\n');
+                    buffer = lines.pop(); // Keep incomplete line in buffer
+                    
+                    for (let line of lines) {
+                        const data = line.trim();
+                        if (data.length === 0) continue;
+                        
+                        console.log('Processing Arduino message:', data);
+                        
+                        // Handle Arduino messages based on actual protocol
+                        if (data === 'READY') {
+                            addLog('Arduino ready - clearing web buzzers', 'success');
+                            // Arduino reset (GPIO button pressed) should clear web buzzers
+                            // Use skipArduinoReset=true to avoid infinite loop
+                            clearBuzzers(true);
+                        } else if (data.startsWith('WINNER:')) {
+                            const teamId = parseInt(data.replace('WINNER:', ''));
+                            if (teamId >= 1 && teamId <= 6) {
+                                addLog(`🚨 Team ${teamId} buzzed in!`, 'success');
+                                
+                                // Buzz team locally
+                                buzzTeam(teamId);
+                                
+                                // Send to main page
+                                sendToMain('team_buzz', { teamId: teamId });
+                                
+                                // Emit socket event
+                                socket.emit('test_buzzer', { teamId: teamId });
+                            }
+                        } else {
+                            // Log unknown messages for debugging
+                            addLog(`Arduino: ${data}`, 'info');
+                        }
+                    }
+                }
+            } catch (error) {
+                if (isConnected) {
+                    console.error('Error reading Arduino data:', error);
+                    addLog(`Arduino communication error: ${error.message}`, 'error');
+                    
+                    // Auto-reconnect attempt
+                    isConnected = false;
+                    updateConnectionUI();
+                    
+                    addLog('Attempting to reconnect...', 'warning');
+                    setTimeout(() => {
+                        if (!isConnected) {
+                            connectArduino();
+                        }
+                    }, 2000);
+                }
+            }
+        }
+        
+        async function sendResetToArduino() {
+            if (isConnected && writer) {
+                try {
+                    console.log('Sending RESET command to Arduino');
+                    await writer.write('RESET\n');
+                    addLog('✅ Reset command sent to Arduino', 'info');
+                } catch (error) {
+                    console.error('Error sending reset:', error);
+                    addLog(`❌ Error sending reset: ${error.message}`, 'error');
+                }
+            } else {
+                addLog('❌ Cannot send reset - Arduino not connected', 'warning');
+            }
+        }
+        
+        function toggleConnection() {
+            if (isConnected) {
+                disconnectArduino();
+            } else {
+                connectArduino();
+            }
+        }
+
         // Initialize console
         document.addEventListener('DOMContentLoaded', function() {
-            // Request ports on load
-            socket.emit('refresh_ports');
+            // Initialize connection UI
+            updateConnectionUI();
             
             // Initialize timer display
             document.getElementById('timerDisplayConsole').textContent = formatTime(gameState.timerValue);
@@ -1189,9 +1597,82 @@
             setTimeout(() => toggleShortcutsInfo(), 1000);
             
             addLog('Console ready for moderation - Press H for keyboard shortcuts', 'success');
+            addLog('Click "Connect Arduino" to connect your buzzer system', 'info');
+            
+            // Force populate all color options after DOM is ready
+            setTimeout(() => {
+                for (let i = 1; i <= 6; i++) {
+                    populateColorOptions(i);
+                }
+                console.log('🎨 Force-populated all color options');
+            }, 100);
+            
+            // Try again after a longer delay to ensure DOM is fully ready
+            setTimeout(() => {
+                for (let i = 1; i <= 6; i++) {
+                    populateColorOptions(i);
+                }
+            }, 1000);
         });
+        
+        // Debug function for color options
+        window.debugColorOptions = function() {
+            console.log('🔍 Available colors:', gameState.availableColors);
+            console.log('🔍 Color definitions:', colorDefinitions);
+            for (let i = 1; i <= 6; i++) {
+                const grid = document.getElementById(`colorGrid-${i}`);
+                console.log(`Team ${i} color grid:`, grid);
+                if (grid) {
+                    console.log(`  Children: ${grid.children.length}`);
+                } else {
+                    console.log(`  Grid not found!`);
+                }
+            }
+        };
+        
+        window.testColorOptions = function() {
+            console.log('🧪 Testing color options population...');
+            for (let i = 1; i <= 6; i++) {
+                populateColorOptions(i);
+            }
+        };
+        
+        window.testColorDropdown = function(teamId) {
+            console.log(`🧪 Testing color dropdown for team ${teamId || 1}`);
+            const team = teamId || 1;
+            toggleColorDropdown(team);
+            
+            setTimeout(() => {
+                const dropdown = document.getElementById(`colorDropdown-${team}`);
+                const grid = document.getElementById(`colorGrid-${team}`);
+                console.log(`🔍 Dropdown visible:`, dropdown && !dropdown.classList.contains('hidden'));
+                console.log(`🔍 Grid children:`, grid ? grid.children.length : 'N/A');
+            }, 100);
+        };
+        
+        window.forceCreateTeamCard = function(teamId) {
+            console.log(`🧪 Force creating team card ${teamId || 1}`);
+            const team = teamId || 1;
+            const teamsGrid = document.getElementById('teamsGrid');
+            if (teamsGrid) {
+                teamsGrid.innerHTML = '';
+                initializeTeamsGrid();
+            }
+        };
+        
+        window.debugArduinoConnection = function() {
+            console.log('🔍 Arduino Debug Info:');
+            console.log('  Is Connected:', isConnected);
+            console.log('  Port:', port);
+            console.log('  Reader:', reader);
+            console.log('  Writer:', writer);
+            console.log('  Serial API Support:', 'serial' in navigator);
+        };
 
         console.log('Quiz Bowl Console - Enhanced Moderator Interface with Tailwind CSS');
     </script>
+    
+    <!-- Unified Hotkeys System for Both Main and Console -->
+    <script src="js/hotkeys.js"></script>
 </body>
 </html> 
