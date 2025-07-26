@@ -16,7 +16,6 @@ class CharacterController {
     // Initialize character controller
     init() {
         if (this.initialized) {
-            console.log('⚠️ Character controller already initialized');
             return true;
         }
         
@@ -32,7 +31,24 @@ class CharacterController {
         if (window.gameState) {
             window.gameState.subscribe('currentSet', () => this.updatePosition());
             window.gameState.subscribe('currentQuestion', () => this.updatePosition());
-            window.gameState.subscribe('currentTeam', (teamId) => this.updateProgressCharacterColor(teamId));
+            window.gameState.subscribe('currentTeam', async (teamId) => {
+                
+                // Ensure ProgressWhite is available before updating character color
+                if (window.ProgressWhite) {
+                    await this.updateProgressCharacterColor(teamId);
+                } else {
+                    console.warn('⚠️ CharacterController: ProgressWhite not available yet, retrying...');
+                    setTimeout(async () => {
+                        if (window.ProgressWhite) {
+                            await this.updateProgressCharacterColor(teamId);
+                        } else {
+                            console.error('❌ CharacterController: ProgressWhite still not available after delay');
+                        }
+                    }, 500);
+                }
+            });
+        } else {
+            console.warn('⚠️ CharacterController: window.gameState not available during init');
         }
         
         // Set initial position only if game state is ready
@@ -43,19 +59,11 @@ class CharacterController {
             }, 100);
         } else {
             // Fallback: set to default position without movement
-            console.log('🎯 CharacterController: Setting default position (34%)');
             this.character.style.left = '34%';
         }
         
-        // Start team animation system
-        if (window.ProgressWhite?.teamAnimationSystem) {
-            setTimeout(() => {
-                window.ProgressWhite.teamAnimationSystem.start();
-            }, 2000); // Start after 2 seconds to let everything initialize
-        }
         
         this.initialized = true;
-        console.log('✅ Character controller ready');
         return true;
     }
     
@@ -105,7 +113,7 @@ class CharacterController {
             window.gameState.set('isAnimating', true);
         }
         
-        // 3. Use the proven team character logic for main character animation
+        // 3. Use the main character animation for movement
         if (window.ProgressWhite?.mainCharacterAnimation) {
             window.ProgressWhite.mainCharacterAnimation.playRunAnimation(direction, targetPosition)
                 .then(() => {
@@ -124,6 +132,7 @@ class CharacterController {
                         window.gameState.set('isAnimating', false);
                     }
                 });
+
         } else {
             console.error('❌ CharacterController: ProgressWhite.mainCharacterAnimation not available');
             this.isAnimating = false;
@@ -185,10 +194,8 @@ class CharacterController {
         
         // Only update if position actually needs to change
         if (Math.abs(newPosition - currentPosition) > 0.1) {
-            console.log(`🎯 CharacterController: Updating position from ${currentPosition}% to ${newPosition}%`);
             this.character.style.left = `${newPosition}%`;
         } else {
-            console.log(`🎯 CharacterController: Position already correct at ${newPosition}%`);
         }
     }
     
@@ -198,8 +205,6 @@ class CharacterController {
             console.error('❌ Character player not found');
             return;
         }
-        
-        console.log('🏃 CharacterController: Starting run animation...');
         
         // Get animation configuration from game state
         const animations = window.gameState?.get('config')?.animations || {
@@ -325,27 +330,80 @@ class CharacterController {
     }
     
     // Update progress character color based on current team
-    updateProgressCharacterColor(teamId) {
+    async updateProgressCharacterColor(teamId) {
+        
+        // Check if progress character element exists and is ready
+        const progressCharacter = document.getElementById('progressCharacter');
+        if (!progressCharacter) {
+            console.error('❌ CharacterController: Progress character element not found');
+            return;
+        }
+        
+        if (!progressCharacter.load) {
+            console.warn('⚠️ CharacterController: Progress character lottie player not ready, retrying...');
+            setTimeout(() => this.updateProgressCharacterColor(teamId), 500);
+            return;
+        }
+        
         if (!teamId || teamId < 1 || teamId > 6) {
-            // Invalid team ID - apply white using global function
-            if (window.ProgressWhite?.applyCharacterColor) {
-                window.ProgressWhite.applyCharacterColor('progressCharacter', 'white');
-            } else if (window.ProgressWhite?.setProgressCharacterToWhite) {
-                window.ProgressWhite.setProgressCharacterToWhite();
+            // Invalid team ID - set to white using unified function
+            try {
+                const progressCharacter = document.getElementById('progressCharacter');
+                if (progressCharacter) {
+                    // Small delay to ensure element is ready
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                    
+                    // Use unified function for white color
+                    if (window.ProgressWhite && window.ProgressWhite.applyCharacterColor) {
+                        const success = await window.ProgressWhite.applyCharacterColor('progressCharacter', 'white');
+                    } else {
+                        // Fallback: direct load() method
+                        if (progressCharacter.load) {
+                            progressCharacter.load('assets/animations/among_us_idle.json');
+                        }
+                    }
+                } else {
+                    console.warn('⚠️ CharacterController: progressCharacter element not found');
+                }
+            } catch (error) {
+                console.error('❌ CharacterController: Error setting character to white:', error);
             }
             return;
         }
         
         const team = window.gameState?.get()?.teams?.[teamId];
+        
         if (team && team.color && window.ProgressWhite?.applyCharacterColor) {
-            window.ProgressWhite.applyCharacterColor('progressCharacter', team.color);
-            console.log(`🎨 Progress character updated to ${team.color} (Team ${team.name})`);
+            try {
+                
+                // Add a small delay to ensure any previous animations have completed
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                const result = await window.ProgressWhite.applyCharacterColor('progressCharacter', team.color);
+
+            } catch (error) {
+                console.error(`❌ CharacterController: Error applying color ${team.color}:`, error);
+                // Fallback to white on error
+                try {
+                    if (window.ProgressWhite?.setProgressCharacterToWhite) {
+                        await window.ProgressWhite.setProgressCharacterToWhite();
+                    }
+                } catch (fallbackError) {
+                    console.error('❌ CharacterController: Fallback to white also failed:', fallbackError);
+                }
+            }
         } else {
+            console.warn(`⚠️ CharacterController: Missing team data or color for team ${teamId}, falling back to white`);
+            
             // Fallback to white if team color not available
-            if (window.ProgressWhite?.applyCharacterColor) {
-                window.ProgressWhite.applyCharacterColor('progressCharacter', 'white');
-            } else if (window.ProgressWhite?.setProgressCharacterToWhite) {
-                window.ProgressWhite.setProgressCharacterToWhite();
+            try {
+                if (window.ProgressWhite?.applyCharacterColor) {
+                    await window.ProgressWhite.applyCharacterColor('progressCharacter', 'white');
+                } else if (window.ProgressWhite?.setProgressCharacterToWhite) {
+                    await window.ProgressWhite.setProgressCharacterToWhite();
+                }
+            } catch (error) {
+                console.error('❌ CharacterController: Error in fallback to white:', error);
             }
         }
     }
@@ -443,5 +501,3 @@ if (document.readyState === 'loading') {
     // DOM is already loaded
     window.characterController.init();
 }
-
-console.log('✅ Character controller loaded with proper alignment'); 

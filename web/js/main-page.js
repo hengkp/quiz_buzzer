@@ -24,7 +24,6 @@ class MainPageApp {
             return;
         }
         
-        console.log('🚀 Initializing main page...');
         
         try {
             // Wait for DOM to be ready
@@ -36,11 +35,19 @@ class MainPageApp {
             // Initialize systems in order
             await this.initializeSystems();
             
+            // Ensure character starts as white
+            await this.ensureCharacterStartsWhite();
+            
+            // Initialize team character colors
+            await this.initializeTeamCharacterColors();
+            
+            // Start continuous team character random animations (5-20 seconds)
+            await this.startTeamAnimations();
+            
             // Setup global functions for backward compatibility
             this.setupBackwardCompatibility();
             
             this.initialized = true;
-            console.log('✅ Main page ready');
             
         } catch (error) {
             console.error('❌ Main page initialization failed:', error);
@@ -166,29 +173,101 @@ class MainPageApp {
         return Promise.resolve();
     }
     
+    // Initialize team character colors
+    async initializeTeamCharacterColors() {
+        
+        try {
+            // Wait for ProgressWhite to be available
+            if (window.ProgressWhite?.initializeTeamColors) {
+                // Wait a bit for elements to be ready
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // Initialize team colors
+                window.ProgressWhite.initializeTeamColors();
+            } else {
+                console.warn('⚠️ ProgressWhite.initializeTeamColors not available');
+                
+                // Fallback: manually set team character colors
+                const teamColors = ['red', 'blue', 'lime', 'orange', 'pink', 'yellow'];
+                for (let i = 1; i <= 6; i++) {
+                    const teamCharacter = document.getElementById(`teamCharacter${i}`);
+                    if (teamCharacter && window.ProgressWhite?.applyCharacterColor) {
+                        await window.ProgressWhite.applyCharacterColor(`teamCharacter${i}`, teamColors[i-1]);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error initializing team character colors:', error);
+        }
+    }
+    
     // Setup backward compatibility functions
     setupBackwardCompatibility() {
-        // Character movement
-        window.moveCharacterToQuestion = (set, question) => {
-            return window.characterController?.moveToQuestion(set, question);
+        // Setup global aliases for commonly used functions
+        window.moveCharacterToQuestion = (setNumber, questionNumber) => {
+            if (window.characterController) {
+                return window.characterController.moveToQuestion(setNumber, questionNumber);
+            }
         };
         
-        // Buzzing
-        window.showBuzzing = (teamId) => {
-            window.buzzingSystem?.showBuzzing(teamId);
-        };
-        
-        window.clearBuzzing = () => {
-            window.buzzingSystem?.clearAll();
-        };
-        
-        // Game state access
         window.getGameState = () => {
             return window.gameState?.get();
         };
         
-        // Socket access
         window.socket = window.socketManager?.socket;
+    }
+    
+    // Ensure character starts as white
+    async ensureCharacterStartsWhite() {
+        
+        try {
+            const progressCharacter = document.getElementById('progressCharacter');
+            if (progressCharacter) {
+                // Wait a moment to ensure the element is fully ready
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Use ProgressWhite system to properly apply white color
+                if (window.ProgressWhite && window.ProgressWhite.applyCharacterColor) {
+                    const success = await window.ProgressWhite.applyCharacterColor('progressCharacter', 'white');
+                } else {
+                    console.warn('⚠️ ProgressWhite not available, using fallback');
+                    // Fallback: direct src assignment
+                    progressCharacter.src = 'assets/animations/among_us_idle.json';
+                }
+                
+                // Ensure it's visible and playing
+                progressCharacter.style.display = 'block';
+                
+                // Wait for it to load
+                await new Promise(resolve => setTimeout(resolve, 200));
+            } else {
+                console.warn('⚠️ Progress character not found');
+            }
+            
+            // Reset game state to ensure no team is selected
+            window.gameState.set('currentTeam', 0);
+            
+        } catch (error) {
+            console.error('❌ Error ensuring white character:', error);
+        }
+    }
+    
+    // Start continuous team character random animations
+    async startTeamAnimations() {
+        try {
+            
+            // Wait a bit for all characters to be properly initialized
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Start the continuous animation system
+            if (window.ProgressWhite?.teamAnimationSystem) {
+                window.ProgressWhite.teamAnimationSystem.startContinuousAnimations();
+            } else {
+                console.warn('⚠️ Team animation system not available');
+            }
+        } catch (error) {
+            console.error('❌ Error starting team animations:', error);
+        }
     }
     
     
@@ -203,7 +282,7 @@ class MainPageApp {
     }
 }
 
-// Initialize the main page application
+// Create and initialize main page app
 const mainPageApp = new MainPageApp();
 
 // Auto-initialize when script loads
@@ -215,5 +294,3 @@ if (document.readyState === 'loading') {
 
 // Export for global access
 window.mainPageApp = mainPageApp;
-
-console.log('✅ Main page app loaded'); 

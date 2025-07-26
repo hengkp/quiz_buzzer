@@ -11,6 +11,33 @@
     <!-- Console Stylesheet -->
     <link rel="stylesheet" href="css/console.css">
     
+    <style>
+        /* Score update glow animation for console */
+        .team-score-console {
+            transition: all 0.3s ease;
+        }
+        
+        .team-score-console.updating {
+            animation: consoleScoreGlow 3s ease-in-out;
+            font-size: 2.5rem !important;
+        }
+        
+        @keyframes consoleScoreGlow {
+            0%, 100% { 
+                text-shadow: none;
+                transform: scale(1);
+            }
+            25%, 75% { 
+                text-shadow: 0 0 10px rgba(59, 130, 246, 0.8), 0 0 20px rgba(59, 130, 246, 0.6);
+                transform: scale(1.05);
+            }
+            50% { 
+                text-shadow: 0 0 15px rgba(59, 130, 246, 1), 0 0 25px rgba(59, 130, 246, 0.8);
+                transform: scale(1.1);
+            }
+        }
+    </style>
+    
     <script>
         tailwind.config = {
             theme: {
@@ -930,7 +957,28 @@
             }
             
             gameState.teams[teamId].score = Math.max(0, gameState.teams[teamId].score + actualAdjustment);
-            document.getElementById(`teamScoreConsole-${teamId}`).textContent = gameState.teams[teamId].score;
+            
+            // Update score display with glow effect
+            const scoreElement = document.getElementById(`teamScoreConsole-${teamId}`);
+            if (scoreElement) {
+                const oldScore = parseInt(scoreElement.textContent) || 0;
+                const newScore = gameState.teams[teamId].score;
+                
+                // Check if score changed
+                if (oldScore !== newScore) {
+                    // Add updating class to trigger glow animation
+                    scoreElement.classList.add('updating', 'team-score-console');
+                    
+                    // Remove updating class after animation completes (3 seconds)
+                    setTimeout(() => {
+                        if (scoreElement) {
+                            scoreElement.classList.remove('updating');
+                        }
+                    }, 3000);
+                }
+                
+                scoreElement.textContent = newScore;
+            }
             
             socket.emit('score_update', {
                 teamId: teamId,
@@ -954,7 +1002,22 @@
         function resetScore(teamId) {
             const oldScore = gameState.teams[teamId].score;
             gameState.teams[teamId].score = 0;
-            document.getElementById(`teamScoreConsole-${teamId}`).textContent = '0';
+            
+            // Update score display with glow effect
+            const scoreElement = document.getElementById(`teamScoreConsole-${teamId}`);
+            if (scoreElement) {
+                // Add updating class to trigger glow animation
+                scoreElement.classList.add('updating', 'team-score-console');
+                
+                // Remove updating class after animation completes (3 seconds)
+                setTimeout(() => {
+                    if (scoreElement) {
+                        scoreElement.classList.remove('updating');
+                    }
+                }, 3000);
+                
+                scoreElement.textContent = '0';
+            }
             
             socket.emit('score_update', {
                 teamId: teamId,
@@ -1099,7 +1162,22 @@
                 Object.keys(gameState.teams).forEach(teamId => {
                     gameState.teams[teamId].score = 0;
                     gameState.teams[teamId].cards = { angel: false, devil: false, cross: false, angelUsed: false, devilUsed: false };
-                    document.getElementById(`teamScoreConsole-${teamId}`).textContent = '0';
+                    
+                    // Update score display with glow effect
+                    const scoreElement = document.getElementById(`teamScoreConsole-${teamId}`);
+                    if (scoreElement) {
+                        // Add updating class to trigger glow animation
+                        scoreElement.classList.add('updating', 'team-score-console');
+                        
+                        // Remove updating class after animation completes (3 seconds)
+                        setTimeout(() => {
+                            if (scoreElement) {
+                                scoreElement.classList.remove('updating');
+                            }
+                        }, 3000);
+                        
+                        scoreElement.textContent = '0';
+                    }
                     
                     // Reset action card UI
                     updateActionCardDisplay(teamId);
@@ -1209,13 +1287,45 @@
             switch (action.type) {
                 case 'score_change':
                     gameState.teams[action.teamId].score = action.oldScore;
-                    document.getElementById(`teamScoreConsole-${action.teamId}`).textContent = action.oldScore;
+                    
+                    // Update score display with glow effect
+                    const scoreElement1 = document.getElementById(`teamScoreConsole-${action.teamId}`);
+                    if (scoreElement1) {
+                        // Add updating class to trigger glow animation
+                        scoreElement1.classList.add('updating', 'team-score-console');
+                        
+                        // Remove updating class after animation completes (3 seconds)
+                        setTimeout(() => {
+                            if (scoreElement1) {
+                                scoreElement1.classList.remove('updating');
+                            }
+                        }, 3000);
+                        
+                        scoreElement1.textContent = action.oldScore;
+                    }
+                    
                     addLog(`Undid score change for Team ${action.teamId}: ${action.newScore} → ${action.oldScore}`, 'warning');
                     break;
                     
                 case 'score_reset':
                     gameState.teams[action.teamId].score = action.oldScore;
-                    document.getElementById(`teamScoreConsole-${action.teamId}`).textContent = action.oldScore;
+                    
+                    // Update score display with glow effect
+                    const scoreElement2 = document.getElementById(`teamScoreConsole-${action.teamId}`);
+                    if (scoreElement2) {
+                        // Add updating class to trigger glow animation
+                        scoreElement2.classList.add('updating', 'team-score-console');
+                        
+                        // Remove updating class after animation completes (3 seconds)
+                        setTimeout(() => {
+                            if (scoreElement2) {
+                                scoreElement2.classList.remove('updating');
+                            }
+                        }, 3000);
+                        
+                        scoreElement2.textContent = action.oldScore;
+                    }
+                    
                     addLog(`Undid score reset for Team ${action.teamId}: 0 → ${action.oldScore}`, 'warning');
                     break;
                     
@@ -1287,7 +1397,28 @@
 
         socket.on('score_update', (data) => {
             gameState.teams[data.teamId].score = data.score;
-            document.getElementById(`teamScoreConsole-${data.teamId}`).textContent = data.score;
+            
+            // Update score display with glow effect
+            const scoreElement = document.getElementById(`teamScoreConsole-${data.teamId}`);
+            if (scoreElement) {
+                const oldScore = parseInt(scoreElement.textContent) || 0;
+                const newScore = data.score;
+                
+                // Check if score changed
+                if (oldScore !== newScore) {
+                    // Add updating class to trigger glow animation
+                    scoreElement.classList.add('updating', 'team-score-console');
+                    
+                    // Remove updating class after animation completes (3 seconds)
+                    setTimeout(() => {
+                        if (scoreElement) {
+                            scoreElement.classList.remove('updating');
+                        }
+                    }, 3000);
+                }
+                
+                scoreElement.textContent = newScore;
+            }
         });
 
         socket.on('timer_update', (data) => {

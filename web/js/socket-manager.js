@@ -56,7 +56,18 @@ class SocketManager {
         this.socket.on('timer_update', (data) => {
             window.gameState?.set('timerValue', data.value);
             window.gameState?.set('timerRunning', data.running);
+            window.gameState?.updateTimerDisplay();
             this.emit('local:timer_update', data);
+        });
+        
+        this.socket.on('timer_ended', () => {
+            // Handle timer reaching zero
+            if (window.gameState) {
+                window.gameState.set('timerRunning', false);
+                window.gameState.set('timerValue', 0);
+                window.gameState.triggerEmergencyMeeting();
+            }
+            this.emit('local:timer_ended');
         });
         
         this.socket.on('score_update', (data) => {
@@ -70,25 +81,45 @@ class SocketManager {
                 window.gameState.set('currentTeam', data.teamId);
                 console.log(`🔔 Team ${data.teamId} buzzed - progress character color updated`);
             }
+            
+            // Show buzzing modal using buzzing system
+            if (window.buzzingSystem) {
+                window.buzzingSystem.showBuzzing(data.teamId);
+            }
+            
             this.emit('local:buzzer_pressed', data);
         });
         
         this.socket.on('clear_buzzers', () => {
-            // Reset currentTeam to 0 when buzzers are cleared
+            // Reset currentTeam and currentChallenge when buzzers are cleared
             if (window.gameState) {
                 window.gameState.set('currentTeam', 0);
+                window.gameState.set('currentChallenge', 0);
                 console.log('🔄 Buzzers cleared - progress character reset to white');
             }
+            
+            // Clear buzzing system
+            if (window.buzzingSystem) {
+                window.buzzingSystem.clearAll();
+            }
+            
             this.emit('local:clear_buzzers');
         });
         
         this.socket.on('admin_reset', () => {
-            // Reset currentTeam to 0 on admin reset
+            // Reset currentTeam and currentChallenge on admin reset
             if (window.gameState) {
                 window.gameState.set('currentTeam', 0);
+                window.gameState.set('currentChallenge', 0);
                 console.log('🔄 Admin reset - progress character reset to white');
             }
             window.gameState?.reset();
+            
+            // Clear buzzing system
+            if (window.buzzingSystem) {
+                window.buzzingSystem.clearAll();
+            }
+            
             this.emit('local:admin_reset');
         });
         
@@ -115,6 +146,60 @@ class SocketManager {
             this.emit('local:card_status_reset', data);
         });
         
+        // Challenge mode events
+        this.socket.on('challenge_activated', (data) => {
+            if (data.teamId && window.gameState) {
+                window.gameState.set('currentChallenge', data.teamId);
+                console.log(`⚡ Challenge mode activated for Team ${data.teamId}`);
+            }
+            this.emit('local:challenge_activated', data);
+        });
+        
+        this.socket.on('challenge_reset', () => {
+            if (window.gameState) {
+                window.gameState.set('currentChallenge', 0);
+                console.log('🔄 Challenge mode reset');
+            }
+            this.emit('local:challenge_reset');
+        });
+        
+        // Devil card attack events
+        this.socket.on('devil_attack', (data) => {
+            if (data.attackingTeam && data.targetTeam && window.gameState) {
+                // Update attacked team state
+                window.gameState.set('attackedTeam', data.targetTeam);
+                
+                // Activate devil card for attacking team
+                window.gameState.update(`actionCards.${data.attackingTeam}.devil`, true);
+                
+                console.log(`😈 Devil attack: Team ${data.attackingTeam} attacked Team ${data.targetTeam}`);
+            }
+            this.emit('local:devil_attack', data);
+        });
+        
+        // Angel card events
+        this.socket.on('angel_activated', (data) => {
+            if (data.teamId && window.gameState) {
+                window.gameState.update(`actionCards.${data.teamId}.angel`, true);
+                console.log(`😇 Angel card activated for Team ${data.teamId}`);
+            }
+            this.emit('local:angel_activated', data);
+        });
+        
+        // Action card reset (for new question sets)
+        this.socket.on('action_cards_reset', (data) => {
+            if (window.gameState) {
+                // Reset all action cards for all teams
+                Object.keys(window.gameState.get('teams')).forEach(teamId => {
+                    window.gameState.update(`actionCards.${teamId}.angel`, false);
+                    window.gameState.update(`actionCards.${teamId}.devil`, false);
+                    window.gameState.update(`actionCards.${teamId}.cross`, false);
+                });
+                console.log('🔄 All action cards reset for new question set');
+            }
+            this.emit('local:action_cards_reset', data);
+        });
+        
         this.socket.on('log_update', (data) => {
             // Forward log updates to local handlers
             this.emit('local:log_update', data);
@@ -123,6 +208,32 @@ class SocketManager {
         this.socket.on('buzzer_data', (data) => {
             // Forward buzzer data to local handlers
             this.emit('local:buzzer_data', data);
+        });
+        
+        // Enhanced game state synchronization
+        this.socket.on('game_state_sync', (data) => {
+            if (data && window.gameState) {
+                // Sync entire game state from server
+                Object.keys(data).forEach(key => {
+                    if (key === 'teams') {
+                        Object.keys(data.teams).forEach(teamId => {
+                            Object.keys(data.teams[teamId]).forEach(prop => {
+                                window.gameState.update(`teams.${teamId}.${prop}`, data.teams[teamId][prop]);
+                            });
+                        });
+                    } else if (key === 'actionCards') {
+                        Object.keys(data.actionCards).forEach(teamId => {
+                            Object.keys(data.actionCards[teamId]).forEach(cardType => {
+                                window.gameState.update(`actionCards.${teamId}.${cardType}`, data.actionCards[teamId][cardType]);
+                            });
+                        });
+                    } else {
+                        window.gameState.set(key, data[key]);
+                    }
+                });
+                console.log('🔄 Game state synchronized from server');
+            }
+            this.emit('local:game_state_sync', data);
         });
     }
     
@@ -216,6 +327,24 @@ class SocketManager {
         }
     }
     
+    resetTimer() {
+        if (this.socket && this.socket.connected) {
+            this.socket.emit('reset_timer', { value: 15 });
+            console.log('⏹️ Reset timer to 15 seconds sent');
+        } else {
+            console.warn('⚠️ Socket not connected - cannot reset timer');
+        }
+    }
+    
+    setTimer(value) {
+        if (this.socket && this.socket.connected) {
+            this.socket.emit('set_timer', { value: value });
+            console.log(`⏱️ Set timer to ${value} seconds sent`);
+        } else {
+            console.warn('⚠️ Socket not connected - cannot set timer');
+        }
+    }
+    
     updateProgress(setNumber, questionNumber) {
         this.send('progress_update', { setNumber, questionNumber });
     }
@@ -227,8 +356,70 @@ class SocketManager {
     updateCard(teamId, cardType, status) {
         this.send('card_update', { teamId, cardType, status });
     }
+    
+    // New methods for enhanced functionality
+    
+    // Activate challenge mode
+    activateChallenge(teamId) {
+        this.send('challenge_activated', { teamId });
+    }
+    
+    // Reset challenge mode
+    resetChallenge() {
+        this.send('challenge_reset');
+    }
+    
+    // Devil card attack
+    devilAttack(attackingTeam, targetTeam) {
+        this.send('devil_attack', { attackingTeam, targetTeam });
+    }
+    
+    // Activate angel card
+    activateAngel(teamId) {
+        this.send('angel_activated', { teamId });
+    }
+    
+    // Reset action cards (for new question set)
+    resetActionCards() {
+        this.send('action_cards_reset');
+    }
+    
+    // Sync entire game state to server
+    syncGameState() {
+        if (window.gameState) {
+            const state = window.gameState.get();
+            this.send('game_state_sync', state);
+        }
+    }
+    
+    // Request game state from server
+    requestGameState() {
+        this.send('request_game_state');
+    }
+    
+    // Send score change with animation trigger
+    sendScoreChange(teamId, scoreChange, reason = 'manual') {
+        const data = {
+            teamId,
+            scoreChange,
+            reason,
+            timestamp: Date.now()
+        };
+        this.send('score_change', data);
+    }
+    
+    // Send action card usage
+    sendActionCardUsage(teamId, cardType, targetTeam = null) {
+        const data = {
+            teamId,
+            cardType,
+            targetTeam,
+            timestamp: Date.now()
+        };
+        this.send('action_card_usage', data);
+    }
 }
 
 // Export singleton instance
 window.socketManager = new SocketManager();
-console.log('✅ Socket manager ready'); 
+console.log('✅ Enhanced socket manager ready'); 

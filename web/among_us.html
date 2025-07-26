@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Among Us Quiz Bowl - Unified Interface</title>
+    <title>Quiz Buzzer - Among Us Style</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQEAYAAABPYyMiAAAABmJLR0T///////8JWPfcAAAACXBIWXMAAABIAAAASABGyWs+AAAAF0lEQVRIx2NgGAWjYBSMglEwCkbBSAcACBAAAeaR9cIAAAAASUVORK5CYII=">
     
     <!-- External Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -47,8 +48,9 @@
 
         <!-- Question Set -->
         <div class="question-set-line">
-            <span class="question-subject" id="subjectIcon">🧬</span>
+            <span class="question-subject" id="subjectIcon"></span>
             <span class="question-set-title" id="currentQuestionSet">Question Set 1</span>
+            <span class="question-set-chance" id="chanceQuestion">(chance: 3/3)</span>
         </div>
 
         <!-- Timer -->
@@ -67,6 +69,16 @@
         <!-- Character -->
         <div class="character-container-main">
             <lottie-player 
+                class="victim-character"
+                id="victimCharacter"
+                src="assets/animations/among_us_idle.json"
+                background="transparent"
+                speed="1"
+                loop
+                autoplay>
+            </lottie-player>
+
+            <lottie-player 
                 class="main-character"
                 id="progressCharacter"
                 src="assets/animations/among_us_idle.json"
@@ -78,7 +90,7 @@
             
             <!-- Action Card and Challenge Indicator Panel -->
             <div class="character-action-panel" id="characterActionPanel">
-                <div class="character-action-icon angel active" id="mainCharacterAngel"></div>
+                <div class="character-action-icon angel" id="mainCharacterAngel"></div>
                 <div class="character-action-icon devil" id="mainCharacterDevil"></div>
                 <div class="character-action-icon cross" id="mainCharacterCross"></div>
                 <div class="character-action-icon challenge" id="mainCharacterChallenge"></div>
@@ -86,9 +98,14 @@
             
             <!-- Score indicator -->
             <div class="score-indicator" id="scoreIndicator">
-                <div class="score-popup show" id="scorePopup">
-                    <div class="score-text" id="scoreText">+1</div>
-                </div>
+                <lottie-player 
+                    id="scoreAnimation"
+                    background="transparent" 
+                    speed="1" 
+                    loop
+                    autoplay="false"
+                    class="score-animation">
+                </lottie-player>
             </div>
         
         </div>
@@ -139,7 +156,7 @@
             <lottie-player 
                 class="question-block-star"
                 id="questionBlockStar"
-                src="assets/animations/space_star.json"
+                src="assets/animations/space_rocket.json"
                 background="transparent"
                 speed="1"
                 loop
@@ -296,6 +313,77 @@
         <div id="teamBuzzingModal" class="buzzing-modal">
             <img id="teamBuzzingCard" class="buzzing-modal-card" src="assets/buzzing/buzzing-white.png">
         </div>
+        
+        <!-- Devil Card Attack Selection Modal -->
+        <div id="devilAttackModal" class="attack-modal">
+            <div class="attack-modal-content">
+                <div class="attack-modal-header">
+                    <h3>😈 Devil Card Attack</h3>
+                    <p>Select a team to attack:</p>
+                </div>
+                
+                <div class="attack-team-grid">
+                    <!-- Team A -->
+                    <div class="attack-team-option" data-team-id="1" onclick="selectAttackTarget(1)">
+                        <img class="attack-team-character" src="assets/characters/character-red.png" alt="Team A">
+                        <div class="attack-team-name">Team A</div>
+                    </div>
+                    
+                    <!-- Team B -->
+                    <div class="attack-team-option" data-team-id="2" onclick="selectAttackTarget(2)">
+                        <img class="attack-team-character" src="assets/characters/character-blue.png" alt="Team B">
+                        <div class="attack-team-name">Team B</div>
+                    </div>
+                    
+                    <!-- Team C -->
+                    <div class="attack-team-option" data-team-id="3" onclick="selectAttackTarget(3)">
+                        <img class="attack-team-character" src="assets/characters/character-lime.png" alt="Team C">
+                        <div class="attack-team-name">Team C</div>
+                    </div>
+                    
+                    <!-- Team D -->
+                    <div class="attack-team-option" data-team-id="4" onclick="selectAttackTarget(4)">
+                        <img class="attack-team-character" src="assets/characters/character-orange.png" alt="Team D">
+                        <div class="attack-team-name">Team D</div>
+                    </div>
+                    
+                    <!-- Team E -->
+                    <div class="attack-team-option" data-team-id="5" onclick="selectAttackTarget(5)">
+                        <img class="attack-team-character" src="assets/characters/character-pink.png" alt="Team E">
+                        <div class="attack-team-name">Team E</div>
+                    </div>
+                    
+                    <!-- Team F -->
+                    <div class="attack-team-option" data-team-id="6" onclick="selectAttackTarget(6)">
+                        <img class="attack-team-character" src="assets/characters/character-yellow.png" alt="Team F">
+                        <div class="attack-team-name">Team F</div>
+                    </div>
+                </div>
+                
+                <div class="attack-modal-actions">
+                    <button class="attack-confirm-btn" onclick="confirmDevilAttack()" disabled>
+                        Confirm Attack
+                    </button>
+                    <button class="attack-cancel-btn" onclick="cancelDevilAttack()">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Answer Animation Modal -->
+        <div id="answerModal" class="answer-modal">
+            <div class="answer-modal-content">
+                <lottie-player 
+                    id="answerAnimation"
+                    src="assets/animations/answer_correct.json"
+                    background="transparent"
+                    speed="1"
+                    loop="false"
+                    autoplay>
+                </lottie-player>
+            </div>
+        </div>
     </div>
     
     <script src="js/game-state.js"></script>
@@ -312,31 +400,29 @@
     <script src="js/main-page.js"></script>
     
     <script>
-        // Initialize main page when everything is loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.MainPageApp) {
-                const app = new MainPageApp();
-                app.init();
-            } else {
-                // Fallback initialization if main-page.js is not available
-                console.log('🔄 Using fallback initialization...');
-                
-                // Ensure characterController is initialized
-                if (window.characterController && !window.characterController.initialized) {
-                    setTimeout(() => {
-                        window.characterController.init();
-                        console.log('✅ Character controller initialized via fallback');
-                    }, 500);
+        // Initialize main character as white immediately when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🎨 DOM loaded - initializing white character...');
+            
+            // Wait for ProgressWhite to be available, then apply white color
+            const initWhiteCharacter = () => {
+                if (window.ProgressWhite && window.ProgressWhite.applyCharacterColor) {
+                    console.log('🎨 Using ProgressWhite to set main character white');
+                    window.ProgressWhite.applyCharacterColor('progressCharacter', 'white')
+                        .then(() => {
+                            console.log('✅ Main character initialized with white animation via ProgressWhite');
+                        })
+                        .catch(error => {
+                            console.error('❌ Error setting main character white:', error);
+                        });
+                } else {
+                    console.log('⏳ ProgressWhite not ready yet, retrying...');
+                    setTimeout(initWhiteCharacter, 100);
                 }
-                
-                // Ensure hotkeys are initialized
-                if (window.hotkeysManager && !window.hotkeysManager.isListening) {
-                    setTimeout(() => {
-                        window.hotkeysManager.init();
-                        console.log('✅ Hotkeys initialized via fallback');
-                    }, 500);
-                }
-            }
+            };
+            
+            // Start initialization
+            initWhiteCharacter();
         });
     </script>
 </body>

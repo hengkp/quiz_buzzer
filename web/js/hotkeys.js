@@ -35,7 +35,7 @@ class HotkeysManager {
     
     // Setup default key bindings
     setupDefaultBindings() {
-        // Team buzzer hotkeys (1-6) - works for both pages
+        // Team buzzer hotkeys (1-6) - simulate buzz-in with modal, sound and color change
         for (let i = 1; i <= 6; i++) {
             this.bind(i.toString(), (event) => {
                 event.preventDefault();
@@ -54,7 +54,18 @@ class HotkeysManager {
             this.handleNavigation('next');
         }, 'Next question');
         
-        // Control hotkeys - works for both pages
+        // Scoring hotkeys - when there's a buzzer team
+        this.bind('ArrowUp', (event) => {
+            event.preventDefault();
+            this.handleScoring(true); // Plus score
+        }, 'Add score to buzzing team');
+        
+        this.bind('ArrowDown', (event) => {
+            event.preventDefault();
+            this.handleScoring(false); // Minus score
+        }, 'Subtract score from buzzing team');
+        
+        // Control hotkeys
         this.bind('r', (event) => {
             event.preventDefault();
             this.handleResetBuzzers();
@@ -62,24 +73,56 @@ class HotkeysManager {
         
         this.bind('q', (event) => {
             event.preventDefault();
-            this.handleAdminReset();
-        }, 'Admin reset');
+            this.handleGameReset();
+        }, 'Reset game state');
+        
+        // Action card hotkeys - only when there's a buzzer team
+        this.bind('z', (event) => {
+            event.preventDefault();
+            this.handleAngelCard();
+        }, 'Activate/Deactivate angel card');
+        
+        this.bind('x', (event) => {
+            event.preventDefault();
+            this.handleDevilCard();
+        }, 'Activate/Deactivate devil card with attack selection');
+        
+        this.bind('c', (event) => {
+            event.preventDefault();
+            this.handleCancelDevilAttack();
+        }, 'Activate/Deactivate Challenge Mode');
+        
+        this.bind('Enter', (event) => {
+            event.preventDefault();
+            this.handleConfirmDevilAttack();
+        }, 'Confirm Devil Attack');
         
         // Timer hotkeys - different behavior per page
-        this.bind(' ', (event) => {
+        this.bind('i', (event) => {
             event.preventDefault();
             this.handleTimerToggle();
-        }, 'Start/pause timer');
+        }, 'Start timer');
         
-        this.bind('p', (event) => {
-            event.preventDefault();
-            this.handlePauseTimer();
-        }, 'Pause timer');
-        
-        this.bind('s', (event) => {
+        this.bind('o', (event) => {
             event.preventDefault();
             this.handleStopTimer();
         }, 'Stop timer');
+
+        this.bind('p', (event) => {
+            event.preventDefault();
+            this.handleResetTimer();
+        }, 'Reset timer to 15 seconds');
+        
+        // Timer adjustment hotkeys
+        this.bind('[', (event) => {
+            event.preventDefault();
+            this.handleDecreaseTimer();
+        }, 'Decrease timer by 1 second');
+        
+        this.bind(']', (event) => {
+            event.preventDefault();
+            this.handleIncreaseTimer();
+        }, 'Increase timer by 1 second');
         
         // Fullscreen hotkey - works for both pages
         this.bind('f', (event) => {
@@ -105,6 +148,12 @@ class HotkeysManager {
             }, 'Switch to hardware tab');
         }
         
+        // Test emergency meeting (temporary for debugging)
+        this.bind('e', (event) => {
+            event.preventDefault();
+            this.testEmergencyMeeting();
+        }, 'Test emergency meeting');
+        
         // Development hotkeys (only in debug mode)
         if (this.isDebugMode()) {
             this.bind('Escape', () => {
@@ -119,7 +168,7 @@ class HotkeysManager {
         }
     }
     
-    // Handle team buzzer for both pages
+    // Handle team buzzer simulation
     handleTeamBuzzer(teamId) {
         if (this.pageType === 'console') {
             // Console page behavior
@@ -132,8 +181,1321 @@ class HotkeysManager {
                 window.simulateTeamBuzz(teamId);
             }
         } else {
-            // Main page behavior
-            window.socketManager?.simulateBuzzer(teamId);
+            // Main page behavior - simulate buzz-in with all effects
+            this.simulateTeamBuzzIn(teamId);
+        }
+    }
+    
+    // Simulate team buzz-in with modal, sound, and color change
+    async simulateTeamBuzzIn(teamId) {
+        if (!teamId || teamId < 1 || teamId > 6) {
+            console.warn('⚠️ Invalid team ID for buzz-in:', teamId);
+            return;
+        }
+        
+        console.log(`🔔 HotkeysManager: Simulating buzz-in for Team ${teamId}`);
+        
+        // Update game state FIRST (this will trigger character color change via subscription)
+        if (window.gameState) {
+            console.log(`🎯 HotkeysManager: Setting currentTeam to ${teamId} in game state`);
+            window.gameState.set('currentTeam', teamId);
+            
+            // Verify the update
+            const currentTeam = window.gameState.get('currentTeam');
+            console.log(`🎯 HotkeysManager: Game state currentTeam is now: ${currentTeam}`);
+        } else {
+            console.error('❌ HotkeysManager: window.gameState not available');
+        }
+        
+        // Show buzzing modal using buzzing system
+        if (window.buzzingSystem) {
+            window.buzzingSystem.showBuzzing(teamId);
+        } else {
+            console.error('❌ HotkeysManager: window.buzzingSystem not available');
+        }
+        
+        // Sync with server
+        if (window.socketManager) {
+            window.socketManager.send('buzzer_pressed', { teamId: teamId });
+        }
+    }
+    
+    // Handle scoring with animations
+    handleScoring(isPositive) {
+        console.log(`🎯 handleScoring called with isPositive: ${isPositive}`);
+        
+        const state = window.gameState?.get();
+        if (!state) {
+            console.warn('⚠️ No game state available');
+            return;
+        }
+        
+        // Require a buzzing team for both positive and negative scoring
+        if (!state.currentTeam || state.currentTeam < 1 || state.currentTeam > 6) {
+            console.warn('⚠️ No team currently buzzing - cannot assign score');
+            return;
+        }
+        
+        const teamId = state.currentTeam;
+        const team = state.teams[teamId];
+        
+        if (!team) {
+            return;
+        }
+        
+        const currentQuestion = state.currentQuestion || 1;
+        const isChallenge = state.currentChallenge === teamId;
+        const hasAngel = state.actionCards[teamId].angel;
+        const isVictimWithCross = state.actionCards[teamId].cross && state.attackedTeam === teamId;
+        
+        console.log(`🎯 Scoring Debug - Team: ${teamId}, Q: ${currentQuestion}, Angel: ${hasAngel}, Challenge: ${isChallenge}, Victim: ${isVictimWithCross}`);
+        
+        // Show answer animation first (correct/incorrect)
+        console.log(`🎬 About to call showAnswerAnimation with isPositive: ${isPositive}`);
+        this.showAnswerAnimation(isPositive);
+        
+        // Handle positive scoring (arrow up)
+        if (isPositive) {
+            let scoreChange = 0;
+            
+            if (isChallenge) {
+                scoreChange = 2; // Challenge mode: +2 for correct
+            } else if (currentQuestion === 1) {
+                scoreChange = 1; // Q1: +1 for correct
+            } else {
+                scoreChange = 1; // Q2-Q4: +1 for correct
+            }
+            
+            // Delay score update until after answer animation (3 seconds)
+            setTimeout(() => {
+                // Update score
+                const newScore = Math.max(0, team.score + scoreChange);
+                if (window.gameState) {
+                    window.gameState.update(`teams.${teamId}.score`, newScore);
+                }
+                
+                // Remove cross protection if this was a devil attack victim who answered correctly
+                if (isVictimWithCross) {
+                    this.removeCrossProtection(teamId);
+                }
+                
+                // Show coin animation after score update
+                setTimeout(() => {
+                    this.showScoreAnimation(scoreChange);
+                }, 500); // Small delay after score update
+                
+            }, 2500); // Wait for answer animation to complete
+            
+            // Handle Q1 success - reset team graying
+            if (currentQuestion === 1) {
+                const currentSet = state.currentSet || 1;
+                this.clearQ1FailedTeams(currentSet);
+                this.resetTeamGraying();
+            }
+            
+            return;
+        }
+        
+        // Handle negative scoring (arrow down)
+        if (!isPositive) {
+            // Q1 Logic
+            if (currentQuestion === 1) {
+                // Q1: Challenge cannot apply, only angel protection
+                if (hasAngel) {
+                    // Angel protection: no penalty, animate shield
+                    this.handleAngelProtection(teamId);
+                } else if (isVictimWithCross) {
+                    // Devil attack victim: attacker gets +2, victim gets -1
+                    this.handleDevilAttackVictim(teamId);
+                } else {
+                    // Normal Q1 incorrect: -1 penalty
+                    this.handleNormalQ1Incorrect(teamId);
+                }
+            } else {
+                // Q2-Q4 Logic
+                if (hasAngel && isChallenge) {
+                    // Both angel and challenge: no penalty, animate shield
+                    this.handleAngelProtection(teamId);
+                } else if (hasAngel && !isChallenge) {
+                    // Angel only: no penalty, animate shield
+                    this.handleAngelProtection(teamId);
+                } else if (!hasAngel && isChallenge) {
+                    // Challenge only: has penalty, animate coin_minus
+                    this.handleChallengeOnlyIncorrect(teamId);
+                } else {
+                    // No angel, no challenge: no penalty, no animation
+                    this.handleNoProtectionIncorrect(teamId);
+                }
+            }
+        }
+    }
+    
+    // Helper functions for different scoring scenarios
+    
+    // Handle angel protection (no penalty, animate shield)
+    handleAngelProtection(teamId) {
+        const state = window.gameState?.get();
+        if (!state) return;
+        
+        // Mark angel card as permanently used
+        if (window.gameState) {
+            window.gameState.update(`actionCards.${teamId}.angelUsed`, true);
+            window.gameState.update(`actionCards.${teamId}.angel`, false);
+        }
+        
+        // Update main character icon
+        const angelIcon = document.getElementById('mainCharacterAngel');
+        if (angelIcon) {
+            angelIcon.classList.remove('active');
+        }
+        
+        // Show shield animation after answer animation
+        setTimeout(() => {
+            this.showProtectionAnimation('Protected');
+        }, 2000);
+        
+        // Sync with server
+        if (window.socketManager) {
+            window.socketManager.send('angel_protection_used', { 
+                teamId, 
+                protectedFrom: -1,
+                angelUsed: true
+            });
+        }
+        
+        // Trigger auto-navigation
+        this.handleAutoNavigationAfterIncorrect();
+    }
+    
+    // Handle devil attack victim (attacker gets +2, victim gets -1)
+    handleDevilAttackVictim(teamId) {
+        const state = window.gameState?.get();
+        if (!state) return;
+        
+        // Find the attacking team
+        let attackingTeamId = null;
+        for (let id = 1; id <= 6; id++) {
+            if (state.actionCards[id].devilUsed && id !== teamId) {
+                attackingTeamId = id;
+                break;
+            }
+        }
+        
+        // Delay score updates until after answer animation (3 seconds)
+        setTimeout(() => {
+            if (attackingTeamId) {
+                // Give +2 points to the attacking team
+                const attackerNewScore = (state.teams[attackingTeamId].score || 0) + 2;
+                if (window.gameState) {
+                    window.gameState.update(`teams.${attackingTeamId}.score`, attackerNewScore);
+                }
+            }
+            
+            // Remove cross protection from victim team
+            this.removeCrossProtection(teamId);
+            
+            // Show coin_minus animation after score update
+            setTimeout(() => {
+                this.showScoreAnimation(-1);
+            }, 500); // Small delay after score update
+            
+        }, 2500); // Wait for answer animation to complete
+        
+        // Trigger auto-navigation after coin animation (additional 2.5 seconds)
+        setTimeout(() => {
+            this.handleAutoNavigationAfterIncorrect();
+        }, 2500); // 0.5s (score delay) + 2s (coin animation)
+    }
+    
+    // Handle normal Q1 incorrect (-1 penalty)
+    handleNormalQ1Incorrect(teamId) {
+        const state = window.gameState?.get();
+        if (!state) return;
+        
+        // Delay score update until after answer animation (3 seconds)
+        setTimeout(() => {
+            // Apply -1 penalty
+            const newScore = Math.max(0, state.teams[teamId].score - 1);
+            if (window.gameState) {
+                window.gameState.update(`teams.${teamId}.score`, newScore);
+            }
+            
+            // Show coin_minus animation after score update
+            setTimeout(() => {
+                this.showScoreAnimation(-1);
+            }, 500); // Small delay after score update
+            
+        }, 2500); // Wait for answer animation to complete
+        
+        // Trigger auto-navigation after coin animation (additional 2.5 seconds)
+        setTimeout(() => {
+            this.handleAutoNavigationAfterIncorrect();
+        }, 2500); // 0.5s (score delay) + 2s (coin animation)
+    }
+    
+    // Handle challenge only incorrect (has penalty, animate coin_minus)
+    handleChallengeOnlyIncorrect(teamId) {
+        const state = window.gameState?.get();
+        if (!state) return;
+        
+        // Delay score update until after answer animation (3 seconds)
+        setTimeout(() => {
+            // Apply -1 penalty
+            const newScore = Math.max(0, state.teams[teamId].score - 1);
+            if (window.gameState) {
+                window.gameState.update(`teams.${teamId}.score`, newScore);
+            }
+            
+            // Show coin_minus animation after score update
+            setTimeout(() => {
+                this.showScoreAnimation(-1);
+            }, 500); // Small delay after score update
+            
+        }, 2500); // Wait for answer animation to complete
+        
+        // Trigger auto-navigation after coin animation (additional 2.5 seconds)
+        setTimeout(() => {
+            this.handleAutoNavigationAfterIncorrect();
+        }, 2500); // 0.5s (score delay) + 2s (coin animation)
+    }
+    
+    // Handle no protection incorrect (penalty for Q1, no penalty for Q2-Q4)
+    handleNoProtectionIncorrect(teamId) {
+        const state = window.gameState?.get();
+        if (!state) return;
+        
+        const currentQuestion = state.currentQuestion || 1;
+        
+        // Apply penalty only for Q1
+        if (currentQuestion === 1) {
+            // Delay score update until after answer animation (3 seconds)
+            setTimeout(() => {
+                // Apply -1 penalty for Q1
+                const newScore = Math.max(0, state.teams[teamId].score - 1);
+                if (window.gameState) {
+                    window.gameState.update(`teams.${teamId}.score`, newScore);
+                }
+                
+                // Show coin_minus animation after score update
+                setTimeout(() => {
+                    this.showScoreAnimation(-1);
+                }, 500); // Small delay after score update
+                
+            }, 2500); // Wait for answer animation to complete
+            
+            // Trigger auto-navigation after coin animation (additional 2.5 seconds)
+            setTimeout(() => {
+                this.handleAutoNavigationAfterIncorrect();
+            }, 2500); // 0.5s (score delay) + 2s (coin animation)
+        } else {
+            // Q2-Q4: No penalty, no animation
+            // Just trigger auto-navigation immediately
+            this.handleAutoNavigationAfterIncorrect();
+        }
+    }
+    
+    // Handle auto-navigation after incorrect answer (arrow down)
+    handleAutoNavigationAfterIncorrect() {
+        const state = window.gameState?.get();
+        if (!state) return;
+        
+        const currentSet = state.currentSet || 1;
+        const currentQuestion = state.currentQuestion || 1;
+        const currentTeam = state.currentTeam; // Store currentTeam BEFORE resetting buzzers
+        
+        // Reset buzzers first
+        this.handleResetBuzzers();
+        
+        // Determine next position based on current question
+        if (currentQuestion === 1) {
+            // Special case for Q1: Allow 3 attempts before moving to next set
+            const attemptsKey = `q1Attempts_${currentSet}`;
+            const attempts = state[attemptsKey] || 0;
+            
+            // Gray out the current team that failed (using stored value)
+            if (currentTeam && currentTeam >= 1 && currentTeam <= 6) {
+                this.grayOutTeam(currentTeam);
+                this.trackQ1Failure(currentTeam, currentSet);
+            }
+            
+            if (attempts < 2) { // Allow 2 more attempts (total 3)
+                // Stay on same question, increment attempts
+                if (window.gameState) {
+                    window.gameState.set(attemptsKey, attempts + 1);
+                }
+                
+                // Update chance display
+                this.updateChanceDisplay(currentSet, attempts + 1);
+                
+            } else {
+                // Move to next set Q1
+                const nextSet = Math.min(currentSet + 1, state.config.totalSets);
+                if (window.gameState) {
+                    window.gameState.moveToQuestion(nextSet, 1);
+                    window.gameState.set(attemptsKey, 0); // Reset attempts for next set
+                }
+                
+                // Clear failed teams tracking and reset graying for next set
+                this.clearQ1FailedTeams(currentSet);
+                this.resetTeamGraying();
+                
+                // Hide chance display for next set (will show when needed)
+                this.hideChanceDisplay();
+                
+            }
+        } else {
+            // For Q2-Q4: Move to next set Q1 immediately
+            const nextSet = Math.min(currentSet + 1, state.config.totalSets);
+            if (window.gameState) {
+                window.gameState.moveToQuestion(nextSet, 1);
+            }
+            
+            // Clear failed teams tracking and reset graying for next set
+            this.clearQ1FailedTeams(currentSet);
+            this.resetTeamGraying();
+            
+            // Hide chance display for non-Q1 questions
+            this.hideChanceDisplay();
+
+            // Explicitly reset challenge state (in case not handled by handleResetBuzzers)
+            if (window.gameState) {
+                window.gameState.set('currentChallenge', 0);
+            }
+            const challengeIcon = document.getElementById('mainCharacterChallenge');
+            if (challengeIcon) {
+                challengeIcon.classList.remove('active');
+            }
+            
+        }
+    }
+    
+    // Update chance display for Q1 attempts
+    updateChanceDisplay(setNumber, attemptNumber) {
+        const chanceElement = document.getElementById('chanceQuestion');
+        if (chanceElement) {
+            const remainingChances = 3 - attemptNumber;
+            if (remainingChances > 0) {
+                chanceElement.textContent = remainingChances === 1 ? '(last chance)' : `(chance: ${remainingChances}/3)`;
+                chanceElement.style.display = 'block';
+            } else {
+                chanceElement.style.display = 'none';
+            }
+        }
+    }
+    
+    // Hide chance display
+    hideChanceDisplay() {
+        const chanceElement = document.getElementById('chanceQuestion');
+        if (chanceElement) {
+            chanceElement.style.display = 'none';
+        }
+    }
+    
+    // Gray out team character for Q1 failure
+    grayOutTeam(teamId) {
+        const teamCharacter = document.getElementById(`teamCharacter${teamId}`);
+        if (teamCharacter) {
+            teamCharacter.style.setProperty('opacity', '0.3', 'important');
+            teamCharacter.style.setProperty('filter', 'grayscale(100%)', 'important');
+        }
+    }
+    
+    // Reset all team character graying
+    resetTeamGraying() {
+        for (let teamId = 1; teamId <= 6; teamId++) {
+            const teamCharacter = document.getElementById(`teamCharacter${teamId}`);
+            if (teamCharacter) {
+                teamCharacter.style.setProperty('opacity', '1', 'important');
+                teamCharacter.style.setProperty('filter', 'none', 'important');
+            }
+        }
+    }
+    
+    // Track failed teams for current Q1
+    trackQ1Failure(teamId, setNumber) {
+        const failedTeamsKey = `q1FailedTeams_${setNumber}`;
+        const state = window.gameState?.get();
+        if (!state) return;
+        
+        let failedTeams = state[failedTeamsKey] || [];
+        if (!failedTeams.includes(teamId)) {
+            failedTeams.push(teamId);
+            if (window.gameState) {
+                window.gameState.set(failedTeamsKey, failedTeams);
+            }
+        }
+    }
+    
+    // Get failed teams for current Q1
+    getQ1FailedTeams(setNumber) {
+        const state = window.gameState?.get();
+        if (!state) return [];
+        
+        const failedTeamsKey = `q1FailedTeams_${setNumber}`;
+        return state[failedTeamsKey] || [];
+    }
+    
+    // Clear failed teams tracking
+    clearQ1FailedTeams(setNumber) {
+        const failedTeamsKey = `q1FailedTeams_${setNumber}`;
+        if (window.gameState) {
+            window.gameState.set(failedTeamsKey, []);
+        }
+    }
+
+    // Show answer animation modal (correct/incorrect)
+    async showAnswerAnimation(isCorrect) {
+        console.log(`🎬 showAnswerAnimation called with isCorrect: ${isCorrect}`);
+        
+        const modal = document.getElementById('answerModal');
+        const animationContainer = modal.querySelector('.answer-modal-content');
+        
+        if (!modal || !animationContainer) {
+            console.warn('⚠️ Answer modal elements not found');
+            return;
+        }
+        
+        // Set the appropriate animation
+        const animationSrc = isCorrect ? 
+            'assets/animations/answer_correct.json' : 
+            'assets/animations/answer_incorrect.json';
+        
+        console.log(`🎬 Loading answer animation: ${animationSrc} (isCorrect: ${isCorrect})`);
+        
+        // Show modal first
+        modal.classList.add('active');
+        
+        // Remove existing animation element
+        const existingAnimation = animationContainer.querySelector('lottie-player');
+        if (existingAnimation) {
+            existingAnimation.remove();
+        }
+        
+        // Create new animation element
+        const newAnimation = document.createElement('lottie-player');
+        newAnimation.id = 'answerAnimation';
+        newAnimation.src = animationSrc;
+        newAnimation.background = 'transparent';
+        newAnimation.speed = 1;
+        newAnimation.loop = false;
+        newAnimation.autoplay = true;
+        
+        // Add to container
+        animationContainer.appendChild(newAnimation);
+        
+        // Force play the animation
+        setTimeout(() => {
+            if (newAnimation.play) {
+                newAnimation.play();
+                console.log(`✅ Answer animation playing: ${animationSrc} (new element)`);
+            }
+        }, 200);
+        
+        // Play sound
+        const audioSrc = isCorrect ? 
+            'assets/audio/correct-duolingo.mp3' : 
+            'assets/audio/incorrect-duolingo.mp3';
+        const audio = new Audio(audioSrc);
+        audio.volume = 1;
+        audio.play().catch(() => {
+            console.warn('⚠️ Could not play answer sound');
+        });
+        
+        // Hide modal after 2 seconds
+        setTimeout(() => {
+            modal.classList.remove('active');
+        }, 2500);
+    }
+    
+    
+    // Show score animation using coin assets
+    async showScoreAnimation(scoreChange) {
+        console.log(`🪙 Showing score animation for change: ${scoreChange}`);
+        
+        const scoreAnimation = document.getElementById('scoreAnimation');
+        
+        if (!scoreAnimation) {
+            console.warn('⚠️ Score animation element not found');
+            return;
+        }
+        
+        const animationSrc = scoreChange > 0 ?
+            'assets/animations/coin_plus.json' :
+            'assets/animations/coin_minus.json';
+        
+        console.log(`🪙 Loading coin animation: ${animationSrc}`);
+        
+        // Show the animation using the class
+        scoreAnimation.classList.add('active');
+        console.log('🪙 Added active class to score animation');
+        
+        // Simple approach: just load and play the animation
+        scoreAnimation.src = animationSrc;
+        scoreAnimation.load(animationSrc);
+        
+        // Check if element is visible
+        setTimeout(() => {
+            const isVisible = scoreAnimation.classList.contains('active');
+            const computedStyle = window.getComputedStyle(scoreAnimation);
+            console.log(`🪙 Animation visibility check - Active class: ${isVisible}, Display: ${computedStyle.display}, Visibility: ${computedStyle.visibility}`);
+        }, 50);
+        
+        // Hide after 2 seconds
+        setTimeout(() => {
+            scoreAnimation.classList.remove('active');
+            console.log('🪙 Removed active class from score animation');
+        }, 2500);
+    }
+    
+    // Handle angel card toggle
+    handleAngelCard() {
+        const state = window.gameState?.get();
+        if (!state || !state.currentTeam || state.currentTeam < 1 || state.currentTeam > 6) {
+            console.warn('⚠️ No team currently buzzing - cannot use angel card');
+            return;
+        }
+        
+        const teamId = state.currentTeam;
+        
+        // Check if angel card has been permanently used
+        if (state.actionCards[teamId].angelUsed) {
+            return;
+        }
+        
+        const angelIcon = document.getElementById('mainCharacterAngel');
+        const currentlyActive = state.actionCards[teamId].angel;
+        
+        // Toggle angel card state (temporary activation)
+        const newState = !currentlyActive;
+        
+        if (window.gameState) {
+            window.gameState.update(`actionCards.${teamId}.angel`, newState);
+        }
+        
+        // Update main character icon
+        if (angelIcon) {
+            angelIcon.classList.toggle('active', newState);
+        }
+        
+        // Update team action card visual
+        const teamAngelElement = document.getElementById(`teamAngel${teamId}`);
+        if (teamAngelElement) {
+            teamAngelElement.classList.toggle('active', !newState);
+        }
+        
+        // Apply or remove angel effect (no animation for toggle)
+        if (newState) {
+            // Just send socket update, no animation
+            if (window.socketManager) {
+                window.socketManager.send('angel_protection_applied', { 
+                    teamId,
+                    effect: 'protection against score decrease'
+                });
+            }
+        } else {
+            // Just send socket update, no animation
+            if (window.socketManager) {
+                window.socketManager.send('angel_protection_removed', { 
+                    teamId,
+                    effect: 'no longer protected from score decrease'
+                });
+            }
+        }
+        
+        // Sync with server
+        if (window.socketManager) {
+            window.socketManager.send('angel_activated', { teamId, activated: newState });
+        }
+        
+    }
+    
+    // Handle devil card toggle (open/close attack modal)
+    handleDevilCard() {
+        const state = window.gameState?.get();
+        if (!state || !state.currentTeam || state.currentTeam < 1 || state.currentTeam > 6) {
+            console.warn('⚠️ No team currently buzzing - cannot use devil card');
+            return;
+        }
+        
+        const teamId = state.currentTeam;
+        
+        // Check if devil card has been permanently used
+        if (state.actionCards[teamId].devilUsed) {
+            return;
+        }
+        
+        const modal = document.getElementById('devilAttackModal');
+        const isModalOpen = modal && modal.classList.contains('active');
+        
+        if (isModalOpen) {
+            // Close modal if already open
+            this.closeDevilAttackModal(teamId);
+        } else {
+            // Open modal
+            this.openDevilAttackModal(teamId);
+        }
+    }
+    
+    // Open devil attack modal
+    openDevilAttackModal(teamId) {
+        const devilIcon = document.getElementById('mainCharacterDevil');
+        const teamDevilElement = document.getElementById(`teamDevil${teamId}`);
+        
+        // Update game state (temporary activation)
+        if (window.gameState) {
+            window.gameState.update(`actionCards.${teamId}.devil`, true);
+        }
+        
+        // Update visual state
+        if (devilIcon) {
+            devilIcon.classList.add('active');
+        }
+        
+        if (teamDevilElement) {
+            teamDevilElement.classList.remove('active');
+        }
+        
+        // Show modal
+        this.showDevilAttackModal(teamId);
+        
+    }
+    
+    // Close devil attack modal
+    closeDevilAttackModal(teamId) {
+        const devilIcon = document.getElementById('mainCharacterDevil');
+        const teamDevilElement = document.getElementById(`teamDevil${teamId}`);
+        
+        // Revert game state (remove temporary activation)
+        if (window.gameState) {
+            window.gameState.update(`actionCards.${teamId}.devil`, false);
+        }
+        
+        // Revert visual state
+        if (devilIcon) {
+            devilIcon.classList.remove('active');
+        }
+        
+        if (teamDevilElement) {
+            teamDevilElement.classList.add('active');
+        }
+        
+        // Close modal
+        this.cancelDevilAttack();
+        
+    }
+    
+    // Handle 'enter' key - Confirm devil attack if modal is open
+    handleConfirmDevilAttack() {
+        const modal = document.getElementById('devilAttackModal');
+        const isModalOpen = modal && modal.classList.contains('active');
+        
+        if (isModalOpen) {
+            // Check if target is selected
+            const targetTeamId = modal.dataset.targetTeam;
+            if (targetTeamId) {
+                this.confirmDevilAttack();
+            } else {
+                console.warn('⚠️ Please select a target team first');
+            }
+        }
+    }
+    
+    // Handle 'c' key - Cancel devil attack or activate challenge mode
+    handleCancelDevilAttack() {
+        const modal = document.getElementById('devilAttackModal');
+        const isModalOpen = modal && modal.classList.contains('active');
+        
+        if (isModalOpen) {
+            // Close devil attack modal using the toggle mechanism
+            const attackingTeamId = parseInt(modal.dataset.attackingTeam);
+            if (attackingTeamId) {
+                this.closeDevilAttackModal(attackingTeamId);
+            }
+        } else {
+            // No modal open, proceed with challenge mode
+            this.handleChallengeMode();
+        }
+    }
+    
+
+    
+    // Apply angel card effect (protection against score decrease)
+    applyAngelEffect(teamId) {
+        
+        // Show protection animation
+        this.showProtectionAnimation('Protection Active');
+        
+        // Send socket update
+        if (window.socketManager) {
+            window.socketManager.send('angel_protection_applied', { 
+                teamId,
+                effect: 'protection against score decrease'
+            });
+        }
+    }
+    
+    // Remove angel card effect (no longer protected)
+    removeAngelEffect(teamId) {
+        
+        // Send socket update
+        if (window.socketManager) {
+            window.socketManager.send('angel_protection_removed', { 
+                teamId,
+                effect: 'no longer protected from score decrease'
+            });
+        }
+    }
+    
+    // Helper function to show protection animations
+    async showProtectionAnimation(text) {
+        console.log('🛡️ Showing protection animation for angel card');
+        
+        const scoreAnimation = document.getElementById('scoreAnimation');
+        
+        if (!scoreAnimation) {
+            console.warn('⚠️ Score animation element not found');
+            return;
+        }
+        
+        // Show the animation using the class
+        scoreAnimation.classList.add('active');
+        scoreAnimation.classList.add('bigger');
+        console.log('🛡️ Added active class to score animation');
+        
+        // Simple approach: just load and play the animation
+        scoreAnimation.src = 'assets/animations/coin_shield.json';
+        scoreAnimation.load('assets/animations/coin_shield.json');
+        
+        // Check if element is visible
+        setTimeout(() => {
+            const isVisible = scoreAnimation.classList.contains('active');
+            const computedStyle = window.getComputedStyle(scoreAnimation);
+            console.log(`🛡️ Animation visibility check - Active class: ${isVisible}, Display: ${computedStyle.display}, Visibility: ${computedStyle.visibility}`);
+        }, 50);
+        
+        // Play the animation
+        setTimeout(() => {
+            if (scoreAnimation.play) {
+                scoreAnimation.play();
+                console.log('✅ Protection animation playing: coin_shield.json');
+            }
+        }, 100);
+        
+        // Hide after 2 seconds
+        setTimeout(() => {
+            scoreAnimation.classList.remove('active');
+            scoreAnimation.classList.remove('bigger');
+            console.log('🛡️ Removed active class from score animation');
+        }, 2500);
+    }
+    
+    // Show devil attack selection modal
+    showDevilAttackModal(attackingTeamId) {
+        const modal = document.getElementById('devilAttackModal');
+        if (!modal) {
+            return;
+        }
+        
+        // Get current game state for filtering
+        const state = window.gameState?.get();
+        
+        // Clear previous selections and filter available targets
+        modal.querySelectorAll('.attack-team-option').forEach(option => {
+            const targetTeamId = parseInt(option.getAttribute('data-team-id'));
+            
+            option.classList.remove('selected');
+            
+            // Check if this team can be attacked
+            const canAttack = this.canAttackTeam(attackingTeamId, targetTeamId, state);
+            
+            if (canAttack) {
+                option.style.display = 'block';
+                option.style.opacity = '1';
+                option.style.pointerEvents = 'auto';
+                option.style.filter = 'none';
+            } else {
+                option.style.display = 'block';
+                option.style.opacity = '0.3';
+                option.style.pointerEvents = 'none';
+                option.style.filter = 'grayscale(100%)';
+            }
+        });
+        
+        // Reset confirm button
+        const confirmBtn = modal.querySelector('.attack-confirm-btn');
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+        }
+        
+        // Show modal
+        modal.classList.add('active');
+        
+        // Store attacking team for confirmation
+        modal.dataset.attackingTeam = attackingTeamId;
+        modal.dataset.targetTeam = null;
+    }
+    
+    // Check if a team can attack another team
+    canAttackTeam(attackingTeamId, targetTeamId, state) {
+        // Can't attack own team
+        if (attackingTeamId === targetTeamId) {
+            return false;
+        }
+        
+        // Can't attack teams with cross protection
+        if (state?.actionCards?.[targetTeamId]?.cross) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    // Cancel devil attack modal (simple close)
+    cancelDevilAttack() {
+        const modal = document.getElementById('devilAttackModal');
+        if (modal) {
+            modal.classList.remove('active');
+            modal.dataset.attackingTeam = null;
+            modal.dataset.targetTeam = null;
+        }
+    }
+    
+    // Select attack target team
+    selectAttackTarget(targetTeamId) {
+        const modal = document.getElementById('devilAttackModal');
+        if (!modal) return;
+        
+        const attackingTeamId = parseInt(modal.dataset.attackingTeam);
+        
+        // Don't allow attacking self
+        if (targetTeamId === attackingTeamId) {
+            return;
+        }
+        
+        // Clear previous selections
+        modal.querySelectorAll('.attack-team-option').forEach(option => {
+            option.classList.remove('selected');
+        });
+        
+        // Select the clicked team
+        const selectedOption = modal.querySelector(`[data-team-id="${targetTeamId}"]`);
+        if (selectedOption) {
+            selectedOption.classList.add('selected');
+        }
+        
+        // Enable confirm button
+        const confirmBtn = modal.querySelector('.attack-confirm-btn');
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+        }
+        
+        // Store target team
+        modal.dataset.targetTeam = targetTeamId;
+        
+    }
+    
+    // Confirm devil attack
+    confirmDevilAttack() {
+        const modal = document.getElementById('devilAttackModal');
+        if (!modal) return;
+        
+        const attackingTeamId = parseInt(modal.dataset.attackingTeam);
+        const targetTeamId = parseInt(modal.dataset.targetTeam);
+        
+        if (!attackingTeamId || !targetTeamId) {
+            console.warn('⚠️ Missing attacking team or target team');
+            return;
+        }
+        
+        // Mark devil card as permanently used (after confirmation)
+        if (window.gameState) {
+            window.gameState.update(`actionCards.${attackingTeamId}.devilUsed`, true);
+            window.gameState.update(`actionCards.${attackingTeamId}.devil`, false);
+            // update cross protection for victim team
+            window.gameState.update(`actionCards.${targetTeamId}.cross`, true);
+        }
+        
+        // Close modal
+        modal.classList.remove('active');
+        
+        // Execute attack animation sequence instead of direct score change
+        this.executeAttackAnimation(attackingTeamId, targetTeamId);
+        
+        // Clear stored data
+        modal.dataset.attackingTeam = null;
+        modal.dataset.targetTeam = null;
+    }
+    
+    // Execute the complex attack animation sequence
+    async executeAttackAnimation(attackingTeamId, targetTeamId) {
+        
+        try {
+            // Get team colors
+            const attackingTeam = window.gameState?.get()?.teams?.[attackingTeamId];
+            const victimTeam = window.gameState?.get()?.teams?.[targetTeamId];
+            const attackingColor = attackingTeam?.color || 'white';
+            const victimColor = victimTeam?.color || 'white';
+            
+            // Step 1: Show both characters side by side
+            await this.showDualCharacterAnimation(attackingTeamId, targetTeamId, attackingColor, victimColor);
+            
+            // Step 2: Change current character to victim's team color (but keep devil card inactive)
+            await this.changeCurrentCharacterToVictimColor(victimColor);
+            
+            // Step 3: Display cross action on current character and set team
+            this.activateCrossProtection(targetTeamId);
+            
+            // Step 4: Set current team to victim team
+            if (window.gameState) {
+                window.gameState.set('currentTeam', targetTeamId);
+                window.gameState.set('attackedTeam', targetTeamId);
+            }
+            
+        } catch (error) {
+            console.error('❌ Error in attack animation:', error);
+        }
+    }
+    
+    // Show both attacker and victim characters side by side
+    async showDualCharacterAnimation(attackingTeamId, targetTeamId, attackingColor, victimColor) {
+        const progressCharacter = document.getElementById('progressCharacter');
+        const victimCharacter = document.getElementById('victimCharacter');
+        
+        if (!progressCharacter || !victimCharacter) {
+            console.warn('⚠️ Character elements not found for dual animation');
+            return;
+        }
+        
+        
+        try {
+            // Step 1: Show victim character (left side)
+            await this.setupVictimCharacter(victimColor);
+            
+            // Step 2: Setup attacker character (right side) with beats_with_fist
+            await this.setupAttackerCharacter(attackingColor);
+            
+            // Step 3: Start the stationary kill sound effect with a small delay to ensure animation is visible
+            setTimeout(() => {
+                this.playStationaryKillSound();
+            }, 200); // Small delay to ensure animation is loaded and visible
+            
+            // Step 4: Play both animations simultaneously for 3 seconds
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            
+            // Step 4: Hide victim character
+            victimCharacter.classList.remove('active');
+            
+        } catch (error) {
+            console.error('❌ Error in dual character animation:', error);
+        }
+    }
+    
+    // Setup victim character on the left
+    async setupVictimCharacter(victimColor) {
+        const victimCharacter = document.getElementById('victimCharacter');
+        if (!victimCharacter) return;
+        
+        
+        try {
+            // Load fears animation with victim color
+            const response = await fetch('assets/animations/among_us_fears.json');
+            const animationData = await response.json();
+            
+            const colorObject = victimColor === 'white' 
+                ? ProgressWhite.getWhiteTeamColors() 
+                : ProgressWhite.teamColors[victimColor] || ProgressWhite.getWhiteTeamColors();
+            
+            const modifiedAnimationData = ProgressWhite.replaceColorsViaStringEdit(animationData, colorObject);
+            
+            // Load animation
+            const blob = new Blob([JSON.stringify(modifiedAnimationData)], { type: 'application/json' });
+            const blobUrl = URL.createObjectURL(blob);
+            
+            victimCharacter.src = blobUrl;
+            victimCharacter.classList.add('active');
+            await new Promise((resolve) => {
+                victimCharacter.addEventListener('ready', resolve, { once: true });
+                victimCharacter.load(blobUrl);
+            });
+            
+            URL.revokeObjectURL(blobUrl);
+            
+        } catch (error) {
+            console.error('❌ Error setting up victim character:', error);
+        }
+    }
+    
+    // Setup attacker character on the right
+    async setupAttackerCharacter(attackingColor) {
+        const progressCharacter = document.getElementById('progressCharacter');
+        if (!progressCharacter) return;
+        
+        
+        try {
+            // Load beats_with_fist animation with attacker color
+            const response = await fetch('assets/animations/among_us_beats_with_fist.json');
+            const animationData = await response.json();
+            
+            const colorObject = attackingColor === 'white' 
+                ? ProgressWhite.getWhiteTeamColors() 
+                : ProgressWhite.teamColors[attackingColor] || ProgressWhite.getWhiteTeamColors();
+            
+            const modifiedAnimationData = ProgressWhite.replaceColorsViaStringEdit(animationData, colorObject);
+            
+            // Load animation
+            const blob = new Blob([JSON.stringify(modifiedAnimationData)], { type: 'application/json' });
+            const blobUrl = URL.createObjectURL(blob);
+            
+            progressCharacter.src = blobUrl;
+            await new Promise((resolve) => {
+                progressCharacter.addEventListener('ready', resolve, { once: true });
+                progressCharacter.load(blobUrl);
+            });
+            
+            URL.revokeObjectURL(blobUrl);
+            
+        } catch (error) {
+            console.error('❌ Error setting up attacker character:', error);
+        }
+    }
+    
+    // Note: Removed playVictimReactionAnimation and hideVictimCharacter functions
+    // as they are now replaced by the dual character animation system
+    
+    // Change current character to victim's color
+    async changeCurrentCharacterToVictimColor(victimColor) {
+        const progressCharacter = document.getElementById('progressCharacter');
+        if (!progressCharacter) return;
+        
+        try {
+            // Return to idle animation with victim color
+            const response = await fetch('assets/animations/among_us_idle.json');
+            const animationData = await response.json();
+            
+            const colorObject = victimColor === 'white' 
+                ? ProgressWhite.getWhiteTeamColors() 
+                : ProgressWhite.teamColors[victimColor] || ProgressWhite.getWhiteTeamColors();
+            
+            const modifiedAnimationData = ProgressWhite.replaceColorsViaStringEdit(animationData, colorObject);
+            
+            const blob = new Blob([JSON.stringify(modifiedAnimationData)], { type: 'application/json' });
+            const blobUrl = URL.createObjectURL(blob);
+            
+            progressCharacter.src = blobUrl;
+            await new Promise((resolve) => {
+                progressCharacter.addEventListener('ready', resolve, { once: true });
+                progressCharacter.load(blobUrl);
+            });
+            
+            URL.revokeObjectURL(blobUrl);
+            
+            // Remove devil card active state since this is now the victim character
+            const devilIcon = document.getElementById('mainCharacterDevil');
+            if (devilIcon) {
+                devilIcon.classList.remove('active');
+            }
+            
+        } catch (error) {
+            console.error('❌ Error changing current character color:', error);
+        }
+    }
+    
+    // Activate cross protection for victim team
+    activateCrossProtection(victimTeamId) {
+        console.log(`🛡️ Activating cross protection for Team ${victimTeamId}`);
+        
+        // Update game state
+        if (window.gameState) {
+            window.gameState.update(`actionCards.${victimTeamId}.cross`, true);
+            console.log(`✅ Game state updated: actionCards.${victimTeamId}.cross = true`);
+        }
+        
+        // Show cross action on main character
+        const crossIcon = document.getElementById('mainCharacterCross');
+        if (crossIcon) {
+            crossIcon.classList.add('active');
+            console.log('✅ Main character cross icon activated');
+        }
+        
+        // Update team card cross display
+        const teamCrossElement = document.getElementById(`teamCross${victimTeamId}`);
+        if (teamCrossElement) {
+            teamCrossElement.classList.add('active');
+            console.log(`✅ Team ${victimTeamId} cross card activated in UI`);
+        }
+        
+        // Force update team displays to ensure cross protection is shown
+        if (window.gameState) {
+            window.gameState.updateTeamDisplays();
+            console.log('✅ Team displays updated via game state');
+        }
+        
+        // Sync with server using existing card_update event
+        if (window.socketManager) {
+            window.socketManager.send('card_update', { 
+                teamId: victimTeamId,
+                cardType: 'cross',
+                active: true
+            });
+            console.log('✅ Cross protection synced with server via card_update');
+        }
+        
+        console.log(`🛡️ Cross protection activation complete for Team ${victimTeamId}`);
+    }
+    
+    // Remove cross protection for victim team
+    removeCrossProtection(victimTeamId) {
+        console.log(`🛡️ Removing cross protection for Team ${victimTeamId}`);
+        
+        // // Update game state
+        // if (window.gameState) {
+        //     window.gameState.update(`actionCards.${victimTeamId}.cross`, false);
+        //     console.log(`✅ Game state updated: actionCards.${victimTeamId}.cross = false`);
+        // }
+        
+        // Remove cross action from main character
+        const crossIcon = document.getElementById('mainCharacterCross');
+        if (crossIcon) {
+            crossIcon.classList.remove('active');
+            console.log('✅ Main character cross icon deactivated');
+        }
+        
+        // // Update team card cross display
+        // const teamCrossElement = document.getElementById(`teamCross${victimTeamId}`);
+        // if (teamCrossElement) {
+        //     teamCrossElement.classList.remove('active');
+        //     console.log(`✅ Team ${victimTeamId} cross card deactivated in UI`);
+        // }
+        
+        // Force update team displays to ensure cross protection is removed
+        if (window.gameState) {
+            window.gameState.updateTeamDisplays();
+            console.log('✅ Team displays updated via game state');
+        }
+        
+        // Sync with server using existing card_update event
+        if (window.socketManager) {
+            window.socketManager.send('card_update', { 
+                teamId: victimTeamId,
+                cardType: 'cross',
+                active: false
+            });
+            console.log('✅ Cross protection removal synced with server via card_update');
+        }
+        
+        // Clear attacked team status
+        if (window.gameState) {
+            window.gameState.set('attackedTeam', 0);
+            console.log('✅ Attacked team status cleared');
+        }
+        
+        console.log(`🛡️ Cross protection removal complete for Team ${victimTeamId}`);
+    }
+    
+    // Play stationary kill sound effect three times
+    playStationaryKillSound() {
+        console.log('🔊 Playing stationary kill sound effect three times');
+        
+        const soundFile = 'assets/audio/stationary-kill-among-us.mp3';
+        let playCount = 0;
+        const maxPlays = 3;
+        
+        const playSound = () => {
+            if (playCount >= maxPlays) {
+                console.log('✅ Stationary kill sound effect completed (3 plays)');
+                return;
+            }
+            
+            // Create a new audio instance for each play to avoid conflicts
+            const soundInstance = new Audio(soundFile);
+            soundInstance.volume = 1;
+            
+            // Try to play immediately
+            const playPromise = soundInstance.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    playCount++;
+                    console.log(`🔊 Stationary kill sound ${playCount}/${maxPlays} played`);
+                    
+                    // Play next sound after current one finishes
+                    soundInstance.addEventListener('ended', () => {
+                        // Small delay between sounds
+                        setTimeout(() => {
+                            playSound();
+                        }, 30); // Reduced delay for better timing
+                    });
+                    
+                }).catch((error) => {
+                    console.warn('⚠️ Could not play stationary kill sound:', error);
+                    playCount++;
+                    // Try to continue with next sound even if current one failed
+                    setTimeout(() => {
+                        playSound();
+                    }, 300); // Reduced retry delay
+                });
+            } else {
+                // Fallback for older browsers
+                playCount++;
+                setTimeout(() => {
+                    playSound();
+                }, 300);
+            }
+        };
+        
+        // Start playing the sound sequence immediately
+        playSound();
+    }
+    
+    // Handle challenge mode activation/deactivation (toggle)
+    // Note: Challenge mode only updates main character action, not team action cards
+    handleChallengeMode() {
+        const state = window.gameState?.get();
+        if (!state || !state.currentTeam || state.currentTeam < 1 || state.currentTeam > 6) {
+            console.warn('⚠️ No team currently buzzing - cannot toggle challenge mode');
+            return;
+        }
+        
+        const teamId = state.currentTeam;
+        
+        // Check current challenge state
+        const isCurrentlyActive = state.currentChallenge === teamId;
+        
+        if (isCurrentlyActive) {
+            // Deactivate challenge mode
+            if (window.gameState) {
+                window.gameState.set('currentChallenge', 0);
+            }
+            
+            // Deactivate visual challenge icon
+            const challengeIcon = document.getElementById('mainCharacterChallenge');
+            if (challengeIcon) {
+                challengeIcon.classList.remove('active');
+            }
+            
+            // Sync with server
+            if (window.socketManager) {
+                window.socketManager.send('challenge_reset', { teamId: teamId });
+            }
+            
+        } else {
+            // Activate challenge mode
+            if (window.gameState) {
+                window.gameState.set('currentChallenge', teamId);
+            }
+            
+            // Activate visual challenge icon
+            const challengeIcon = document.getElementById('mainCharacterChallenge');
+            if (challengeIcon) {
+                challengeIcon.classList.add('active');
+            }
+            
+            // Sync with server
+            if (window.socketManager) {
+                window.socketManager.send('challenge_activated', { teamId: teamId });
+            }
+            
+            console.log(`⚡ Challenge mode activated for Team ${teamId} (+2/-1 scoring)`);
         }
     }
     
@@ -314,39 +1676,131 @@ class HotkeysManager {
         }
     }
     
-    // Handle reset buzzers for both pages
+    // Reset buzzers ('r' key)
     handleResetBuzzers() {
-        if (this.pageType === 'console') {
-            if (window.socket && window.socket.connected) {
-                window.socket.emit('reset_buzzers');
+        console.log('🔄 HotkeysManager: Resetting buzzers...');
+        
+        // Reset game state
+        if (window.gameState) {
+            window.gameState.set('currentTeam', 0);
+            window.gameState.set('currentChallenge', 0);
+        }
+        
+        // Clear main character action icons
+        const angelIcon = document.getElementById('mainCharacterAngel');
+        const devilIcon = document.getElementById('mainCharacterDevil');
+        const challengeIcon = document.getElementById('mainCharacterChallenge');
+        const crossIcon = document.getElementById('mainCharacterCross');
+        
+        if (angelIcon) angelIcon.classList.remove('active');
+        if (devilIcon) devilIcon.classList.remove('active');
+        if (challengeIcon) challengeIcon.classList.remove('active');
+        if (crossIcon) crossIcon.classList.remove('active');
+        
+        // Reset character to white using character controller
+        if (window.characterController) {
+            window.characterController.updateProgressCharacterColor(0);
+        }
+        
+        // Clear any buzzing modal
+        if (window.buzzingSystem) {
+            window.buzzingSystem.clearAll();
+        }
+        
+        // Reset temporary action card states but preserve permanently used cards
+        if (window.gameState) {
+            const state = window.gameState.get();
+            for (let teamId = 1; teamId <= 6; teamId++) {
+                // Reset temporary states but preserve permanent usage
+                window.gameState.update(`actionCards.${teamId}.angel`, false);
+                window.gameState.update(`actionCards.${teamId}.devil`, false);
+                window.gameState.update(`actionCards.${teamId}.cross`, false);
+                // angelUsed and devilUsed remain unchanged to preserve permanent usage
             }
             
-            // Clear local buzzer UI
-            document.querySelectorAll('.team-buzzed').forEach(el => {
-                el.classList.remove('team-buzzed');
-            });
-        } else {
-            window.socketManager?.resetBuzzers();
+            // Clear attacked team status
+            window.gameState.set('attackedTeam', 0);
         }
+        
+        // Sync with server
+        if (window.socketManager) {
+            window.socketManager.resetBuzzers();
+        }
+        
+        console.log('✅ Buzzers reset, action card states preserved, visuals updated');
     }
     
-    // Handle admin reset for both pages
-    handleAdminReset() {
-        if (this.pageType === 'console') {
-            if (window.socket && window.socket.connected) {
-                window.socket.emit('admin_reset');
-            }
-            
-            // Reset local state
-            this.updateProgress(1, 1);
-            this.handleResetBuzzers();
+    // Handle game state reset (resets everything including team action cards)
+    handleGameReset() {
+        console.log('🔄 handleGameReset called - FULL RESET');
+        
+        // Reset entire game state (this should reset all team action cards)
+        if (window.gameState) {
+            window.gameState.reset();
+            console.log('✅ Game state reset completed (including team action cards)');
         } else {
-            window.socketManager?.adminReset();
+            console.warn('⚠️ GameState not available for reset');
         }
+        
+        // Clear all action card icons on main character
+        document.querySelectorAll('.character-action-icon').forEach(icon => {
+            icon.classList.remove('active');
+        });
+        console.log('✅ Main character action card icons cleared');
+        
+        // Reset character to white directly
+        const progressCharacter = document.getElementById('progressCharacter');
+        if (progressCharacter) {
+            progressCharacter.src = 'assets/animations/among_us_idle.json';
+            console.log('✅ Character reset to white (direct)');
+        } else {
+            console.warn('⚠️ progressCharacter element not found');
+        }
+        
+        // Reset all gray team characters back to default state
+        this.resetTeamGraying();
+        console.log('✅ All team characters reset from gray to default state');
+        
+        // Clear all Q1 failure tracking states for all sets
+        if (window.gameState) {
+            for (let setNumber = 1; setNumber <= 10; setNumber++) {
+                this.clearQ1FailedTeams(setNumber);
+                const attemptsKey = `q1Attempts_${setNumber}`;
+                window.gameState.set(attemptsKey, 0);
+            }
+            console.log('✅ All Q1 failure tracking states cleared');
+        }
+        
+        // Hide chance display
+        this.hideChanceDisplay();
+        console.log('✅ Chance display hidden');
+        
+        // Clear buzzing modal
+        if (window.buzzingSystem) {
+            window.buzzingSystem.clearAll();
+            console.log('✅ Buzzing system cleared');
+        } else {
+            console.warn('⚠️ BuzzingSystem not available');
+        }
+        
+        // Force update team displays to show reset action cards
+        if (window.gameState) {
+            window.gameState.updateTeamDisplays();
+            console.log('✅ Team displays updated to show reset action cards');
+        }
+        
+        // Sync with server for full game reset
+        if (window.socketManager) {
+            window.socketManager.send('admin_reset', {});
+            console.log('✅ Full game reset synced with server');
+        }
+        
+        console.log('🔄 FULL game reset completed - everything back to default');
     }
     
     // Handle timer toggle for both pages
     handleTimerToggle() {
+        console.log('⏱️ Timer toggle triggered');
         if (this.pageType === 'console') {
             const isRunning = document.querySelector('.timer-running');
             
@@ -356,6 +1810,13 @@ class HotkeysManager {
                 this.startTimer();
             }
         } else {
+            // Main page: Update local game state and UI immediately
+            if (window.gameState) {
+                const currentRunning = window.gameState.get('timerRunning');
+                window.gameState.set('timerRunning', !currentRunning);
+                window.gameState.updateTimerDisplay();
+                console.log(`⏱️ Timer running: ${!currentRunning}`);
+            }
             window.socketManager?.startTimer();
         }
     }
@@ -386,12 +1847,18 @@ class HotkeysManager {
                 timerDisplay.classList.remove('timer-running');
             }
         } else {
+            // Main page: Update local game state and UI immediately
+            if (window.gameState) {
+                window.gameState.set('timerRunning', false);
+                window.gameState.updateTimerDisplay();
+            }
             window.socketManager?.pauseTimer();
         }
     }
     
     // Handle stop timer for both pages
     handleStopTimer() {
+        console.log('⏹️ Timer stop triggered');
         if (this.pageType === 'console') {
             if (window.socket && window.socket.connected) {
                 window.socket.emit('stop_timer');
@@ -401,13 +1868,136 @@ class HotkeysManager {
             const timerDisplay = document.getElementById('timerDisplay');
             if (timerDisplay) {
                 timerDisplay.classList.remove('timer-running');
-                timerDisplay.textContent = '0:00';
+                timerDisplay.textContent = '0:15';
             }
         } else {
+            // Main page: Update local game state and UI immediately
+            if (window.gameState) {
+                window.gameState.set('timerRunning', false);
+                window.gameState.set('timerValue', 15);
+                window.gameState.updateTimerDisplay();
+                console.log('⏹️ Timer stopped and reset to 15 seconds');
+            }
             window.socketManager?.stopTimer();
         }
     }
     
+    // Handle reset timer for both pages
+    handleResetTimer() {
+        console.log('🔄 Timer reset triggered');
+        if (this.pageType === 'console') {
+            if (window.socket && window.socket.connected) {
+                window.socket.emit('reset_timer', { value: 15 });
+            }
+            
+            // Update UI
+            const timerDisplay = document.getElementById('timerDisplay');
+            if (timerDisplay) {
+                timerDisplay.classList.remove('timer-running');
+                timerDisplay.textContent = '0:15';
+            }
+        } else {
+            // Main page: Update local game state and UI immediately
+            if (window.gameState) {
+                window.gameState.set('timerRunning', false);
+                window.gameState.set('timerValue', 15);
+                window.gameState.updateTimerDisplay();
+                console.log('🔄 Timer reset to 15 seconds');
+            }
+            window.socketManager?.resetTimer();
+        }
+    }
+    
+    // Test emergency meeting function
+    testEmergencyMeeting() {
+        console.log('🧪 Testing emergency meeting...');
+        if (window.gameState) {
+            window.gameState.set('timerValue', 0);
+            window.gameState.set('timerRunning', false);
+            window.gameState.triggerEmergencyMeeting();
+        }
+    }
+    
+    // Handle decrease timer by 1 second
+    handleDecreaseTimer() {
+        console.log('⏱️ Decreasing timer by 1 second');
+        if (this.pageType === 'console') {
+            // Console page: Get current timer value from display
+            const timerDisplay = document.getElementById('timerDisplay');
+            if (timerDisplay) {
+                const currentText = timerDisplay.textContent;
+                const [minutes, seconds] = currentText.split(':').map(Number);
+                const totalSeconds = minutes * 60 + seconds;
+                const newSeconds = Math.max(0, totalSeconds - 1); // Don't go below 0
+                
+                // Update display
+                const newMinutes = Math.floor(newSeconds / 60);
+                const newSecondsRemainder = newSeconds % 60;
+                timerDisplay.textContent = `${newMinutes}:${newSecondsRemainder.toString().padStart(2, '0')}`;
+                
+                // Send to server
+                if (window.socketManager) {
+                    window.socketManager.setTimer(newSeconds);
+                }
+            }
+        } else {
+            // Main page: Update local game state
+            if (window.gameState) {
+                const currentValue = window.gameState.get('timerValue');
+                const newValue = Math.max(0, currentValue - 1); // Don't go below 0
+                window.gameState.set('timerValue', newValue);
+                window.gameState.updateTimerDisplay();
+                console.log(`⏱️ Timer decreased to ${newValue} seconds`);
+            }
+            
+            // Sync with server
+            if (window.socketManager) {
+                const newValue = window.gameState?.get('timerValue') || 0;
+                window.socketManager.setTimer(newValue);
+            }
+        }
+    }
+    
+    // Handle increase timer by 1 second
+    handleIncreaseTimer() {
+        console.log('⏱️ Increasing timer by 1 second');
+        if (this.pageType === 'console') {
+            // Console page: Get current timer value from display
+            const timerDisplay = document.getElementById('timerDisplay');
+            if (timerDisplay) {
+                const currentText = timerDisplay.textContent;
+                const [minutes, seconds] = currentText.split(':').map(Number);
+                const totalSeconds = minutes * 60 + seconds;
+                const newSeconds = totalSeconds + 1;
+                
+                // Update display
+                const newMinutes = Math.floor(newSeconds / 60);
+                const newSecondsRemainder = newSeconds % 60;
+                timerDisplay.textContent = `${newMinutes}:${newSecondsRemainder.toString().padStart(2, '0')}`;
+                
+                // Send to server
+                if (window.socketManager) {
+                    window.socketManager.setTimer(newSeconds);
+                }
+            }
+        } else {
+            // Main page: Update local game state
+            if (window.gameState) {
+                const currentValue = window.gameState.get('timerValue');
+                const newValue = currentValue + 1;
+                window.gameState.set('timerValue', newValue);
+                window.gameState.updateTimerDisplay();
+                console.log(`⏱️ Timer increased to ${newValue} seconds`);
+            }
+            
+            // Sync with server
+            if (window.socketManager) {
+                const newValue = window.gameState?.get('timerValue') || 0;
+                window.socketManager.setTimer(newValue);
+            }
+        }
+    }
+
     // Handle fullscreen toggle for both pages
     handleFullscreen() {
         if (typeof window.toggleFullscreen === 'function') {
@@ -619,7 +2209,7 @@ class HotkeysManager {
             'Team Controls': ['1', '2', '3', '4', '5', '6'],
             'Navigation': ['arrowleft', 'arrowright'],
             'Game Controls': ['r', 'q'],
-            'Timer Controls': ['space', 'p', 's'],
+            'Timer Controls': ['i', 'o', 'p', '[', ']'],
             'Display Controls': ['f']
         };
         
@@ -709,6 +2299,11 @@ if (document.readyState === 'loading') {
         
         // Backward compatibility for console
         window.consoleHotkeys = window.hotkeysManager;
+        
+        // Make devil attack functions globally available for HTML onclick handlers
+        window.cancelDevilAttack = () => window.hotkeysManager.cancelDevilAttack();
+        window.selectAttackTarget = (targetTeamId) => window.hotkeysManager.selectAttackTarget(targetTeamId);
+        window.confirmDevilAttack = () => window.hotkeysManager.confirmDevilAttack();
     });
 } else {
     window.hotkeysManager = new HotkeysManager();
@@ -716,9 +2311,9 @@ if (document.readyState === 'loading') {
     
     // Backward compatibility for console
     window.consoleHotkeys = window.hotkeysManager;
+    
+    // Make devil attack functions globally available for HTML onclick handlers
+    window.cancelDevilAttack = () => window.hotkeysManager.cancelDevilAttack();
+    window.selectAttackTarget = (targetTeamId) => window.hotkeysManager.selectAttackTarget(targetTeamId);
+    window.confirmDevilAttack = () => window.hotkeysManager.confirmDevilAttack();
 }
-
-// Backward compatibility - expose common functions
-window.moveCharacterToQuestion = (set, question) => {
-    window.characterController?.moveToQuestion(set, question);
-}; 

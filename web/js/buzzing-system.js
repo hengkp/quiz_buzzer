@@ -1,13 +1,20 @@
 /**
  * Buzzing System
- * Manages team buzz-in visual effects and overlays
+ * Manages team buzz-in visual effects and overlays with teamBuzzingModal integration
+ * 
+ * FUNCTION MANAGEMENT:
+ * - playBuzzerSound(): PRIMARY implementation here (removed duplicate from hotkeys.js)
+ * - showTeamBuzzingModal(): PRIMARY implementation here (removed duplicate from hotkeys.js)
+ * - Global aliases: window.showBuzzing, window.clearBuzzing, window.simulateBuzzer
  */
 
 class BuzzingSystem {
     constructor() {
         this.activeOverlays = new Map();
         this.teamColors = ['red', 'blue', 'lime', 'orange', 'pink', 'yellow'];
-        this.autoHideDelay = 3000;
+        this.autoHideDelay = 2000; // Changed from 3000ms to 2000ms
+        this.currentBuzzingTeam = 0;
+        this.modalTimeout = null; // Track modal timeout
     }
     
     // Initialize buzzing system
@@ -82,6 +89,29 @@ class BuzzingSystem {
                 animation: buzzSlide 0.3s ease-out 0.2s both;
             }
             
+            /* Enhanced styles for score indicator */
+            .score-indicator .score-popup {
+                opacity: 0;
+                transform: translateY(20px) scale(0.8);
+                transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+                pointer-events: none;
+            }
+            
+            .score-indicator .score-popup.active {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            
+            .score-text.positive {
+                color: #22c55e;
+                text-shadow: 0 2px 4px rgba(34, 197, 94, 0.3);
+            }
+            
+            .score-text.negative {
+                color: #ef4444;
+                text-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+            }
+            
             @keyframes buzzPulse {
                 0% { transform: scale(0.8); }
                 50% { transform: scale(1.1); }
@@ -103,43 +133,84 @@ class BuzzingSystem {
         document.head.appendChild(style);
     }
     
-    // Show buzzing overlay for specific team
+    // Show buzzing using teamBuzzingModal with enhanced features
     showBuzzing(teamId) {
         if (!teamId || teamId < 1 || teamId > 6) {
             console.warn('⚠️ Invalid team ID for buzzing:', teamId);
             return;
         }
         
-        const teamCard = this.findTeamCard(teamId);
-        if (!teamCard) {
-            console.warn('⚠️ Team card not found:', teamId);
+        console.log(`🔔 Team ${teamId} buzzed - showing modal`);
+        
+        // Clear any existing timeout to prevent overlap
+        if (this.modalTimeout) {
+            clearTimeout(this.modalTimeout);
+            this.modalTimeout = null;
+        }
+        
+        // Update current buzzing team
+        this.currentBuzzingTeam = teamId;
+        
+        // Show the teamBuzzingModal
+        this.showTeamBuzzingModal(teamId);
+        
+        // Play buzzer sound
+        this.playBuzzerSound();
+        
+        // Set new timeout to auto-hide after delay
+        this.modalTimeout = setTimeout(() => {
+            this.clearBuzzing(teamId);
+            this.modalTimeout = null;
+        }, this.autoHideDelay);
+        
+        console.log(`⏰ Modal timeout set for ${this.autoHideDelay}ms`);
+    }
+    
+    // Show team buzzing modal with proper styling
+    showTeamBuzzingModal(teamId) {
+        const modal = document.getElementById('teamBuzzingModal');
+        const card = document.getElementById('teamBuzzingCard');
+        
+        if (!modal || !card) {
+            console.warn('⚠️ Team buzzing modal elements not found');
             return;
         }
         
-        // Remove existing overlay for this team
-        this.clearBuzzing(teamId);
+        // Get team color for the buzzing card
+        let teamColor = 'white';
+        if (window.gameState) {
+            const team = window.gameState.get('teams')[teamId];
+            if (team && team.color) {
+                teamColor = team.color;
+            }
+        }
         
-        // Create new overlay
-        const overlay = this.createOverlay(teamId);
-        teamCard.appendChild(overlay);
+        // Update card image
+        card.src = `assets/buzzing/buzzing-${teamColor}.png`;
+        card.alt = `Team ${teamId} Buzzed`;
         
-        // Store reference
-        this.activeOverlays.set(teamId, overlay);
+        // Show modal with animation
+        modal.classList.add('active');
         
-        // Show overlay with animation
-        requestAnimationFrame(() => {
-            overlay.classList.add('show');
-        });
-        
-        // Auto-hide after delay
-        setTimeout(() => {
-            this.clearBuzzing(teamId);
-        }, this.autoHideDelay);
-        
-        console.log(`🔔 Team ${teamId} buzzed`);
+        console.log(`📢 Showing buzzing modal for Team ${teamId} with ${teamColor} card`);
     }
     
-    // Create buzzing overlay element
+    // Play buzzer sound
+    playBuzzerSound() {
+        try {
+            // Try to play correct sound first
+            const audio = new Audio('assets/audio/emergency-meeting-among-us.mp3');
+            audio.volume = 0.5;
+            audio.play().catch(() => {
+                // Fallback: try incorrect sound
+                console.warn('⚠️ Could not play buzzer sound');
+            });
+        } catch (error) {
+            console.warn('⚠️ Audio error:', error);
+        }
+    }
+    
+    // Create buzzing overlay element (legacy support)
     createOverlay(teamId) {
         const overlay = document.createElement('div');
         overlay.className = 'buzzing-overlay';
@@ -166,7 +237,7 @@ class BuzzingSystem {
         return overlay;
     }
     
-    // Find team card element
+    // Find team card element (legacy support)
     findTeamCard(teamId) {
         // Try different selectors for team cards
         const selectors = [
@@ -193,6 +264,19 @@ class BuzzingSystem {
     
     // Clear specific team's buzzing overlay
     clearBuzzing(teamId) {
+        // Hide the main buzzing modal (always clear it regardless of currentBuzzingTeam)
+        const modal = document.getElementById('teamBuzzingModal');
+        if (modal && modal.classList.contains('active')) {
+            modal.classList.remove('active');
+            console.log(`🔕 Buzzing modal cleared for Team ${teamId}`);
+        }
+        
+        // Reset current buzzing team only if it matches
+        if (this.currentBuzzingTeam === teamId) {
+            this.currentBuzzingTeam = 0;
+        }
+        
+        // Also clear any legacy overlays
         const overlay = this.activeOverlays.get(teamId);
         if (overlay) {
             overlay.classList.remove('show');
@@ -207,6 +291,21 @@ class BuzzingSystem {
     
     // Clear all buzzing overlays
     clearAll() {
+        // Clear main buzzing modal
+        const modal = document.getElementById('teamBuzzingModal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+        
+        // Clear modal timeout
+        if (this.modalTimeout) {
+            clearTimeout(this.modalTimeout);
+            this.modalTimeout = null;
+        }
+        
+        this.currentBuzzingTeam = 0;
+        
+        // Clear any legacy overlays
         this.activeOverlays.forEach((overlay, teamId) => {
             this.clearBuzzing(teamId);
         });
@@ -222,30 +321,69 @@ class BuzzingSystem {
         });
         
         this.activeOverlays.clear();
+        
+        // Reset game state
+        if (window.gameState) {
+            window.gameState.set('currentTeam', 0);
+            window.gameState.set('currentChallenge', 0);
+        }
+        
         console.log('🔕 All buzzing cleared');
     }
     
     // Get active buzzing teams
     getActiveBuzzing() {
+        if (this.currentBuzzingTeam > 0) {
+            return [this.currentBuzzingTeam];
+        }
         return Array.from(this.activeOverlays.keys());
     }
     
     // Check if team is currently buzzing
     isBuzzing(teamId) {
-        return this.activeOverlays.has(teamId);
+        return this.currentBuzzingTeam === teamId || this.activeOverlays.has(teamId);
+    }
+    
+    // Get current buzzing team
+    getCurrentBuzzingTeam() {
+        return this.currentBuzzingTeam;
     }
     
     // Set auto-hide delay
     setAutoHideDelay(delay) {
         this.autoHideDelay = Math.max(1000, delay);
     }
+    
+    // Simulate buzzer for testing (integrated with hotkeys)
+    simulateBuzzer(teamId) {
+        this.showBuzzing(teamId);
+    }
+    
+    // Reset buzzers (integrated with hotkeys)
+    resetBuzzers() {
+        this.clearAll();
+    }
+    
+    // Handle server buzzer events
+    handleServerBuzzer(data) {
+        if (data && data.teamId) {
+            this.showBuzzing(data.teamId);
+        }
+    }
+    
+    // Handle server clear buzzers
+    handleServerClear() {
+        this.clearAll();
+    }
 }
 
 // Export singleton instance and add to global scope
 window.buzzingSystem = new BuzzingSystem();
 
-// Backward compatibility
+// Backward compatibility and enhanced API
 window.showBuzzing = (teamId) => window.buzzingSystem?.showBuzzing(teamId);
 window.clearBuzzing = () => window.buzzingSystem?.clearAll();
+window.simulateBuzzer = (teamId) => window.buzzingSystem?.simulateBuzzer(teamId);
+window.resetBuzzers = () => window.buzzingSystem?.resetBuzzers();
 
-console.log('✅ Buzzing system loaded'); 
+console.log('✅ Enhanced buzzing system loaded with teamBuzzingModal integration'); 

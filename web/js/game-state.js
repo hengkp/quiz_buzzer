@@ -9,10 +9,26 @@ class GameState {
             currentSet: 1,
             currentQuestion: 1,
             currentTeam: 0,
+            currentChallenge: 0,
             attackedTeam: 0,
             isAnimating: false,
-            timerValue: 0,
+            timerValue: 15, // Default to 15 seconds
             timerRunning: false,
+            emergencyMeetingActive: false,
+            
+            // Question sets with titles and themes
+            questionSets: {
+                1: { title: 'General Knowledge', theme: 'general', icon: '🌍' },
+                2: { title: 'Science & Technology', theme: 'science', icon: '🔬' },
+                3: { title: 'History & Geography', theme: 'history', icon: '📚' },
+                4: { title: 'Arts & Literature', theme: 'arts', icon: '🎨' },
+                5: { title: 'Sports & Entertainment', theme: 'sports', icon: '⚽' },
+                6: { title: 'Mathematics', theme: 'math', icon: '📐' },
+                7: { title: 'Current Events', theme: 'current', icon: '📰' },
+                8: { title: 'Mystery & Logic', theme: 'mystery', icon: '🔍' },
+                9: { title: 'Nature & Environment', theme: 'nature', icon: '🌿' },
+                10: { title: 'Final Challenge', theme: 'final', icon: '🏆' }
+            },
             
             teams: {
                 1: { score: 0, name: 'Team A', color: 'red' },
@@ -24,12 +40,21 @@ class GameState {
             },
             
             actionCards: {
-                1: { angel: false, devil: false, cross: false, challenge: false },
-                2: { angel: false, devil: false, cross: false, challenge: false },
-                3: { angel: false, devil: false, cross: false, challenge: false },
-                4: { angel: false, devil: false, cross: false, challenge: false },
-                5: { angel: false, devil: false, cross: false, challenge: false },
-                6: { angel: false, devil: false, cross: false, challenge: false }
+                1: { angel: false, angelUsed: false, devil: false, devilUsed: false, cross: false },
+                2: { angel: false, angelUsed: false, devil: false, devilUsed: false, cross: false },
+                3: { angel: false, angelUsed: false, devil: false, devilUsed: false, cross: false },
+                4: { angel: false, angelUsed: false, devil: false, devilUsed: false, cross: false },
+                5: { angel: false, angelUsed: false, devil: false, devilUsed: false, cross: false },
+                6: { angel: false, angelUsed: false, devil: false, devilUsed: false, cross: false }
+            },
+            
+            rankings: {
+                1: { rank: 'badge', position: 0 },
+                2: { rank: 'badge', position: 0 },
+                3: { rank: 'badge', position: 0 },
+                4: { rank: 'badge', position: 0 },
+                5: { rank: 'badge', position: 0 },
+                6: { rank: 'badge', position: 0 }
             },
             
             config: {
@@ -85,6 +110,42 @@ class GameState {
         
         // Initialize team characters with their team colors
         this.initializeTeamCharacters();
+        
+        // Set up automatic UI updates for team changes
+        this.setupTeamUIUpdates();
+    }
+    
+    // Set up automatic UI updates when team data changes
+    setupTeamUIUpdates() {
+        // Subscribe to team score changes
+        for (let teamId = 1; teamId <= 6; teamId++) {
+            this.subscribe(`teams.${teamId}.score`, () => {
+                this.updateTeamDisplays();
+            });
+            
+            // Subscribe to action card changes
+            this.subscribe(`actionCards.${teamId}.angel`, () => {
+                this.updateTeamDisplays();
+            });
+            
+            this.subscribe(`actionCards.${teamId}.devil`, () => {
+                this.updateTeamDisplays();
+            });
+            
+            this.subscribe(`actionCards.${teamId}.cross`, () => {
+                this.updateTeamDisplays();
+            });
+        }
+        
+        // Subscribe to timer changes
+        this.subscribe('timerValue', () => {
+            this.updateTimerDisplay();
+        });
+        
+        this.subscribe('timerRunning', () => {
+            this.updateTimerDisplay();
+        });
+        
     }
     
     // Initialize team characters with their team colors
@@ -94,18 +155,11 @@ class GameState {
             window.ProgressWhite.initializeTeamColors();
         } else {
             // Fallback: apply team colors manually
-            const teamColorMap = {
-                1: 'red',     // Team A
-                2: 'blue',    // Team B
-                3: 'lime',    // Team C
-                4: 'orange',  // Team D
-                5: 'pink',    // Team E
-                6: 'yellow'   // Team F
-            };
-            
             Object.keys(this.state.teams).forEach(teamId => {
                 const characterElement = document.getElementById(`teamCharacter${teamId}`);
-                const teamColor = teamColorMap[teamId];
+                const teamColor = window.ProgressWhite?.getTeamColor ? 
+                    window.ProgressWhite.getTeamColor(parseInt(teamId)) : 
+                    this.state.teams[teamId]?.color;
                 
                 if (characterElement && teamColor && window.ProgressWhite?.applyTeamColor) {
                     window.ProgressWhite.applyTeamColor(characterElement, teamColor);
@@ -176,7 +230,76 @@ class GameState {
         this.updatePlanetBlocks();
         this.updateQuestionSetDisplay();
         
+        // Handle chance display for Q1
+        if (questionNumber === 1) {
+            this.updateChanceDisplayForQ1(setNumber);
+            // Restore team graying for Q1
+            this.restoreQ1TeamGraying(setNumber);
+        } else {
+            this.hideChanceDisplay();
+        }
+        
         return true;
+    }
+    
+    // Get question set information
+    getQuestionSetInfo(setNumber) {
+        return this.state.questionSets[setNumber] || { title: `Question Set ${setNumber}`, theme: 'general', icon: '❓' };
+    }
+    
+    // Get current question set information
+    getCurrentQuestionSetInfo() {
+        return this.getQuestionSetInfo(this.state.currentSet);
+    }
+    
+    // Update chance display when moving to Q1
+    updateChanceDisplayForQ1(setNumber) {
+        const chanceElement = document.getElementById('chanceQuestion');
+        if (chanceElement) {
+            const attemptsKey = `q1Attempts_${setNumber}`;
+            const attempts = this.state[attemptsKey] || 0;
+            
+            // Always show chances for Q1, even on first attempt
+            const remainingChances = 3 - attempts;
+            if (remainingChances > 0) {
+                chanceElement.textContent = remainingChances === 1 ? '(last chance)' : `(chance: ${remainingChances}/3)`;
+                chanceElement.style.display = 'block';
+            } else {
+                chanceElement.style.display = 'none';
+            }
+        }
+    }
+    
+    // Hide chance display
+    hideChanceDisplay() {
+        const chanceElement = document.getElementById('chanceQuestion');
+        if (chanceElement) {
+            chanceElement.style.display = 'none';
+        }
+    }
+    
+    // Restore team graying for Q1
+    restoreQ1TeamGraying(setNumber) {
+        const failedTeamsKey = `q1FailedTeams_${setNumber}`;
+        const failedTeams = this.state[failedTeamsKey] || [];
+        
+        // Reset all teams first
+        for (let teamId = 1; teamId <= 6; teamId++) {
+            const teamCharacter = document.getElementById(`teamCharacter${teamId}`);
+            if (teamCharacter) {
+                teamCharacter.style.setProperty('opacity', '1', 'important');
+                teamCharacter.style.setProperty('filter', 'none', 'important');
+            }
+        }
+        
+        // Gray out failed teams
+        failedTeams.forEach(teamId => {
+            const teamCharacter = document.getElementById(`teamCharacter${teamId}`);
+            if (teamCharacter) {
+                teamCharacter.style.setProperty('opacity', '0.3', 'important');
+                teamCharacter.style.setProperty('filter', 'grayscale(100%)', 'important');
+            }
+        });
     }
     
     // Update planet blocks display
@@ -203,6 +326,80 @@ class GameState {
         });
     }
     
+    // Calculate and update team rankings
+    updateRankings() {
+        
+        // Get all teams with scores
+        const teamsWithScores = Object.keys(this.state.teams).map(teamId => ({
+            teamId: parseInt(teamId),
+            score: this.state.teams[teamId].score
+        }));
+        
+        // Sort teams by score (highest first)
+        teamsWithScores.sort((a, b) => b.score - a.score);
+        
+        // Reset all rankings
+        Object.keys(this.state.rankings).forEach(teamId => {
+            this.state.rankings[teamId] = { rank: 'badge', position: 0 };
+        });
+        
+        // Assign rankings with tie handling
+        let currentRank = 1;
+        let teamsAtCurrentRank = 0;
+        let lastScore = null;
+        
+        for (let i = 0; i < teamsWithScores.length; i++) {
+            const team = teamsWithScores[i];
+            
+            // Check if this is a new score (different from previous)
+            if (lastScore !== null && team.score < lastScore) {
+                // Move to next rank, accounting for ties
+                currentRank += teamsAtCurrentRank;
+                teamsAtCurrentRank = 0;
+            }
+            
+            // Only assign ranks 1, 2, 3 - rest stay as 'badge'
+            if (currentRank <= 3) {
+                const rankNames = { 1: '1st', 2: '2nd', 3: '3rd' };
+                this.state.rankings[team.teamId] = {
+                    rank: rankNames[currentRank],
+                    position: currentRank
+                        };
+            } else {
+                this.state.rankings[team.teamId] = {
+                    rank: 'badge',
+                    position: 0
+                };
+            }
+            
+            teamsAtCurrentRank++;
+            lastScore = team.score;
+        }
+        
+        // Update UI rankings
+        this.updateRankingDisplays();
+    }
+    
+    // Update ranking displays on team cards
+    updateRankingDisplays() {
+        Object.keys(this.state.rankings).forEach(teamId => {
+            const ranking = this.state.rankings[teamId];
+            const rankingElement = document.getElementById(`teamRanking${teamId}`);
+            
+            if (rankingElement) {
+                // Update ranking image based on rank
+                const rankImages = {
+                    '1st': 'assets/rankings/ranking-1st.png',
+                    '2nd': 'assets/rankings/ranking-2nd.png',
+                    '3rd': 'assets/rankings/ranking-3rd.png',
+                    'badge': 'assets/rankings/ranking-badge.png'
+                };
+                
+                rankingElement.src = rankImages[ranking.rank];
+            }
+        });
+    }
+
     // Update team displays
     updateTeamDisplays() {
         Object.keys(this.state.teams).forEach(teamId => {
@@ -217,31 +414,55 @@ class GameState {
             // Update team score
             const scoreElement = document.getElementById(`teamScore${teamId}`);
             if (scoreElement) {
-                scoreElement.textContent = team.score;
+                const oldScore = parseInt(scoreElement.textContent) || 0;
+                const newScore = team.score;
+                
+                // Check if score changed
+                if (oldScore !== newScore) {
+                    // Add updating class to trigger glow animation
+                    scoreElement.classList.add('updating');
+                    
+                    // Remove updating class after animation completes (3 seconds)
+                    setTimeout(() => {
+                        if (scoreElement) {
+                            scoreElement.classList.remove('updating');
+                        }
+                    }, 3000);
+                }
+                
+                scoreElement.textContent = newScore;
             }
             
             // Update action cards
             const actionCards = this.state.actionCards[teamId];
             if (actionCards) {
-                // Angel card
+                // Angel card: Default=active (bright), Used/Permanently Used=not active (gray)
                 const angelElement = document.getElementById(`teamAngel${teamId}`);
                 if (angelElement) {
-                    angelElement.classList.toggle('active', actionCards.angel);
+                    // Card should be inactive (gray) if temporarily active OR permanently used
+                    const shouldBeActive = !actionCards.angel && !actionCards.angelUsed;
+                    angelElement.classList.toggle('active', shouldBeActive);
                 }
                 
-                // Devil card
+                // Devil card: Default=active (bright), Used/Permanently Used=not active (gray) 
                 const devilElement = document.getElementById(`teamDevil${teamId}`);
                 if (devilElement) {
-                    devilElement.classList.toggle('active', actionCards.devil);
+                    // Card should be inactive (gray) if temporarily active OR permanently used
+                    const shouldBeActive = !actionCards.devil && !actionCards.devilUsed;
+                    devilElement.classList.toggle('active', shouldBeActive);
                 }
                 
-                // Cross card
+                // Cross card: Default=not active (gray), Applied=active (bright)
                 const crossElement = document.getElementById(`teamCross${teamId}`);
                 if (crossElement) {
-                    crossElement.classList.toggle('active', actionCards.cross);
+                    const shouldBeActive = actionCards.cross; // Direct: false=not active, true=active
+                    crossElement.classList.toggle('active', shouldBeActive);
                 }
             }
         });
+        
+        // Update rankings whenever team displays are updated
+        this.updateRankings();
     }
     
     // Update timer display
@@ -250,18 +471,134 @@ class GameState {
         if (timerElement) {
             const minutes = Math.floor(this.state.timerValue / 60);
             const seconds = this.state.timerValue % 60;
-            timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            const displayText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            timerElement.textContent = displayText;
             
             // Add running animation class
             timerElement.classList.toggle('timer-running', this.state.timerRunning);
+            
+            // Check if timer reached zero and trigger emergency meeting
+            if (this.state.timerValue === 0 && this.state.timerRunning) {
+                this.set('timerRunning', false);
+                this.triggerEmergencyMeeting();
+            }
+            
+            console.log(`⏱️ Timer display updated: ${displayText} (running: ${this.state.timerRunning})`);
+        } else {
+            console.warn('⚠️ Timer display element not found');
         }
+    }
+    
+    // Trigger emergency meeting when timer reaches zero
+    triggerEmergencyMeeting() {
+        // Prevent multiple emergency meetings
+        if (this.state.emergencyMeetingActive) {
+            return;
+        }
+        
+        console.log('🚨 Emergency meeting triggered!');
+        
+        // Set emergency meeting state
+        this.state.emergencyMeetingActive = true;
+        
+        const timerElement = document.getElementById('timerDisplay');
+        if (!timerElement) {
+            console.warn('⚠️ Timer display element not found for emergency meeting');
+            return;
+        }
+        
+        // Play emergency meeting sound
+        this.playEmergencyMeetingSound();
+        
+        // Start emergency meeting animation
+        this.startEmergencyMeetingAnimation(timerElement);
+    }
+    
+    // Play emergency meeting sound
+    playEmergencyMeetingSound() {
+        try {
+            const audio = new Audio('assets/audio/emergency-meeting-among-us.mp3');
+            audio.volume = 1;
+            audio.play().catch((error) => {
+                console.warn('⚠️ Could not play emergency meeting sound:', error);
+            });
+        } catch (error) {
+            console.warn('⚠️ Error creating emergency meeting audio:', error);
+        }
+    }
+    
+    // Start emergency meeting animation with red text and glowing effect
+    startEmergencyMeetingAnimation(timerElement) {
+        // Set text to red and 0:00
+        timerElement.textContent = '0:00';
+        timerElement.style.color = '#ff0000';
+        timerElement.style.textShadow = '0 0 10px #ff0000';
+        
+        // Add emergency meeting class for CSS animations
+        timerElement.classList.add('emergency-meeting');
+        
+        // Create glowing animation sequence
+        let glowCount = 0;
+        const maxGlows = 3;
+        
+        const glowAnimation = () => {
+            if (glowCount >= maxGlows) {
+                // Animation complete, reset to normal state
+                this.resetEmergencyMeetingState(timerElement);
+                return;
+            }
+            
+            // Big glow
+            timerElement.style.transform = 'scale(1.2)';
+            timerElement.style.textShadow = '0 0 20px #ff0000, 0 0 30px #ff0000';
+            
+            setTimeout(() => {
+                // Small glow
+                timerElement.style.transform = 'scale(0.8)';
+                timerElement.style.textShadow = '0 0 5px #ff0000';
+                
+                setTimeout(() => {
+                    // Normal size
+                    timerElement.style.transform = 'scale(1)';
+                    timerElement.style.textShadow = '0 0 10px #ff0000';
+                    
+                    glowCount++;
+                    setTimeout(glowAnimation, 500); // Wait 500ms before next glow cycle
+                }, 200);
+            }, 300);
+        };
+        
+        // Start the animation
+        setTimeout(glowAnimation, 100);
+    }
+    
+    // Reset emergency meeting state
+    resetEmergencyMeetingState(timerElement) {
+        timerElement.style.color = '';
+        timerElement.style.textShadow = '';
+        timerElement.style.transform = '';
+        timerElement.classList.remove('emergency-meeting');
+        
+        // Reset emergency meeting state
+        this.state.emergencyMeetingActive = false;
+        
+        // Update timer display to show current state
+        this.updateTimerDisplay();
     }
     
     // Update question set display
     updateQuestionSetDisplay() {
         const setElement = document.getElementById('currentQuestionSet');
+        const subjectElement = document.getElementById('subjectIcon');
         if (setElement) {
-            setElement.textContent = `Question Set ${this.state.currentSet}`;
+            const currentSetData = this.state.questionSets[this.state.currentSet];
+            if (currentSetData) {
+                setElement.textContent = `${currentSetData.title}`;
+                subjectElement.textContent = `${currentSetData.icon}`;
+            } else {
+                setElement.textContent = `Question Set ${this.state.currentSet}`;
+                subjectElement.textContent = `❓`;
+            }
         }
         
         // Update the question block number to show current set
@@ -322,9 +659,12 @@ class GameState {
     reset() {
         this.set('currentSet', 1);
         this.set('currentQuestion', 1);
+        this.set('currentTeam', 0); // Reset current team
+        this.set('currentChallenge', 0); // Reset current challenge
         this.set('isAnimating', false);
-        this.set('timerValue', 0);
+        this.set('timerValue', 15); // Reset to 15 seconds
         this.set('timerRunning', false);
+        this.set('emergencyMeetingActive', false);
         
         // Reset team scores
         Object.keys(this.state.teams).forEach(teamId => {
@@ -343,14 +683,14 @@ class GameState {
         this.updateTeamDisplays();
         this.updateTimerDisplay();
         this.updateQuestionSetDisplay();
+        
     }
 
     // Change progress character to team color
     setProgressCharacterTeam(teamId) {
         const team = this.state.teams[teamId];
         if (team && window.ProgressWhite?.applyProgressTeamColor) {
-            window.ProgressWhite.applyProgressTeamColor(team.color);
-            console.log(`🎨 Progress character changed to ${team.color} (Team ${team.name})`);
+                window.ProgressWhite.applyProgressTeamColor(team.color);
         }
     }
     
@@ -358,7 +698,6 @@ class GameState {
     resetProgressCharacter() {
         if (window.ProgressWhite?.setProgressCharacterToWhite) {
             window.ProgressWhite.setProgressCharacterToWhite();
-            console.log('🎨 Progress character reset to white');
         }
     }
 
@@ -384,8 +723,73 @@ class GameState {
         
         document.head.appendChild(style);
     }
+    
+    // Reset action cards for new game (complete reset including permanent usage)
+    resetActionCards() {
+        for (let teamId = 1; teamId <= 6; teamId++) {
+            this.state.actionCards[teamId] = { 
+                angel: false, 
+                angelUsed: false, 
+                devil: false, 
+                devilUsed: false, 
+                cross: false 
+            };
+            
+            // Reset visual state of team action cards
+            const teamAngelElement = document.getElementById(`teamAngel${teamId}`);
+            const teamDevilElement = document.getElementById(`teamDevil${teamId}`);
+            const teamCrossElement = document.getElementById(`teamCross${teamId}`);
+            
+            if (teamAngelElement) {
+                teamAngelElement.classList.add('active');
+                teamAngelElement.classList.remove('used');
+            }
+            if (teamDevilElement) {
+                teamDevilElement.classList.add('active');
+                teamDevilElement.classList.remove('used');
+            }
+            if (teamCrossElement) {
+                teamCrossElement.classList.add('active');
+                teamCrossElement.classList.remove('used');
+            }
+        }
+        
+        // Reset main character action indicators
+        const mainCharacterAngel = document.getElementById('mainCharacterAngel');
+        const mainCharacterDevil = document.getElementById('mainCharacterDevil');
+        const mainCharacterCross = document.getElementById('mainCharacterCross');
+        
+        if (mainCharacterAngel) mainCharacterAngel.classList.remove('active');
+        if (mainCharacterDevil) mainCharacterDevil.classList.remove('active');
+        if (mainCharacterCross) mainCharacterCross.classList.remove('active');
+        
+        this.save(this.state);
+    }
+    
+    // Reset entire game state
+    resetGame() {
+        // Reset scores
+        for (let teamId = 1; teamId <= 6; teamId++) {
+            this.state.teams[teamId].score = 0;
+        }
+        
+        // Reset game progress
+        this.state.currentSet = 1;
+        this.state.currentQuestion = 1;
+        this.state.currentTeam = 0;
+        this.state.currentChallenge = 0;
+        this.state.attackedTeam = 0;
+        this.state.timerValue = 0;
+        this.state.timerRunning = false;
+        
+        // Reset action cards
+        this.resetActionCards();
+        
+        // Update all UI elements
+        this.initializeUI();
+        
+    }
 }
 
 // Export singleton instance
 window.gameState = new GameState();
-console.log('✅ Game state initialized'); 

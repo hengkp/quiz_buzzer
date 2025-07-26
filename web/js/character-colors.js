@@ -7,15 +7,91 @@
 // Namespace to avoid conflicts with existing code
 window.ProgressWhite = window.ProgressWhite || {};
 
+// Color constants with visual indicators
+/**
+ * @fileoverview Color definitions for Among Us character customization
+ * All colors are stored as HEX codes for easy maintenance and design tool integration
+ */
+
+// 🔴 RED TEAM COLORS
+const RED_PRIMARY = '#D71E22';    // 🔴 Main red body
+const RED_SHADOW = '#7A0838';     // 🟤 Dark red shadow  
+const RED_LIGHT = '#FFE6E6';      // 💗 Light red reflection
+
+// 🔵 BLUE TEAM COLORS
+const BLUE_PRIMARY = '#1D3CE9';   // 🔵 Main blue body
+const BLUE_SHADOW = '#09158E';    // 🟦 Dark blue shadow
+const BLUE_LIGHT = '#CCE6FF';     // 💙 Light blue reflection
+
+// 🟢 LIME TEAM COLORS  
+const LIME_PRIMARY = '#5BFE4B';   // 🟢 Main lime body
+const LIME_SHADOW = '#15A742';    // 🟩 Dark lime shadow
+const LIME_LIGHT = '#E6FFE6';     // 💚 Light lime reflection
+
+// 🟠 ORANGE TEAM COLORS
+const ORANGE_PRIMARY = '#FF8D1C'; // 🟠 Main orange body
+const ORANGE_SHADOW = '#B43E15';  // 🟫 Dark orange shadow
+const ORANGE_LIGHT = '#FFE6CC';   // 🧡 Light orange reflection
+
+// 💖 PINK TEAM COLORS
+const PINK_PRIMARY = '#FF63D4';   // 💖 Main pink body
+const PINK_SHADOW = '#AC2BAE';    // 🟪 Dark pink shadow
+const PINK_LIGHT = '#FFE6FF';     // 💕 Light pink reflection
+
+// 🟣 PURPLE TEAM COLORS
+const PURPLE_PRIMARY = '#783DD2'; // 🟣 Main purple body
+const PURPLE_SHADOW = '#3B177C';  // 🟪 Dark purple shadow
+const PURPLE_LIGHT = '#E6CCFF';   // 💜 Light purple reflection
+
+// 🟡 YELLOW TEAM COLORS
+const YELLOW_PRIMARY = '#FFD700'; // 🟡 Main yellow body
+const YELLOW_SHADOW = '#B8860B';  // 🟫 Dark yellow shadow
+const YELLOW_LIGHT = '#FFFACD';   // 💛 Light yellow reflection
+
+// ⚪ WHITE TEAM COLORS
+const WHITE_PRIMARY = '#E9F7FF';  // ⚪ Main white body
+const WHITE_SHADOW = '#8495C0';   // 🔵 Blue-gray shadow
+const WHITE_LIGHT = '#FFFFFF';    // ⚪ Pure white reflection
+
+// 🔷 CYAN TEAM COLORS
+const CYAN_PRIMARY = '#44FFF7';   // 🔷 Main cyan body
+const CYAN_SHADOW = '#024A9B';    // 🔵 Dark cyan shadow (fixed hex code)
+const CYAN_LIGHT = '#CCFFFF';     // 💎 Light cyan reflection
+
+// Utility function to convert HEX to RGB
+ProgressWhite.hexToRgb = function(hex) {
+    // Remove # if present
+    hex = hex.replace('#', '');
+    
+    // Parse the hex values
+    const r = parseInt(hex.substr(0, 2), 16) / 255;
+    const g = parseInt(hex.substr(2, 2), 16) / 255;
+    const b = parseInt(hex.substr(4, 2), 16) / 255;
+    
+    return [r, g, b, 1]; // Return as RGBA with alpha = 1
+};
+
+// Get team color for a specific team ID from game state
+ProgressWhite.getTeamColor = function(teamId) {
+    if (window.gameState) {
+        const state = window.gameState.get();
+        const team = state.teams?.[teamId];
+        if (team && team.color) {
+            return team.color;
+        }
+    }
+    return 'white'; // Default fallback
+};
+
 // Animation cache for loaded JSON files
 ProgressWhite.animationCache = {};
 
 // Color mapping for white character
 ProgressWhite.getWhiteTeamColors = function() {
     return {
-        primary: [0.969, 0.996, 0.996, 1],     // Very light white
-        secondary: [0.667, 0.725, 0.725, 1],   // Light gray shadows
-        light: [0.996, 0.996, 0.996, 1]       // Pure white highlights
+        primary: ProgressWhite.hexToRgb(WHITE_PRIMARY),    // Main white
+        secondary: ProgressWhite.hexToRgb(WHITE_SHADOW),   // Shadow white
+        light: ProgressWhite.hexToRgb(WHITE_LIGHT)         // Pure white highlights
     };
 };
 
@@ -49,52 +125,154 @@ ProgressWhite.calculateColorDistance = function(color1, color2) {
     return Math.sqrt(dr * dr + dg * dg + db * db);
 };
 
-// Check if color is the main character body color
+// Comprehensive visor protection - check if color is ANY visor-related color that should be preserved
+ProgressWhite.isVisorColor = function(color) {
+    // Light blue visor colors
+    const originalVisor1 = [0.576, 0.788, 0.855, 1]; // Light blue visor (integer alpha)
+    const originalVisor2 = [0.576, 0.788, 0.855, 1.0]; // Light blue visor (decimal alpha)
+    
+    // Dark blue visor shadow colors
+    const originalVisorShadow1 = [0.278, 0.38, 0.424, 1]; // Dark blue visor shadow (integer alpha)
+    const originalVisorShadow2 = [0.278, 0.38, 0.424, 1.0]; // Dark blue visor shadow (decimal alpha)
+    
+    // Check exact matches first
+    if (ProgressWhite.calculateColorDistance(color, originalVisor1) < 0.1 ||
+        ProgressWhite.calculateColorDistance(color, originalVisor2) < 0.1 ||
+        ProgressWhite.calculateColorDistance(color, originalVisorShadow1) < 0.1 ||
+        ProgressWhite.calculateColorDistance(color, originalVisorShadow2) < 0.1) {
+        return true;
+    }
+    
+    // Additional protection for visor-like colors (blue-ish colors in visor range)
+    const [r, g, b, a] = color;
+    
+    // Protect colors that are clearly visor-like (blue dominant, specific ranges)
+    // Light visor range: high blue, moderate green, low red
+    if (b > 0.8 && g > 0.7 && r < 0.7 && b > g && b > r) {
+        return true;
+    }
+    
+    // Dark visor shadow range: blue-gray colors
+    if (b > 0.35 && b < 0.5 && g > 0.3 && g < 0.45 && r > 0.2 && r < 0.35 && 
+        Math.abs(r - g) < 0.1 && b > r && b > g) {
+        return true;
+    }
+    
+    return false;
+};
+
+// Check if color is the main character body color (enhanced to detect various character colors)
 ProgressWhite.isMainCharacterColor = function(color) {
+    // FIRST: Check if this is a visor color that should be preserved
+    if (ProgressWhite.isVisorColor(color)) {
+        return false;
+    }
+    
+    // Original red colors
     const originalMain1 = [0.784, 0.125, 0.055, 1]; // Main red body (integer alpha)
     const originalMain2 = [0.784, 0.125, 0.055, 1.0]; // Main red body (decimal alpha)
     
-    return ProgressWhite.calculateColorDistance(color, originalMain1) < 0.1 ||
-           ProgressWhite.calculateColorDistance(color, originalMain2) < 0.1;
+    // Check for original red
+    if (ProgressWhite.calculateColorDistance(color, originalMain1) < 0.1 ||
+        ProgressWhite.calculateColorDistance(color, originalMain2) < 0.1) {
+        return true;
+    }
+    
+    // Enhanced detection for other character colors (but more conservative)
+    const [r, g, b, a] = color;
+    
+    // Skip if it's too dark (black) or too light (white)
+    if ((r + g + b) < 0.4 || (r + g + b) > 2.5) {
+        return false;
+    }
+    
+    // Check if it has character-like saturation (not too gray)
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const saturation = max > 0 ? (max - min) / max : 0;
+    
+    // Character body colors should have decent saturation and brightness
+    return saturation > 0.3 && max > 0.4;
 };
 
 // Check if color is a shadow color (excluding visor shadow)
 ProgressWhite.isShadowColor = function(color) {
-    const originalShadow1 = [0.545, 0.094, 0.157, 1]; // Dark red shadow (integer alpha)
-    const originalShadow2 = [0.545, 0.094, 0.157, 1.0]; // Dark red shadow (decimal alpha)
-    const originalVisorShadow1 = [0.278, 0.38, 0.424, 1]; // Dark blue visor shadow - keep original (integer alpha)
-    const originalVisorShadow2 = [0.278, 0.38, 0.424, 1.0]; // Dark blue visor shadow - keep original (decimal alpha)
-    
-    // Don't change the visor shadow color
-    if (ProgressWhite.calculateColorDistance(color, originalVisorShadow1) < 0.1 ||
-        ProgressWhite.calculateColorDistance(color, originalVisorShadow2) < 0.1) {
+    // FIRST: Check if this is a visor color that should be preserved
+    if (ProgressWhite.isVisorColor(color)) {
         return false;
     }
     
-    return ProgressWhite.calculateColorDistance(color, originalShadow1) < 0.1 ||
-           ProgressWhite.calculateColorDistance(color, originalShadow2) < 0.1;
+    // Original red shadow colors
+    const originalShadow1 = [0.545, 0.094, 0.157, 1]; // Dark red shadow (integer alpha)
+    const originalShadow2 = [0.545, 0.094, 0.157, 1.0]; // Dark red shadow (decimal alpha)
+    
+    // Check for original red shadow
+    if (ProgressWhite.calculateColorDistance(color, originalShadow1) < 0.1 ||
+        ProgressWhite.calculateColorDistance(color, originalShadow2) < 0.1) {
+        return true;
+    }
+    
+    // Enhanced detection for shadow colors (more conservative)
+    const [r, g, b, a] = color;
+    
+    // Shadow colors are generally darker (lower brightness)
+    const brightness = (r + g + b) / 3;
+    
+    // Skip very light colors and be more conservative about blue-ish colors
+    if (brightness > 0.5) {
+        return false;
+    }
+    
+    // Shadow colors should have some color but be relatively dark
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const saturation = max > 0 ? (max - min) / max : 0;
+    
+    // Look for colors that are dark but still have reasonable saturation (not pure black/gray)
+    return brightness < 0.5 && brightness > 0.15 && saturation > 0.2;
 };
 
 // Check if color is a light reflection color (excluding visor)
 ProgressWhite.isLightColor = function(color) {
-    const originalLight1 = [0.969, 0.996, 0.996, 1]; // Very light reflection (integer alpha)
-    const originalLight2 = [0.969, 0.996, 0.996, 1.0]; // Very light reflection (decimal alpha)
-    const originalVisor1 = [0.576, 0.788, 0.855, 1]; // Light blue visor - keep original (integer alpha)
-    const originalVisor2 = [0.576, 0.788, 0.855, 1.0]; // Light blue visor - keep original (decimal alpha)
-    
-    // Don't change the visor color
-    if (ProgressWhite.calculateColorDistance(color, originalVisor1) < 0.1 ||
-        ProgressWhite.calculateColorDistance(color, originalVisor2) < 0.1) {
+    // FIRST: Check if this is a visor color that should be preserved
+    if (ProgressWhite.isVisorColor(color)) {
         return false;
     }
     
-    return ProgressWhite.calculateColorDistance(color, originalLight1) < 0.1 ||
-           ProgressWhite.calculateColorDistance(color, originalLight2) < 0.1 ||
-           (color[0] > 0.95 && color[1] > 0.95 && color[2] > 0.95);
+    // Original light colors
+    const originalLight1 = [0.969, 0.996, 0.996, 1]; // Very light reflection (integer alpha)
+    const originalLight2 = [0.969, 0.996, 0.996, 1.0]; // Very light reflection (decimal alpha)
+    
+    // Check for original light colors
+    if (ProgressWhite.calculateColorDistance(color, originalLight1) < 0.1 ||
+        ProgressWhite.calculateColorDistance(color, originalLight2) < 0.1) {
+        return true;
+    }
+    
+    // Enhanced detection for light/highlight colors (more conservative)
+    const [r, g, b, a] = color;
+    
+    // Light colors are generally bright
+    const brightness = (r + g + b) / 3;
+    
+    // Look for very bright colors that could be highlights/reflections
+    // These are typically desaturated (closer to white) versions of main colors
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const saturation = max > 0 ? (max - min) / max : 0;
+    
+    // Light/highlight colors are bright and often have low saturation
+    // Be more conservative to avoid affecting visor
+    return brightness > 0.9 && saturation < 0.2;
 };
 
 // Check if color is a light blue color (newly added)
 ProgressWhite.isLightBlueColor = function(color) {
+    // FIRST: Check if this is a visor color that should be preserved
+    if (ProgressWhite.isVisorColor(color)) {
+        return false;
+    }
+    
     const originalLightBlue1 = [0.733, 0.945, 1.0, 1]; // New light blue color found in fears (integer alpha)
     const originalLightBlue2 = [0.733, 0.945, 1.0, 1.0]; // New light blue color found in fears (decimal alpha)
     
@@ -111,7 +289,77 @@ ProgressWhite.isBlackColor = function(color) {
            ProgressWhite.calculateColorDistance(color, originalBlack2) < 0.1;
 };
 
-// Replace colors in animation layer recursively
+// JSON String replacement method - more reliable for catching all color instances
+ProgressWhite.replaceColorsViaStringEdit = function(animationData, whiteColors) {
+    
+    // Convert animation data to JSON string
+    let jsonString = JSON.stringify(animationData);
+    let replacementCount = 0;
+    
+    // Define known character colors that need to be replaced
+    const characterColorMap = {
+        // Original red character colors (main body)
+        '[0.784,0.125,0.055,1]': whiteColors.primary,
+        '[0.784,0.125,0.055,1.0]': whiteColors.primary,
+        
+        // Original red shadow colors
+        '[0.545,0.094,0.157,1]': whiteColors.secondary,
+        '[0.545,0.094,0.157,1.0]': whiteColors.secondary,
+        
+        // Original light/reflection colors
+        '[0.969,0.996,0.996,1]': whiteColors.light,
+        '[0.969,0.996,0.996,1.0]': whiteColors.light,
+        
+        // Light blue color found in some animations
+        '[0.733,0.945,1.0,1]': whiteColors.light,
+        '[0.733,0.945,1.0,1.0]': whiteColors.light,
+        
+        // Additional common character color variations
+        '[0.78,0.12,0.05,1]': whiteColors.primary,
+        '[0.78,0.12,0.05,1.0]': whiteColors.primary,
+        '[0.54,0.09,0.15,1]': whiteColors.secondary,
+        '[0.54,0.09,0.15,1.0]': whiteColors.secondary
+    };
+    
+    // Preserve visor colors - these should NOT be replaced
+    const visorColors = [
+        '[0.576,0.788,0.855,1]',    // Light blue visor
+        '[0.576,0.788,0.855,1.0]',  // Light blue visor
+        '[0.278,0.38,0.424,1]',     // Dark blue visor shadow
+        '[0.278,0.38,0.424,1.0]'    // Dark blue visor shadow
+    ];
+    
+    // Replace character colors while preserving visor colors
+    for (const [originalColor, newColor] of Object.entries(characterColorMap)) {
+        // Check if this is a visor color that should be preserved
+        if (visorColors.includes(originalColor)) {
+            continue;
+        }
+        
+        // Format the new color as JSON array string
+        const newColorString = JSON.stringify(newColor);
+        
+        // Count occurrences before replacement
+        const beforeCount = (jsonString.match(new RegExp(originalColor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+        
+        if (beforeCount > 0) {
+            // Replace all occurrences
+            jsonString = jsonString.replace(new RegExp(originalColor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), newColorString);
+            replacementCount += beforeCount;
+        }
+    }
+
+    
+    // Parse the modified JSON back to object
+    try {
+        return JSON.parse(jsonString);
+    } catch (error) {
+        console.error('❌ Error parsing modified JSON:', error);
+        return animationData; // Return original data if parsing fails
+    }
+};
+
+// Legacy recursive method (kept as fallback)
 ProgressWhite.replaceColorsInLayer = function(layer, whiteColors) {
     if (layer.shapes) {
         layer.shapes.forEach(shape => {
@@ -120,6 +368,11 @@ ProgressWhite.replaceColorsInLayer = function(layer, whiteColors) {
                     // Handle fill colors (ty: 'fl')
                     if (item.ty === 'fl' && item.c && item.c.k) {
                         const currentColor = item.c.k;
+                        
+                        // Check if this is a visor color that should be preserved
+                        if (ProgressWhite.isVisorColor(currentColor)) {
+                            return; // Skip this color - preserve it
+                        }
                         
                         // Check if this is the main character color (red body)
                         if (ProgressWhite.isMainCharacterColor(currentColor)) {
@@ -139,9 +392,14 @@ ProgressWhite.replaceColorsInLayer = function(layer, whiteColors) {
                         }
                     }
                     
-                    // Handle stroke colors (ty: 'st') - but only if they're not black outlines
+                    // Handle stroke colors (ty: 'st') - but only if they're not black outlines or visor colors
                     if (item.ty === 'st' && item.c && item.c.k) {
                         const currentColor = item.c.k;
+                        
+                        // Check if this is a visor color that should be preserved
+                        if (ProgressWhite.isVisorColor(currentColor)) {
+                            return; // Skip this color - preserve it
+                        }
                         
                         // Only replace non-black stroke colors (character body strokes)
                         if (!ProgressWhite.isBlackColor(currentColor)) {
@@ -208,153 +466,13 @@ ProgressWhite.applyColorsToAnimation = async function(animationData, colorString
         whiteColors = colorString; // Assume it's already a whiteColors object
     }
     
-    if (animationData.layers) {
-        let colorReplacements = 0;
-        
-        animationData.layers.forEach((layer, layerIndex) => {
-            // Process the layer
-            const processedLayer = ProgressWhite.replaceColorsInLayer(layer, whiteColors);
-            
-            // Count color replacements in this layer
-            const countReplacements = (obj) => {
-                let count = 0;
-                if (obj.shapes) {
-                    obj.shapes.forEach(shape => {
-                        if (shape.it) {
-                            shape.it.forEach(item => {
-                                // Count fill color replacements
-                                if (item.ty === 'fl' && item.c && item.c.k) {
-                                    const color = item.c.k;
-                                    if (ProgressWhite.isMainCharacterColor(color) || 
-                                        ProgressWhite.isShadowColor(color) || 
-                                        ProgressWhite.isLightColor(color) ||
-                                        ProgressWhite.isLightBlueColor(color)) {
-                                        count++;
-                                    }
-                                }
-                                // Count stroke color replacements (non-black only)
-                                if (item.ty === 'st' && item.c && item.c.k) {
-                                    const color = item.c.k;
-                                    if (!ProgressWhite.isBlackColor(color) && 
-                                        (ProgressWhite.isMainCharacterColor(color) || 
-                                         ProgressWhite.isShadowColor(color) || 
-                                         ProgressWhite.isLightColor(color) ||
-                                         ProgressWhite.isLightBlueColor(color))) {
-                                        count++;
-                                    }
-                                }
-                            });
-                        }
-                        if (shape.shapes) count += countReplacements(shape);
-                    });
-                }
-                return count;
-            };
-            
-            const layerReplacements = countReplacements(processedLayer);
-            colorReplacements += layerReplacements;
-            
-        });
-        
-        if (colorReplacements === 0) {
-            console.warn('⚠️ ProgressWhite: No colors were replaced. This might indicate an issue with the animation structure.');
-        }
-    } else {
-        console.warn('⚠️ ProgressWhite: No layers found in animation data');
-    }
-    return animationData; // Return the modified data
+    // Use the more reliable JSON string replacement method
+    const modifiedAnimationData = ProgressWhite.replaceColorsViaStringEdit(animationData, whiteColors);
+    
+    return modifiedAnimationData; // Return the modified data
 };
 
-// Generic function to apply white color to any character element
-ProgressWhite.setCharacterToWhite = async function(characterElement) {
-    if (!characterElement) {
-        console.error('❌ ProgressWhite: Character element not found!');
-        return false;
-    }
-    
-    // Check if lottie-player is ready
-    if (!characterElement.load) {
-        setTimeout(() => ProgressWhite.setCharacterToWhite(characterElement), 200);
-        return false;
-    }
-    
-    // Clear any existing filters or overlays
-    characterElement.style.filter = '';
-    
-    const existingOverlay = characterElement.parentNode.querySelector('.color-overlay');
-    if (existingOverlay) {
-        existingOverlay.remove();
-    }
-    
-    // Get the current animation source
-    const currentSrc = characterElement.getAttribute('src');
-    if (!currentSrc) {
-        console.error(`❌ ProgressWhite: No animation source found for ${characterElement.id}!`);
-        return false;
-    }
-    
-    // Load and modify animation data
-    const whiteColors = ProgressWhite.getWhiteTeamColors();
-    const animationData = await ProgressWhite.loadAnimationData(currentSrc);
-    
-    if (!animationData) {
-        console.error(`❌ ProgressWhite: Failed to load animation data for ${characterElement.id}!`);
-        return false;
-    }
-    
-    // Replace colors in all layers
-    if (animationData.layers) {
-        ProgressWhite.applyColorsToAnimation(animationData, whiteColors);
-    }
-    
-    // Create a data URL from the modified JSON
-    const dataUrl = 'data:application/json;base64,' + btoa(JSON.stringify(animationData));
-    
-    // Update the lottie player with the new white animation
-    try {
-        characterElement.load(dataUrl);
-        return true;
-    } catch (error) {
-        console.error(`❌ ProgressWhite: Failed to load modified animation for ${characterElement.id}:`, error);
-        return false;
-    }
-};
 
-// Main function to apply white color to progress character
-ProgressWhite.setProgressCharacterToWhite = async function() {
-    // Find the progress character element
-    const progressCharacter = document.getElementById('progressCharacter');
-    
-    if (!progressCharacter) {
-        console.error('❌ ProgressWhite: Progress character element not found!');
-        return false;
-    }
-    
-    return await ProgressWhite.setCharacterToWhite(progressCharacter);
-};
-
-// Function to set a specific team character to white
-ProgressWhite.setTeamCharacterToWhite = async function(teamId) {
-    const teamCharacter = document.getElementById(`teamCharacter${teamId}`);
-    
-    if (!teamCharacter) {
-        console.error(`❌ ProgressWhite: teamCharacter${teamId} not found!`);
-        return false;
-    }
-    
-    return await ProgressWhite.setCharacterToWhite(teamCharacter);
-};
-
-// Function to reset progress character to white (for external use)
-ProgressWhite.resetProgressToWhite = async function() {
-    const success = await ProgressWhite.setProgressCharacterToWhite();
-    
-    if (!success) {
-        console.error('💥 ProgressWhite: Failed to reset progress character to white!');
-    }
-    
-    return success;
-};
 
 // Apply run animation color to character
 ProgressWhite.applyRunAnimationColor = function(characterElement) {
@@ -378,125 +496,413 @@ ProgressWhite.applyRunAnimationColor = function(characterElement) {
     }
 };
 
-// Team color mapping - All 8 available colors
-ProgressWhite.teamColors = {
-    'blue': {
-        primary: [0.2, 0.4, 0.8, 1],          // Blue body
-        secondary: [0.1, 0.2, 0.4, 1],        // Dark blue shadow
-        light: [0.969, 0.996, 0.996, 1]       // Light reflection
-    },
-    'cyan': {
-        primary: [0.2, 0.8, 0.8, 1],          // Cyan body
-        secondary: [0.1, 0.4, 0.4, 1],        // Dark cyan shadow
-        light: [0.969, 0.996, 0.996, 1]       // Light reflection
-    },
-    'lime': {
-        primary: [0.4, 0.8, 0.2, 1],          // Lime body
-        secondary: [0.2, 0.4, 0.1, 1],        // Dark lime shadow
-        light: [0.969, 0.996, 0.996, 1]       // Light reflection
-    },
-    'orange': {
-        primary: [0.8, 0.4, 0.1, 1],          // Orange body
-        secondary: [0.4, 0.2, 0.05, 1],       // Dark orange shadow
-        light: [0.969, 0.996, 0.996, 1]       // Light reflection
-    },
-    'pink': {
-        primary: [0.8, 0.2, 0.6, 1],          // Pink body
-        secondary: [0.4, 0.1, 0.3, 1],        // Dark pink shadow
-        light: [0.969, 0.996, 0.996, 1]       // Light reflection
-    },
-    'purple': {
-        primary: [0.6, 0.2, 0.8, 1],          // Purple body
-        secondary: [0.3, 0.1, 0.4, 1],        // Dark purple shadow
-        light: [0.969, 0.996, 0.996, 1]       // Light reflection
-    },
-    'red': {
-        primary: [0.784, 0.125, 0.055, 1],     // Red body
-        secondary: [0.545, 0.094, 0.157, 1],   // Dark red shadow
-        light: [0.969, 0.996, 0.996, 1]       // Light reflection
-    },
-    'yellow': {
-        primary: [1.0, 1.0, 0.0, 1],          // Bright yellow body
-        secondary: [0.6, 0.6, 0.0, 1],        // Dark yellow shadow
-        light: [0.969, 0.996, 0.996, 1]       // Light reflection
+// Main Character Animation System for question navigation
+ProgressWhite.mainCharacterAnimation = {
+    // Play run animation for main character movement with correct direction handling
+    async playRunAnimation(direction, targetPosition) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                
+                const progressCharacter = document.getElementById('progressCharacter');
+                if (!progressCharacter) {
+                    reject(new Error('Progress character element not found'));
+                    return;
+                }
+                
+                // Get current team state to maintain color
+                let currentTeam = 0;
+                let teamColor = 'white';
+                if (window.gameState) {
+                    const state = window.gameState.get();
+                    currentTeam = state.currentTeam || 0;
+                    if (currentTeam > 0 && state.teams && state.teams[currentTeam]) {
+                        teamColor = state.teams[currentTeam].color || 'white';
+                    }
+                }
+                
+                // Animation timing configuration
+                const ANIMATION_DURATION = 1200; // 1.2 seconds
+                
+                // 1. Switch to run animation with JSON string modification
+                const runAnimationSrc = 'assets/animations/among_us_run.json';
+                
+                // Load and modify JSON string before applying
+                try {
+                    const response = await fetch(runAnimationSrc);
+                    const animationData = await response.json();
+                    
+                    // Apply color via JSON string modification
+                    const colorObject = teamColor === 'white' 
+                        ? ProgressWhite.getWhiteTeamColors() 
+                        : ProgressWhite.teamColors[teamColor] || ProgressWhite.getWhiteTeamColors();
+                    const modifiedAnimationData = ProgressWhite.replaceColorsViaStringEdit(animationData, colorObject);
+                    
+                    // Convert to blob URL and load
+                    const blob = new Blob([JSON.stringify(modifiedAnimationData)], { type: 'application/json' });
+                    const blobUrl = URL.createObjectURL(blob);
+                    
+                    progressCharacter.src = blobUrl;
+                    await new Promise((resolveLoad) => {
+                        progressCharacter.addEventListener('ready', resolveLoad, { once: true });
+                        progressCharacter.load(blobUrl);
+                    });
+                    
+                    // Clean up blob URL
+                    URL.revokeObjectURL(blobUrl);
+                } catch (error) {
+                    console.warn('⚠️ Fallback to standard loading:', error);
+                    progressCharacter.src = runAnimationSrc;
+                    await new Promise((resolveLoad) => {
+                        progressCharacter.addEventListener('ready', resolveLoad, { once: true });
+                        progressCharacter.load(runAnimationSrc);
+                    });
+                    await ProgressWhite.applyCharacterColor('progressCharacter', teamColor);
+                }
+                
+                // Set direction: backward = default (scaleX = 1), forward = flip (scaleX = -1)
+                const scaleX = direction === 'forward' ? -1 : 1;
+                progressCharacter.style.transform = `scaleX(${scaleX})`;
+                
+                // 2. Animate position change
+                const characterContainer = progressCharacter.closest('.character-container-main');
+                if (characterContainer) {
+                    characterContainer.style.transition = `left ${ANIMATION_DURATION}ms cubic-bezier(0.4, 0.0, 0.2, 1)`;
+                    characterContainer.style.left = `${targetPosition}%`;
+                }
+                
+                // 3. After animation duration, switch back to idle
+                setTimeout(async () => {
+                    try {
+                        // Reset transform
+                        progressCharacter.style.transform = '';
+                        
+                        // Switch back to idle animation with JSON string modification
+                        const idleAnimationSrc = 'assets/animations/among_us_idle.json';
+                        
+                        try {
+                            const response = await fetch(idleAnimationSrc);
+                            const animationData = await response.json();
+                            
+                            // Apply color via JSON string modification
+                            const colorObject = teamColor === 'white' 
+                                ? ProgressWhite.getWhiteTeamColors() 
+                                : ProgressWhite.teamColors[teamColor] || ProgressWhite.getWhiteTeamColors();
+                            const modifiedAnimationData = ProgressWhite.replaceColorsViaStringEdit(animationData, colorObject);
+                            
+                            // Convert to blob URL and load
+                            const blob = new Blob([JSON.stringify(modifiedAnimationData)], { type: 'application/json' });
+                            const blobUrl = URL.createObjectURL(blob);
+                            
+                            progressCharacter.src = blobUrl;
+                            await new Promise((resolveIdle) => {
+                                progressCharacter.addEventListener('ready', resolveIdle, { once: true });
+                                progressCharacter.load(blobUrl);
+                            });
+                            
+                            // Clean up blob URL
+                            URL.revokeObjectURL(blobUrl);
+                        } catch (error) {
+                            console.warn('⚠️ Fallback to standard loading:', error);
+                            progressCharacter.src = idleAnimationSrc;
+                            await new Promise((resolveIdle) => {
+                                progressCharacter.addEventListener('ready', resolveIdle, { once: true });
+                                progressCharacter.load(idleAnimationSrc);
+                            });
+                            await ProgressWhite.applyCharacterColor('progressCharacter', teamColor);
+                        }
+                        
+                        // Clear transition
+                        if (characterContainer) {
+                            characterContainer.style.transition = '';
+                        }
+                        
+                        resolve();
+                    } catch (error) {
+                        console.error('❌ Error in animation cleanup:', error);
+                        reject(error);
+                    }
+                }, ANIMATION_DURATION);
+                
+            } catch (error) {
+                console.error('❌ Error in playRunAnimation:', error);
+                reject(error);
+            }
+        });
     }
 };
 
-// Apply team color to character
-ProgressWhite.applyTeamColor = function(characterElement, teamColor) {
+// Team Character Continuous Random Animation System (5-20 seconds)
+ProgressWhite.teamAnimationSystem = {
+    animationTimers: new Map(),
+    isActive: false,
+    
+    // Start continuous random animations for all team characters
+    startContinuousAnimations() {
+        if (this.isActive) {
+            return; // Already running
+        }
+        
+        this.isActive = true;
+        
+        // Start animation cycle for each team
+        for (let teamId = 1; teamId <= 6; teamId++) {
+            this.scheduleNextAnimation(teamId);
+        }
+    },
+    
+    // Stop all continuous animations
+    stopContinuousAnimations() {
+        if (!this.isActive) {
+            return;
+        }
+        
+        this.isActive = false;
+        
+        // Clear all timers
+        for (const [teamId, timer] of this.animationTimers) {
+            clearTimeout(timer);
+        }
+        this.animationTimers.clear();
+        
+        // Return all characters to idle
+        for (let teamId = 1; teamId <= 6; teamId++) {
+            this.returnToIdle(teamId);
+        }
+    },
+    
+    // Schedule next random animation for a team (5-20 seconds)
+    scheduleNextAnimation(teamId) {
+        if (!this.isActive) {
+            return;
+        }
+        
+        // Random interval between 5-20 seconds
+        const minInterval = 5000;  // 5 seconds
+        const maxInterval = 20000; // 20 seconds
+        const randomInterval = Math.random() * (maxInterval - minInterval) + minInterval;
+        
+        const timer = setTimeout(() => {
+            this.playRandomAnimation(teamId);
+        }, randomInterval);
+        
+        this.animationTimers.set(teamId, timer);
+    },
+    
+    // Play random animation for a specific team
+    async playRandomAnimation(teamId) {
+        if (!this.isActive) {
+            return;
+        }
+        
+        const teamCharacter = document.getElementById(`teamCharacter${teamId}`);
+        if (!teamCharacter) {
+            // Schedule next animation even if character not found
+            this.scheduleNextAnimation(teamId);
+            return;
+        }
+        
+        // Available random animations
+        const animations = [
+            'assets/animations/among_us_eating_chocolate.json',
+            'assets/animations/among_us_nods_with_headphones.json',
+            'assets/animations/among_us_fears.json',
+            'assets/animations/among_us_wipes_off_sweat.json',
+            'assets/animations/among_us_nods.json'
+        ];
+        
+        // Get team color
+        let teamColor = 'white';
+        if (window.gameState) {
+            const state = window.gameState.get();
+            if (state.teams && state.teams[teamId]) {
+                teamColor = state.teams[teamId].color || 'white';
+            }
+        }
+        
+        try {
+            // Pick random animation
+            const randomAnimation = animations[Math.floor(Math.random() * animations.length)];
+            
+                         // Load animation with JSON string modification
+             const response = await fetch(randomAnimation);
+             const animationData = await response.json();
+             
+             // Apply color via JSON string modification
+             const colorObject = teamColor === 'white' 
+                 ? ProgressWhite.getWhiteTeamColors() 
+                 : ProgressWhite.teamColors[teamColor] || ProgressWhite.getWhiteTeamColors();
+             const modifiedAnimationData = ProgressWhite.replaceColorsViaStringEdit(animationData, colorObject);
+            
+            // Convert to blob URL and load
+            const blob = new Blob([JSON.stringify(modifiedAnimationData)], { type: 'application/json' });
+            const blobUrl = URL.createObjectURL(blob);
+            
+            teamCharacter.src = blobUrl;
+            await new Promise((resolve) => {
+                teamCharacter.addEventListener('ready', resolve, { once: true });
+                teamCharacter.load(blobUrl);
+            });
+            
+            // Clean up blob URL
+            URL.revokeObjectURL(blobUrl);
+            
+            // Return to idle after 3 seconds, then schedule next animation
+            setTimeout(() => {
+                this.returnToIdle(teamId);
+                this.scheduleNextAnimation(teamId);
+            }, 3000);
+            
+        } catch (error) {
+            console.error(`❌ Error playing random animation for team ${teamId}:`, error);
+            // Schedule next animation even on error
+            this.scheduleNextAnimation(teamId);
+        }
+    },
+    
+    // Return team character to idle animation
+    async returnToIdle(teamId) {
+        const teamCharacter = document.getElementById(`teamCharacter${teamId}`);
+        if (!teamCharacter) {
+            return;
+        }
+        
+        // Get team color
+        let teamColor = 'white';
+        if (window.gameState) {
+            const state = window.gameState.get();
+            if (state.teams && state.teams[teamId]) {
+                teamColor = state.teams[teamId].color || 'white';
+            }
+        }
+        
+        try {
+            const idleAnimationSrc = 'assets/animations/among_us_idle.json';
+            
+            // Load idle animation with JSON string modification
+            const response = await fetch(idleAnimationSrc);
+            const animationData = await response.json();
+            
+            // Apply color via JSON string modification
+            const colorObject = teamColor === 'white' 
+                ? ProgressWhite.getWhiteTeamColors() 
+                : ProgressWhite.teamColors[teamColor] || ProgressWhite.getWhiteTeamColors();
+            const modifiedAnimationData = ProgressWhite.replaceColorsViaStringEdit(animationData, colorObject);
+            
+            // Convert to blob URL and load
+            const blob = new Blob([JSON.stringify(modifiedAnimationData)], { type: 'application/json' });
+            const blobUrl = URL.createObjectURL(blob);
+            
+            teamCharacter.src = blobUrl;
+            teamCharacter.load(blobUrl);
+            
+            // Clean up blob URL after a short delay
+            setTimeout(() => {
+                URL.revokeObjectURL(blobUrl);
+            }, 1000);
+            
+        } catch (error) {
+            console.warn(`⚠️ Fallback idle loading for team ${teamId}:`, error);
+            teamCharacter.src = 'assets/animations/among_us_idle.json';
+            teamCharacter.load('assets/animations/among_us_idle.json');
+            await ProgressWhite.applyCharacterColor(`teamCharacter${teamId}`, teamColor);
+        }
+    }
+};
+
+// Team color mapping - All 8 available colors with HEX codes
+ProgressWhite.teamColors = {
+    'blue': {
+        primary: ProgressWhite.hexToRgb(BLUE_PRIMARY),    // Blue body
+        secondary: ProgressWhite.hexToRgb(BLUE_SHADOW),   // Dark blue shadow
+        light: ProgressWhite.hexToRgb(BLUE_LIGHT)         // Light blue reflection
+    },
+    'cyan': {
+        primary: ProgressWhite.hexToRgb(CYAN_PRIMARY),    // Cyan body
+        secondary: ProgressWhite.hexToRgb(CYAN_SHADOW),   // Dark cyan shadow
+        light: ProgressWhite.hexToRgb(CYAN_LIGHT)         // Light cyan reflection
+    },
+    'lime': {
+        primary: ProgressWhite.hexToRgb(LIME_PRIMARY),    // Lime body
+        secondary: ProgressWhite.hexToRgb(LIME_SHADOW),   // Dark lime shadow
+        light: ProgressWhite.hexToRgb(LIME_LIGHT)         // Light lime reflection
+    },
+    'orange': {
+        primary: ProgressWhite.hexToRgb(ORANGE_PRIMARY),  // Orange body
+        secondary: ProgressWhite.hexToRgb(ORANGE_SHADOW), // Dark orange shadow
+        light: ProgressWhite.hexToRgb(ORANGE_LIGHT)       // Light orange reflection
+    },
+    'pink': {
+        primary: ProgressWhite.hexToRgb(PINK_PRIMARY),    // Pink body
+        secondary: ProgressWhite.hexToRgb(PINK_SHADOW),   // Dark pink shadow
+        light: ProgressWhite.hexToRgb(PINK_LIGHT)         // Light pink reflection
+    },
+    'purple': {
+        primary: ProgressWhite.hexToRgb(PURPLE_PRIMARY),  // Purple body
+        secondary: ProgressWhite.hexToRgb(PURPLE_SHADOW), // Dark purple shadow
+        light: ProgressWhite.hexToRgb(PURPLE_LIGHT)       // Light purple reflection
+    },
+    'red': {
+        primary: ProgressWhite.hexToRgb(RED_PRIMARY),     // Red body
+        secondary: ProgressWhite.hexToRgb(RED_SHADOW),    // Dark red shadow
+        light: ProgressWhite.hexToRgb(RED_LIGHT)          // Light red reflection
+    },
+    'yellow': {
+        primary: ProgressWhite.hexToRgb(YELLOW_PRIMARY),  // Bright yellow body
+        secondary: ProgressWhite.hexToRgb(YELLOW_SHADOW), // Dark yellow shadow
+        light: ProgressWhite.hexToRgb(YELLOW_LIGHT)       // Light yellow reflection
+    }
+};
+
+// Apply specific team color to character with enhanced error handling
+ProgressWhite.applyTeamColor = async function(characterElement, teamColor) {
+    // Always use the original animation source, not the current src which might be a blob URL
+    const originalSrc = 'assets/animations/among_us_idle.json';
+    
     if (!characterElement) {
-        console.warn('❌ No character element provided for team color');
+        console.warn('❌ Character element not found');
         return false;
     }
     
-    if (!ProgressWhite.teamColors[teamColor]) {
-        console.warn(`❌ Unknown team color: ${teamColor}`);
+    // Get team color configuration
+    const colors = ProgressWhite.teamColors[teamColor];
+    if (!colors) {
+        console.warn(`❌ Team color ${teamColor} not found`);
         return false;
     }
     
     try {
-        const colors = ProgressWhite.teamColors[teamColor];
-        
-        // Load current animation data
-        const currentSrc = characterElement.src;
-        if (!currentSrc) {
-            console.warn('❌ No animation source found for character');
+        const animationData = await ProgressWhite.loadAnimationData(originalSrc);
+        if (!animationData) {
+            console.error('❌ Failed to load animation data for team color');
             return false;
         }
         
-        ProgressWhite.loadAnimationData(currentSrc).then(animationData => {
-            if (!animationData) {
-                console.error('❌ Failed to load animation data for team color');
-                return false;
-            }
-            
-            // Apply team colors to animation with enhanced debugging
-            ProgressWhite.applyColorsToAnimation(animationData, colors);
-            
-            // Update the character with new colors
-            characterElement.load(JSON.stringify(animationData));
-            
-            return true;
-        }).catch(error => {
-            console.error('❌ Error applying team color:', error);
-            return false;
-        });
+        // Apply team colors to animation using the new string replacement method
+        const modifiedData = await ProgressWhite.applyColorsToAnimation(animationData, colors);
         
+        // Create a data URL from the modified JSON
+        const dataUrl = 'data:application/json;base64,' + btoa(JSON.stringify(modifiedData));
+        
+        // Update the character with new colors
+        characterElement.load(dataUrl);
+        
+        return true;
     } catch (error) {
-        console.error('❌ Error applying team color:', error);
+        console.error('❌ Error in applyTeamColor:', error);
         return false;
     }
 };
 
 // Initialize all team characters with their team colors
 ProgressWhite.initializeTeamColors = function() {
-    const teamColorMap = {
-        1: 'red',     // Team A
-        2: 'blue',    // Team B
-        3: 'lime',    // Team C
-        4: 'orange',  // Team D
-        5: 'pink',    // Team E
-        6: 'yellow'   // Team F
-    };
-    
     // Apply team colors to all team characters
     for (let teamId = 1; teamId <= 6; teamId++) {
         const characterElement = document.getElementById(`teamCharacter${teamId}`);
-        const teamColor = teamColorMap[teamId];
+        const teamColor = ProgressWhite.getTeamColor(teamId);
         
         if (characterElement && teamColor) {
             ProgressWhite.applyTeamColor(characterElement, teamColor);
         }
-    }
-    
-
-};
-
-// Apply team color to progress character
-ProgressWhite.applyProgressTeamColor = function(teamColor) {
-    const progressCharacter = document.getElementById('progressCharacter');
-    if (progressCharacter && teamColor) {
-        ProgressWhite.applyTeamColor(progressCharacter, teamColor);
     }
 };
 
@@ -507,7 +913,20 @@ ProgressWhite.getAllTeamColors = function() {
 
 // Get available colors that are not currently assigned to teams
 ProgressWhite.getAvailableColors = function() {
-    const assignedColors = ['red', 'blue', 'lime', 'orange', 'pink', 'yellow']; // Current team assignments
+    // Get assigned colors from game state
+    let assignedColors = [];
+    if (window.gameState) {
+        const state = window.gameState.get();
+        Object.values(state.teams || {}).forEach(team => {
+            if (team.color) {
+                assignedColors.push(team.color);
+            }
+        });
+    } else {
+        // Fallback to default team colors if game state not available
+        assignedColors = ['red', 'blue', 'lime', 'orange', 'pink', 'yellow'];
+    }
+    
     const allColors = ProgressWhite.getAllTeamColors();
     return allColors.filter(color => !assignedColors.includes(color)); // Returns ['cyan', 'purple']
 };
@@ -555,7 +974,6 @@ ProgressWhite.waitForLottieAndSetWhite = function() {
             ProgressWhite.setProgressCharacterToWhite();
             ProgressWhite.initializeTeamColors();
         } else {
-            console.log('⏳ ProgressWhite: Waiting for lottie-players to be ready...');
             setTimeout(checkAndSet, 500);
         }
     };
@@ -565,12 +983,80 @@ ProgressWhite.waitForLottieAndSetWhite = function() {
 
 // Auto-run when DOM is ready with smart detection
 ProgressWhite.autoInit = function() {
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => ProgressWhite.initialize(), 100);
-        });
-    } else {
-        setTimeout(() => ProgressWhite.initialize(), 100);
+    // DISABLED: Let main-page.js handle initialization to prevent conflicts
+    return;
+};
+
+// Manual initialization that sets character to proper white
+ProgressWhite.initWhiteOnly = function() {
+    const progressCharacter = document.getElementById('progressCharacter');
+    if (progressCharacter) {
+        // Force load white animation
+        progressCharacter.src = 'assets/animations/among_us_idle.json';
+        progressCharacter.load('assets/animations/among_us_idle.json');
+    }
+};
+
+// Global function to apply any color to any character by ID
+ProgressWhite.applyCharacterColor = async function(characterId, color) {
+    const characterElement = document.getElementById(characterId);
+    
+    if (!characterElement) {
+        console.warn(`❌ Character element '${characterId}' not found`);
+        return false;
+    }
+    
+    // Check if lottie-player is ready
+    if (!characterElement.load) {
+        setTimeout(() => ProgressWhite.applyCharacterColor(characterId, color), 200);
+        return false;
+    }
+    
+    // Always use the original animation source, not the current src which might be a blob URL
+    const originalSrc = 'assets/animations/among_us_idle.json';
+    
+    try {
+        if (color === 'white') {
+            const animationData = await ProgressWhite.loadAnimationData(originalSrc);
+            if (!animationData) {
+                console.error('❌ Failed to load animation data for white color');
+                return false;
+            }
+            
+            // Apply white colors to animation using the new string replacement method
+            const modifiedData = await ProgressWhite.applyColorsToAnimation(animationData, ProgressWhite.getWhiteTeamColors());
+            
+            // Create a data URL from the modified JSON
+            const dataUrl = 'data:application/json;base64,' + btoa(JSON.stringify(modifiedData));
+            
+            // Update the character with new colors
+            characterElement.load(dataUrl);
+
+            return true;
+            
+        } else if (ProgressWhite.teamColors[color]) {
+            // For team colors, use the existing team color system
+            const result = await ProgressWhite.applyTeamColor(characterElement, color);
+            return result;
+        } else {
+            console.warn(`❌ ProgressWhite: Unknown color ${color} for character ${characterId}`);
+            return false;
+        }
+    } catch (error) {
+        console.error(`❌ ProgressWhite: Error applying ${color} to ${characterId}:`, error);
+        
+        // Fallback: direct load() method
+        try {
+            if (characterElement.load) {
+                characterElement.load('assets/animations/among_us_idle.json');
+            } else {
+                characterElement.src = 'assets/animations/among_us_idle.json';
+            }
+            return true;
+        } catch (fallbackError) {
+            console.error('❌ Fallback also failed:', fallbackError);
+            return false;
+        }
     }
 };
 
@@ -581,383 +1067,9 @@ window.resetProgressToWhite = ProgressWhite.resetProgressToWhite;
 window.waitForLottieAndSetWhite = ProgressWhite.waitForLottieAndSetWhite;
 window.applyCharacterColor = ProgressWhite.applyCharacterColor;
 window.teamAnimationSystem = ProgressWhite.teamAnimationSystem;
+window.initializeTeamColors = ProgressWhite.initializeTeamColors;
 
 // Export functions for use in other scripts
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        setProgressCharacterToWhite: ProgressWhite.setProgressCharacterToWhite,
-        setTeamCharacterToWhite: ProgressWhite.setTeamCharacterToWhite,
-        resetProgressToWhite: ProgressWhite.resetProgressToWhite,
-        initialize: ProgressWhite.initialize,
-        waitForLottieAndSetWhite: ProgressWhite.waitForLottieAndSetWhite,
-        initializeTeamColors: ProgressWhite.initializeTeamColors,
-        applyTeamColor: ProgressWhite.applyTeamColor,
-        applyProgressTeamColor: ProgressWhite.applyProgressTeamColor,
-        applyRunAnimationColor: ProgressWhite.applyRunAnimationColor,
-        applyCharacterColor: ProgressWhite.applyCharacterColor,
-        teamAnimationSystem: ProgressWhite.teamAnimationSystem
-    };
-}
-
-// Auto-initialize when script is loaded
-if (typeof window !== 'undefined') {
-    ProgressWhite.autoInit();
+    module.exports = ProgressWhite;
 } 
-
-// Global function to apply color to any character by ID
-ProgressWhite.applyCharacterColor = async function(characterId, color) {
-    const characterElement = document.getElementById(characterId);
-    
-    if (!characterElement) {
-        console.error(`❌ ProgressWhite: Character element ${characterId} not found!`);
-        return false;
-    }
-    
-    // Check if lottie-player is ready
-    if (!characterElement.load) {
-        setTimeout(() => ProgressWhite.applyCharacterColor(characterId, color), 200);
-        return false;
-    }
-    
-    try {
-        if (color === 'white') {
-            return await ProgressWhite.setCharacterToWhite(characterElement);
-        } else if (ProgressWhite.teamColors[color]) {
-            return await ProgressWhite.applyTeamColor(characterElement, color);
-        } else {
-            console.warn(`❌ ProgressWhite: Unknown color ${color} for character ${characterId}`);
-            return false;
-        }
-    } catch (error) {
-        console.error(`❌ ProgressWhite: Error applying ${color} to ${characterId}:`, error);
-        return false;
-    }
-};
-
-// Random animation system for team characters
-ProgressWhite.teamAnimationSystem = {
-    animations: [
-        'among_us_eating_chocolate.json',
-        'among_us_nods_with_headphones.json',
-        'among_us_wipes_off_sweat.json'
-    ],
-    
-    idleAnimation: 'among_us_idle.json',
-    
-    // Animation intervals for each team (30-60 seconds)
-    intervals: {},
-    
-    // Current animation states
-    animationStates: {},
-    
-    // Team color mapping for animation system
-    teamColorMap: {
-        1: 'red',
-        2: 'blue',
-        3: 'lime',
-        4: 'orange',
-        5: 'pink',
-        6: 'yellow'
-    },
-    
-    // Start random animation system for all team characters
-    start: function() {
-        // Initialize animation states
-        for (let teamId = 1; teamId <= 6; teamId++) {
-            this.animationStates[teamId] = {
-                isPlaying: false,
-                currentAnimation: this.idleAnimation,
-            };
-        }
-        
-        // Start animation cycles for each team
-        for (let teamId = 1; teamId <= 6; teamId++) {
-            this.startTeamAnimationCycle(teamId);
-        }
-        
-    },
-    
-    // Get team color for a specific team ID
-    getTeamColor: function(teamId) {
-        const teamColorMap = {
-            1: 'red',     // Team A
-            2: 'blue',    // Team B
-            3: 'lime',    // Team C
-            4: 'orange',  // Team D
-            5: 'pink',    // Team E
-            6: 'yellow'   // Team F
-        };
-        return teamColorMap[teamId] || 'white';
-    },
-    
-    // Start animation cycle for a specific team
-    startTeamAnimationCycle: function(teamId) {
-        const characterId = `teamCharacter${teamId}`;
-        const characterElement = document.getElementById(characterId);
-        
-        if (!characterElement) {
-            console.warn(`⚠️ ProgressWhite: Team character ${characterId} not found`);
-            return;
-        }
-        
-        // Clear existing interval if any
-        if (this.intervals[teamId]) {
-            clearInterval(this.intervals[teamId]);
-        }
-        
-        // Set random interval between 30-60 seconds
-        const interval = Math.random() * 10000 + 1000; // 10-30 seconds
-        
-        this.intervals[teamId] = setInterval(() => {
-            this.playRandomAnimation(teamId);
-        }, interval);
-        
-    },
-    
-    // Play a random animation for a specific team
-    playRandomAnimation: function(teamId) {
-        const characterId = `teamCharacter${teamId}`;
-        const randomAnimation = this.animations[Math.floor(Math.random() * this.animations.length)];
-        const animationSrc = `assets/animations/${randomAnimation}`;
-        const teamColor = this.teamColorMap[teamId];
-        const characterElement = document.getElementById(characterId);
-        if (!characterElement) return;
-        characterElement.src = animationSrc;
-        characterElement.load(animationSrc);
-        characterElement.addEventListener('load', async () => {
-            await ProgressWhite.applyCharacterColor(characterId, teamColor);
-            // Return to idle after 3 seconds
-            setTimeout(() => {
-                characterElement.src = `assets/animations/${this.idleAnimation}`;
-                characterElement.load(`assets/animations/${this.idleAnimation}`);
-                characterElement.addEventListener('load', async () => {
-                    await ProgressWhite.applyCharacterColor(characterId, teamColor);
-                }, { once: true });
-            }, 3000);
-        }, { once: true });
-    },
-    
-    // Stop animation system
-    stop: function() {
-        console.log('🛑 ProgressWhite: Stopping team character animation system...');
-        
-        // Clear all intervals
-        Object.keys(this.intervals).forEach(teamId => {
-            if (this.intervals[teamId]) {
-                clearInterval(this.intervals[teamId]);
-            }
-        });
-        
-        this.intervals = {};
-        this.animationStates = {};
-        
-        console.log('✅ ProgressWhite: Team character animation system stopped');
-    },
-    
-    // Pause animation system
-    pause: function() {
-        console.log('⏸️ ProgressWhite: Pausing team character animation system...');
-        
-        Object.keys(this.intervals).forEach(teamId => {
-            if (this.intervals[teamId]) {
-                clearInterval(this.intervals[teamId]);
-            }
-        });
-        
-        console.log('✅ ProgressWhite: Team character animation system paused');
-    },
-    
-    // Resume animation system
-    resume: function() {
-        console.log('▶️ ProgressWhite: Resuming team character animation system...');
-        
-        for (let teamId = 1; teamId <= 6; teamId++) {
-            this.startTeamAnimationCycle(teamId);
-        }
-        
-        console.log('✅ ProgressWhite: Team character animation system resumed');
-    }
-}; 
-
-// Main character animation system (using same logic as team characters)
-ProgressWhite.mainCharacterAnimation = {
-    // Play run animation for main character (simple version like team characters)
-    playRunAnimation: async function(direction = 'forward', targetPosition) {
-        const characterId = 'progressCharacter';
-        const characterElement = document.getElementById(characterId);
-        
-        if (!characterElement) {
-            console.error('❌ ProgressWhite: Main character not found');
-            return false;
-        }
-        
-        // Set direction (flip character) - FIX: Flip for forward, no flip for backward
-        const mainCharacter = document.querySelector('.main-character');
-        if (mainCharacter) {
-            const scaleX = direction === 'forward' ? -1 : 1; // FIX: Flip for forward
-            mainCharacter.style.transform = `scaleX(${scaleX}) translateY(var(--bounce-y, 0px))`;
-        }
-        
-        // FIX: Also apply transform directly to the lottie-player element
-        if (characterElement) {
-            const scaleX = direction === 'forward' ? -1 : 1; // FIX: Flip for forward
-            characterElement.style.transform = `scaleX(${scaleX})`;
-        }
-        
-        // Get current team color
-        const currentTeam = window.gameState?.get()?.currentTeam || 0;
-        let teamColor = 'white';
-        if (currentTeam > 0) {
-            const team = window.gameState?.get()?.teams?.[currentTeam];
-            if (team && team.color) {
-                teamColor = team.color;
-            }
-        }
-        
-        // NEW APPROACH: Modify JSON data before loading
-        const runSrc = 'assets/animations/among_us_run.json';
-        
-        try {
-            // Fetch the JSON file
-            const response = await fetch(runSrc);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch ${runSrc}: ${response.status}`);
-            }
-            const animationData = await response.json();
-            
-            // Apply color to the animation data
-            const coloredAnimationData = await ProgressWhite.applyColorsToAnimation(animationData, teamColor);
-            
-            // Create a blob URL for the modified animation
-            const blob = new Blob([JSON.stringify(coloredAnimationData)], { type: 'application/json' });
-            const blobUrl = URL.createObjectURL(blob);
-            
-            // Load the modified animation
-            characterElement.src = blobUrl;
-            characterElement.load(blobUrl);
-            characterElement.classList.add('running');
-            
-            // Clean up the blob URL after loading
-            characterElement.addEventListener('load', () => {
-                URL.revokeObjectURL(blobUrl);
-                
-                // Move character to target position
-                setTimeout(() => {
-                    const characterContainer = document.querySelector('.character-container-main');
-                    if (characterContainer) {
-                        characterContainer.style.left = `${targetPosition}%`;
-                    }
-                    
-                    // Switch to idle animation after movement
-                    setTimeout(() => {
-                        this.switchToIdle(characterId, teamColor, mainCharacter);
-                    }, 1200); // Wait for movement to complete
-                    
-                }, 100); // Small delay to ensure animation is playing
-                
-            }, { once: true });
-            
-        } catch (error) {
-            console.error('❌ ProgressWhite: Error modifying run animation:', error);
-            
-            // Fallback to original approach
-            characterElement.src = runSrc;
-            characterElement.load(runSrc);
-            characterElement.classList.add('running');
-            
-            // Apply color after loading as fallback
-            characterElement.addEventListener('load', async () => {
-                await ProgressWhite.applyCharacterColor(characterId, teamColor);
-                
-                // Move character to target position
-                setTimeout(() => {
-                    const characterContainer = document.querySelector('.character-container-main');
-                    if (characterContainer) {
-                        characterContainer.style.left = `${targetPosition}%`;
-                    }
-                    
-                    // Switch to idle animation after movement
-                    setTimeout(() => {
-                        this.switchToIdle(characterId, teamColor, mainCharacter);
-                    }, 1200); // Wait for movement to complete
-                    
-                }, 100); // Small delay to ensure animation is playing
-                
-            }, { once: true });
-        }
-        
-        return true;
-    },
-    
-    // Switch main character back to idle animation (simple version like team characters)
-    switchToIdle: async function(characterId, teamColor, mainCharacter) {
-        const characterElement = document.getElementById(characterId);
-        
-        if (!characterElement) {
-            console.error('❌ ProgressWhite: Main character not found for idle switch');
-            return false;
-        }
-        
-        // NEW APPROACH: Modify JSON data before loading
-        const idleSrc = 'assets/animations/among_us_idle.json';
-        
-        try {
-            // Fetch the JSON file
-            const response = await fetch(idleSrc);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch ${idleSrc}: ${response.status}`);
-            }
-            const animationData = await response.json();
-            
-            // Apply color to the animation data
-            const coloredAnimationData = await ProgressWhite.applyColorsToAnimation(animationData, teamColor);
-            
-            // Create a blob URL for the modified animation
-            const blob = new Blob([JSON.stringify(coloredAnimationData)], { type: 'application/json' });
-            const blobUrl = URL.createObjectURL(blob);
-            
-            // Load the modified animation
-            characterElement.src = blobUrl;
-            characterElement.load(blobUrl);
-            characterElement.classList.remove('running');
-            
-            // Clean up the blob URL after loading
-            characterElement.addEventListener('load', () => {
-                URL.revokeObjectURL(blobUrl);
-                
-                // Reset animation state - FIX: Reset transform on both elements
-                if (mainCharacter) {
-                    mainCharacter.style.transform = 'scaleX(1) translateY(0)';
-                }
-                if (characterElement) {
-                    characterElement.style.transform = 'scaleX(1)';
-                }
-                
-            }, { once: true });
-            
-        } catch (error) {
-            console.error('❌ ProgressWhite: Error modifying idle animation:', error);
-            
-            // Fallback to original approach
-            characterElement.src = idleSrc;
-            characterElement.load(idleSrc);
-            characterElement.classList.remove('running');
-            
-            // Apply color after loading as fallback
-            characterElement.addEventListener('load', async () => {
-                await ProgressWhite.applyCharacterColor(characterId, teamColor);
-                
-                // Reset animation state - FIX: Reset transform on both elements
-                if (mainCharacter) {
-                    mainCharacter.style.transform = 'scaleX(1) translateY(0)';
-                }
-                if (characterElement) {
-                    characterElement.style.transform = 'scaleX(1)';
-                }
-                
-            }, { once: true });
-        }
-        
-        return true;
-    }
-}; 
