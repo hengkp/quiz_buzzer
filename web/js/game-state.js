@@ -10,7 +10,8 @@ class GameState {
             currentQuestion: 1,
             currentTeam: 0,
             currentChallenge: 0,
-            attackedTeam: 0,
+            attackTeam: 0,
+            victimTeam: 0,
             isAnimating: false,
             timerValue: 15, // Default to 15 seconds
             timerRunning: false,
@@ -18,16 +19,16 @@ class GameState {
             
             // Question sets with titles and themes
             questionSets: {
-                1: { title: 'General Knowledge', theme: 'general', icon: '🌍' },
-                2: { title: 'Science & Technology', theme: 'science', icon: '🔬' },
-                3: { title: 'History & Geography', theme: 'history', icon: '📚' },
-                4: { title: 'Arts & Literature', theme: 'arts', icon: '🎨' },
-                5: { title: 'Sports & Entertainment', theme: 'sports', icon: '⚽' },
-                6: { title: 'Mathematics', theme: 'math', icon: '📐' },
-                7: { title: 'Current Events', theme: 'current', icon: '📰' },
-                8: { title: 'Mystery & Logic', theme: 'mystery', icon: '🔍' },
-                9: { title: 'Nature & Environment', theme: 'nature', icon: '🌿' },
-                10: { title: 'Final Challenge', theme: 'final', icon: '🏆' }
+                1: { title: 'General Knowledge', theme: 'general', icon: 'brainstorm' },
+                2: { title: 'Science & Technology', theme: 'science', icon: 'brainstorm' },
+                3: { title: 'History & Geography', theme: 'history', icon: 'brainstorm' },
+                4: { title: 'Arts & Literature', theme: 'arts', icon: 'brainstorm' },
+                5: { title: 'Sports & Entertainment', theme: 'sports', icon: 'brainstorm' },
+                6: { title: 'Mathematics', theme: 'math', icon: 'brainstorm' },
+                7: { title: 'Current Events', theme: 'current', icon: 'brainstorm' },
+                8: { title: 'Mystery & Logic', theme: 'mystery', icon: 'brainstorm' },
+                9: { title: 'Nature & Environment', theme: 'nature', icon: 'brainstorm' },
+                10: { title: 'Final Challenge', theme: 'final', icon: 'brainstorm' }
             },
             
             teams: {
@@ -117,10 +118,23 @@ class GameState {
     
     // Set up automatic UI updates when team data changes
     setupTeamUIUpdates() {
-        // Subscribe to team score changes
+        // Subscribe to team changes
         for (let teamId = 1; teamId <= 6; teamId++) {
+            // Subscribe to team score changes
             this.subscribe(`teams.${teamId}.score`, () => {
                 this.updateTeamDisplays();
+            });
+            
+            // Subscribe to team name changes
+            this.subscribe(`teams.${teamId}.name`, () => {
+                this.updateTeamDisplays();
+            });
+            
+            // Subscribe to team color changes
+            this.subscribe(`teams.${teamId}.color`, () => {
+                this.updateTeamDisplays();
+                // Also update team character colors
+                this.initializeTeamCharacters();
             });
             
             // Subscribe to action card changes
@@ -145,6 +159,21 @@ class GameState {
         this.subscribe('timerRunning', () => {
             this.updateTimerDisplay();
         });
+        
+        // Subscribe to question set changes
+        for (let setNumber = 1; setNumber <= 8; setNumber++) {
+            this.subscribe(`questionSets.${setNumber}.title`, () => {
+                this.updateQuestionSetDisplay();
+            });
+            
+            this.subscribe(`questionSets.${setNumber}.theme`, () => {
+                this.updateQuestionSetDisplay();
+            });
+            
+            this.subscribe(`questionSets.${setNumber}.icon`, () => {
+                this.updateQuestionSetDisplay();
+            });
+        }
         
     }
     
@@ -237,6 +266,17 @@ class GameState {
             this.restoreQ1TeamGraying(setNumber);
         } else {
             this.hideChanceDisplay();
+        }
+        
+        // Play run animation if character controller is available and we're on the main page
+        if (window.characterController && window.characterController.startRunAnimation && !window.location.pathname.includes('console')) {
+            // Determine direction based on movement
+            const currentPosition = this.getCurrentCharacterPosition();
+            const newPosition = this.getCharacterPosition(setNumber, questionNumber);
+            const direction = newPosition > currentPosition ? 'forward' : 'backward';
+            
+            // Start run animation
+            window.characterController.startRunAnimation(direction);
         }
         
         return true;
@@ -594,7 +634,10 @@ class GameState {
             const currentSetData = this.state.questionSets[this.state.currentSet];
             if (currentSetData) {
                 setElement.textContent = `${currentSetData.title}`;
-                subjectElement.textContent = `${currentSetData.icon}`;
+                // update the subject icon by loading the assets/themes and get filename from the icon
+                const themeFolder = `assets/themes/${currentSetData.theme}`;
+                const iconFile = `${themeFolder}/${currentSetData.icon}.png`;
+                subjectElement.src = iconFile;
             } else {
                 setElement.textContent = `Question Set ${this.state.currentSet}`;
                 subjectElement.textContent = `❓`;
@@ -671,10 +714,14 @@ class GameState {
             this.state.teams[teamId].score = 0;
         });
         
-        // Reset action cards
+        // Reset action cards (including permanent usage flags)
         Object.keys(this.state.actionCards).forEach(teamId => {
             this.update(`actionCards.${teamId}`, {
-                angel: false, devil: false, cross: false, challenge: false
+                angel: false, 
+                angelUsed: false, 
+                devil: false, 
+                devilUsed: false, 
+                cross: false
             });
         });
         
@@ -741,15 +788,15 @@ class GameState {
             const teamCrossElement = document.getElementById(`teamCross${teamId}`);
             
             if (teamAngelElement) {
-                teamAngelElement.classList.add('active');
+                teamAngelElement.classList.add('active'); // angel=false, angelUsed=false → active
                 teamAngelElement.classList.remove('used');
             }
             if (teamDevilElement) {
-                teamDevilElement.classList.add('active');
+                teamDevilElement.classList.add('active'); // devil=false, devilUsed=false → active
                 teamDevilElement.classList.remove('used');
             }
             if (teamCrossElement) {
-                teamCrossElement.classList.add('active');
+                teamCrossElement.classList.remove('active'); // cross=false → inactive
                 teamCrossElement.classList.remove('used');
             }
         }
@@ -762,6 +809,9 @@ class GameState {
         if (mainCharacterAngel) mainCharacterAngel.classList.remove('active');
         if (mainCharacterDevil) mainCharacterDevil.classList.remove('active');
         if (mainCharacterCross) mainCharacterCross.classList.remove('active');
+        
+        // Update team displays to ensure consistency
+        this.updateTeamDisplays();
         
         this.save(this.state);
     }

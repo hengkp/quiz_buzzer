@@ -594,30 +594,20 @@ def handle_reset(data=None):
 @socketio.on('simulate_buzzer')
 def handle_simulate_buzzer(data):
     """Handle buzzer simulation for teams 1-6"""
-    team = data.get('team', 1)
+    team_id = data.get('teamId', data.get('team', 1))
     
-    if arduino.is_connected:
-        # If Arduino is connected, simulate by sending winner message
-        if game_state['winner'] is None:
-            game_state['winner'] = team
-            message = f'WINNER:{team}'
-            socketio.emit('buzzer_data', message)
-            logger.info(f'Simulated Team {team} wins!')
-            socketio.emit('log', {'message': f'Simulated Team {team} wins!'})
-        else:
-            logger.info(f'Simulated Team {team} buzzed (too late)')
-            socketio.emit('log', {'message': f'Simulated Team {team} buzzed (too late)'})
-    else:
-        # Pure simulation mode
-        if game_state['winner'] is None:
-            game_state['winner'] = team
-            message = f'WINNER:{team}'
-            socketio.emit('buzzer_data', message)
-            logger.info(f'Team {team} wins!')
-            socketio.emit('log', {'message': f'Team {team} wins!'})
-        else:
-            logger.info(f'Team {team} buzzed (too late)')
-            socketio.emit('log', {'message': f'Team {team} buzzed (too late)'})
+    # Reset winner if it's been cleared
+    if game_state['winner'] is not None:
+        game_state['winner'] = None
+    
+    # Set new winner
+    game_state['winner'] = team_id
+    
+    # Broadcast to all clients
+    socketio.emit('buzzer_pressed', {'teamId': team_id})
+    add_log(f"Team {team_id} simulated buzz-in")
+    
+    logger.info(f"✅ Simulated Team {team_id} buzzed in successfully")
 
 @socketio.on('admin_reset')
 def handle_admin_reset():
@@ -999,13 +989,18 @@ def handle_buzzer_pressed(data):
     """Handle buzzer press from Arduino or simulation"""
     team_id = data.get('teamId')
     
-    if game_state['winner'] is None:
-        game_state['winner'] = team_id
-        
-        socketio.emit('buzzer_pressed', {'teamId': team_id})
-        add_log(f"Team {team_id} win the buzz")
-    else:
-        add_log(f"Team {team_id} buzzed (too late)")
+    # Reset winner if it's been cleared
+    if game_state['winner'] is not None:
+        game_state['winner'] = None
+    
+    # Set new winner
+    game_state['winner'] = team_id
+    
+    # Broadcast to all clients
+    socketio.emit('buzzer_pressed', {'teamId': team_id})
+    add_log(f"Team {team_id} buzzed in!")
+    
+    logger.info(f"✅ Team {team_id} buzzed in successfully")
 
 @socketio.on('progress_update')
 def handle_progress_update(data):
@@ -1038,31 +1033,234 @@ def handle_progress_update(data):
 
 @socketio.on('character_update')
 def handle_character_update(data):
-    """Handle character color updates"""
+    """Handle character position and animation updates"""
+    set_number = data.get('setNumber')
+    question_number = data.get('questionNumber')
+    animate_run = data.get('animateRun', False)
     team_id = data.get('teamId')
     color = data.get('color')
     
-    if team_id in game_state['teams']:
-        game_state['teams'][team_id]['color'] = color
-        
-        # Broadcast to all clients
+    # Handle character position updates (from console navigation)
+    if set_number is not None and question_number is not None:
+        # Broadcast to all clients for character movement
         socketio.emit('character_update', {
-            'teamId': team_id,
-            'color': color
+            'setNumber': set_number,
+            'questionNumber': question_number,
+            'animateRun': animate_run
         })
+        add_log(f"Character update: Set {set_number}, Question {question_number}")
+        logger.info(f"✅ Character update broadcast: Set {set_number}, Question {question_number}")
+    
+    # Handle character color updates (from team selection)
+    elif team_id is not None and color is not None:
+        if team_id in game_state['teams']:
+            game_state['teams'][team_id]['color'] = color
+            
+            # Broadcast to all clients
+            socketio.emit('character_update', {
+                'teamId': team_id,
+                'color': color
+            })
 
 @socketio.on('test_buzzer')
 def handle_test_buzzer(data):
     """Handle test buzzer press from keyboard shortcuts"""
     team_id = data.get('teamId')
     
-    if game_state['winner'] is None:
-        game_state['winner'] = team_id
+    # Reset winner if it's been cleared
+    if game_state['winner'] is not None:
+        game_state['winner'] = None
+    
+    # Set new winner
+    game_state['winner'] = team_id
+    
+    # Broadcast to all clients
+    socketio.emit('buzzer_pressed', {'teamId': team_id})
+    add_log(f"Team {team_id} test buzz-in")
+    
+    logger.info(f"✅ Test Team {team_id} buzzed in successfully")
+
+@socketio.on('scoring_action')
+def handle_scoring_action(data):
+    """Handle scoring actions from console that should trigger animations on main page"""
+    team_id = data.get('teamId')
+    is_positive = data.get('isPositive', True)
+    action = data.get('action', 'correct')
+    
+    # Broadcast to all clients to trigger animations
+    socketio.emit('scoring_action', {
+        'teamId': team_id,
+        'isPositive': is_positive,
+        'action': action
+    })
+    
+    add_log(f"Scoring action: Team {team_id} {action}")
+    logger.info(f"✅ Scoring action broadcast: Team {team_id} {action}")
+
+@socketio.on('angel_card_action')
+def handle_angel_card_action(data):
+    """Handle angel card actions from console"""
+    team_id = data.get('teamId')
+    action = data.get('action', 'toggle')
+    
+    # Broadcast to all clients
+    socketio.emit('angel_card_action', {
+        'teamId': team_id,
+        'action': action
+    })
+    
+    add_log(f"Angel card action: Team {team_id} {action}")
+    logger.info(f"✅ Angel card action broadcast: Team {team_id} {action}")
+
+@socketio.on('devil_card_action')
+def handle_devil_card_action(data):
+    """Handle devil card actions from console"""
+    team_id = data.get('teamId')
+    action = data.get('action', 'toggle')
+    
+    # Broadcast to all clients
+    socketio.emit('devil_card_action', {
+        'teamId': team_id,
+        'action': action
+    })
+    
+    add_log(f"Devil card action: Team {team_id} {action}")
+    logger.info(f"✅ Devil card action broadcast: Team {team_id} {action}")
+
+@socketio.on('challenge_mode_action')
+def handle_challenge_mode_action(data):
+    """Handle challenge mode actions from console"""
+    enabled = data.get('enabled', False)
+    team_id = data.get('teamId')
+    action = data.get('action', 'toggle')
+    
+    # Broadcast to all clients
+    socketio.emit('challenge_mode_action', {
+        'enabled': enabled,
+        'teamId': team_id,
+        'action': action
+    })
+    
+    add_log(f"Challenge mode action: Team {team_id} {action} (enabled: {enabled})")
+    logger.info(f"✅ Challenge mode action broadcast: Team {team_id} {action}")
+
+@socketio.on('navigation_action')
+def handle_navigation_action(data):
+    """Handle navigation actions from console"""
+    direction = data.get('direction', 'next')
+    from_set = data.get('fromSet', 1)
+    from_question = data.get('fromQuestion', 1)
+    to_set = data.get('toSet', 1)
+    to_question = data.get('toQuestion', 1)
+    
+    # Broadcast to all clients
+    socketio.emit('navigation_action', {
+        'direction': direction,
+        'fromSet': from_set,
+        'fromQuestion': from_question,
+        'toSet': to_set,
+        'toQuestion': to_question
+    })
+    
+    add_log(f"Navigation action: {direction} from Set {from_set} Q{from_question} to Set {to_set} Q{to_question}")
+    logger.info(f"✅ Navigation action broadcast: {direction}")
+
+@socketio.on('buzzer_reset_action')
+def handle_buzzer_reset_action(data):
+    """Handle buzzer reset actions from console"""
+    action = data.get('action', 'clear_all')
+    reason = data.get('reason', 'manual_reset')
+    
+    # Broadcast to all clients
+    socketio.emit('buzzer_reset_action', {
+        'action': action,
+        'reason': reason
+    })
+    
+    add_log(f"Buzzer reset action: {action} ({reason})")
+    logger.info(f"✅ Buzzer reset action broadcast: {action}")
+
+# Simplified console-to-main page communication events
+@socketio.on('angel_card_toggle')
+def handle_angel_card_toggle(data):
+    """Handle angel card toggle from console"""
+    team_id = data.get('teamId')
+    socketio.emit('angel_card_toggle', {'teamId': team_id})
+    add_log(f"Angel card toggle: Team {team_id}")
+    logger.info(f"✅ Angel card toggle broadcast: Team {team_id}")
+
+@socketio.on('devil_card_toggle')
+def handle_devil_card_toggle(data):
+    """Handle devil card toggle from console"""
+    team_id = data.get('teamId')
+    socketio.emit('devil_card_toggle', {'teamId': team_id})
+    add_log(f"Devil card toggle: Team {team_id}")
+    logger.info(f"✅ Devil card toggle broadcast: Team {team_id}")
+
+@socketio.on('challenge_mode_toggle')
+def handle_challenge_mode_toggle(data):
+    """Handle challenge mode toggle from console"""
+    team_id = data.get('teamId')
+    socketio.emit('challenge_mode_toggle', {'teamId': team_id})
+    add_log(f"Challenge mode toggle: Team {team_id}")
+    logger.info(f"✅ Challenge mode toggle broadcast: Team {team_id}")
+
+@socketio.on('navigation_previous')
+def handle_navigation_previous():
+    """Handle navigation previous from console"""
+    socketio.emit('navigation_previous')
+    add_log("Navigation: Previous question")
+    logger.info("✅ Navigation previous broadcast")
+
+@socketio.on('navigation_next')
+def handle_navigation_next():
+    """Handle navigation next from console"""
+    socketio.emit('navigation_next')
+    add_log("Navigation: Next question")
+    logger.info("✅ Navigation next broadcast")
+
+@socketio.on('scoring_correct')
+def handle_scoring_correct(data):
+    """Handle scoring correct from console"""
+    team_id = data.get('teamId')
+    socketio.emit('scoring_correct', {'teamId': team_id})
+    add_log(f"Scoring correct: Team {team_id}")
+    logger.info(f"✅ Scoring correct broadcast: Team {team_id}")
+
+@socketio.on('scoring_incorrect')
+def handle_scoring_incorrect(data):
+    """Handle scoring incorrect from console"""
+    team_id = data.get('teamId')
+    socketio.emit('scoring_incorrect', {'teamId': team_id})
+    add_log(f"Scoring incorrect: Team {team_id}")
+    logger.info(f"✅ Scoring incorrect broadcast: Team {team_id}")
+
+@socketio.on('game_state_update')
+def handle_game_state_update(data):
+    """Handle game state updates from console"""
+    path = data.get('path')
+    value = data.get('value')
+    
+    if path and value is not None:
+        # Update game state
+        keys = path.split('.')
+        current = game_state
         
-        socketio.emit('buzzer_pressed', {'teamId': team_id})
-        add_log(f"Team {team_id} test buzz-in")
-    else:
-        add_log(f"Team {team_id} test buzzed (too late)")
+        for key in keys[:-1]:
+            if key not in current:
+                current[key] = {}
+            current = current[key]
+        
+        current[keys[-1]] = value
+        
+        # Broadcast to all clients
+        socketio.emit('game_state_update', {
+            'path': path,
+            'value': value
+        })
+        
+        add_log(f"Game state updated: {path} = {value}")
+        logger.info(f"✅ Game state update broadcast: {path} = {value}")
 
 def add_log(message, type='info'):
     """Add entry to game logs"""

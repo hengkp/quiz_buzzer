@@ -530,22 +530,26 @@
 
     .question-block-number {
         position: absolute;
-        top: 35%;
-        left: 25%;
-        transform: translate(-50%, -50%);
-        font-size: 3rem;
+        top: 30%;
+        right: 75%;
+        font-size: 5rem;
         font-weight: 700;
         color: #f0b3ff;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        text-align: center;
+        text-align: right;
         line-height: 1;
         z-index: 100;
+        min-width: 4.5em; /* Ensures enough width for two digits to align right */
+        letter-spacing: 0.05em;
     }
 
     .question-block-star {
         position: absolute;
-        width: 120% !important;
-        height: 120% !important;
+        width: 150% !important;
+        height: 150% !important;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
         z-index: 10 !important;
     }
 

@@ -19,6 +19,12 @@ class CharacterController {
             return true;
         }
         
+        // Skip initialization on console page
+        if (window.location.pathname.includes('console')) {
+            console.log('⏭️ Skipping character controller on console page');
+            return false;
+        }
+        
         this.character = document.querySelector('.character-container-main');
         this.characterPlayer = document.getElementById('progressCharacter');
         
@@ -69,8 +75,20 @@ class CharacterController {
     
     // Move character to specific question
     moveToQuestion(setNumber, questionNumber) {
+        console.log('🎯 CharacterController: moveToQuestion called with:', { setNumber, questionNumber });
+        
+        // Check if character player is available
+        if (!this.characterPlayer) {
+            console.error('❌ CharacterController: Character player not available');
+            console.log('🎯 CharacterController: Current page:', window.location.pathname);
+            console.log('🎯 CharacterController: Character element:', this.character);
+            console.log('🎯 CharacterController: Character player element:', this.characterPlayer);
+            return false;
+        }
+        
         // Check if we're already animating
         if (this.isAnimating) {
+            console.log('⚠️ CharacterController: Already animating, skipping');
             return false;
         }
         
@@ -78,21 +96,37 @@ class CharacterController {
         const targetPosition = this.calculateCharacterPosition(setNumber, questionNumber);
         
         // FIX: Calculate direction based on question numbers, not current position
-        // Get current question from game state BEFORE updating it
+        // Get current question and set from game state BEFORE updating it
         let currentQuestion = 1;
+        let currentSet = 1;
         if (window.gameState) {
             const state = window.gameState.get();
             currentQuestion = state.currentQuestion;
+            currentSet = state.currentSet;
         }
         
-        // Check if we're already at the target question
-        if (currentQuestion === questionNumber) {
+        // Check if we're already at the target question AND set
+        if (currentQuestion === questionNumber && currentSet === setNumber) {
+            console.log('⚠️ CharacterController: Already at target position, skipping');
             return false;
         }
         
-        // Determine direction based on question progression
-        const isForward = questionNumber > currentQuestion;
+        // Determine direction based on set and question progression
+        let isForward = false;
+        
+        if (setNumber > currentSet) {
+            // Moving to a higher set (forward)
+            isForward = true;
+        } else if (setNumber < currentSet) {
+            // Moving to a lower set (backward)
+            isForward = false;
+        } else {
+            // Same set, check question number
+            isForward = questionNumber > currentQuestion;
+        }
+        
         const direction = isForward ? 'forward' : 'backward';
+        console.log('🎯 CharacterController: Direction calculated:', direction);
         
         // Set animation flags BEFORE updating game state to prevent position updates
         this.isAnimating = true;
@@ -114,7 +148,9 @@ class CharacterController {
         }
         
         // 3. Use the main character animation for movement
+        console.log('🎯 CharacterController: About to call ProgressWhite.mainCharacterAnimation.playRunAnimation');
         if (window.ProgressWhite?.mainCharacterAnimation) {
+            console.log('🎯 CharacterController: ProgressWhite.mainCharacterAnimation found, calling playRunAnimation');
             window.ProgressWhite.mainCharacterAnimation.playRunAnimation(direction, targetPosition)
                 .then(() => {
                     // Animation completed

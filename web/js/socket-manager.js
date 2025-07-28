@@ -30,7 +30,9 @@ class SocketManager {
         this.socket.on('connect', () => {
             this.isConnected = true;
             this.reconnectAttempts = 0;
-            console.log('🔗 Connected');
+            console.log('🔗 Connected to server');
+            console.log('🔗 Current page:', window.location.pathname);
+            console.log('🔗 Socket ID:', this.socket.id);
         });
         
         this.socket.on('disconnect', () => {
@@ -47,11 +49,40 @@ class SocketManager {
         
         // Game state synchronization
         this.socket.on('progress_update', (data) => {
+            console.log('🔄 SocketManager: progress_update received:', data);
+            console.log('🔄 SocketManager: Current page:', window.location.pathname);
+            console.log('🔄 SocketManager: Socket ID:', this.socket.id);
+            
             if (data.setNumber && data.questionNumber) {
-                window.gameState?.moveToQuestion(data.setNumber, data.questionNumber);
+                const isMainPage = !window.location.pathname.includes('console');
+                
+                if (isMainPage) {
+                    // Main page: Handle character animation
+                    console.log('🎯 SocketManager: Main page - handling character animation');
+                    const hasCharacterController = !!window.characterController;
+                    const shouldAnimate = !!data.animateRun;
+                    
+                    console.log('🔄 SocketManager: Character controller available:', hasCharacterController);
+                    console.log('🔄 SocketManager: Animate run:', shouldAnimate);
+                    
+                    if (hasCharacterController && shouldAnimate) {
+                        console.log('🎯 SocketManager: Using character controller for animation');
+                        window.characterController.moveToQuestion(data.setNumber, data.questionNumber);
+                    } else {
+                        console.log('⚠️ SocketManager: Fallback to direct game state update');
+                        window.gameState?.moveToQuestion(data.setNumber, data.questionNumber);
+                    }
+                } else {
+                    // Console page: Only update local game state, no animation needed
+                    console.log('🎮 SocketManager: Console page - updating local game state only');
+                    window.gameState?.moveToQuestion(data.setNumber, data.questionNumber);
+                }
+                
                 this.emit('local:progress_update', data);
             }
         });
+
+
         
         this.socket.on('timer_update', (data) => {
             window.gameState?.set('timerValue', data.value);
@@ -234,6 +265,107 @@ class SocketManager {
                 console.log('🔄 Game state synchronized from server');
             }
             this.emit('local:game_state_sync', data);
+        });
+
+        // New event handlers for console-to-main page communication
+        this.socket.on('scoring_action', (data) => {
+            console.log('🎯 Scoring action received from console:', data);
+            if (window.hotkeysManager) {
+                window.hotkeysManager.handleScoring(data.isPositive);
+            }
+        });
+
+        this.socket.on('angel_card_action', (data) => {
+            console.log('👼 Angel card action received from console:', data);
+            if (window.hotkeysManager) {
+                window.hotkeysManager.handleAngelCard();
+            }
+        });
+
+        this.socket.on('devil_card_action', (data) => {
+            console.log('👿 Devil card action received from console:', data);
+            if (window.hotkeysManager) {
+                window.hotkeysManager.handleDevilCard();
+            }
+        });
+
+        this.socket.on('challenge_mode_action', (data) => {
+            console.log('🎯 Challenge mode action received from console:', data);
+            if (window.hotkeysManager) {
+                window.hotkeysManager.handleChallengeMode();
+            }
+        });
+
+        this.socket.on('navigation_action', (data) => {
+            console.log('🧭 Navigation action received from console:', data);
+            if (window.hotkeysManager) {
+                window.hotkeysManager.handleNavigation(data.direction);
+            }
+        });
+
+        this.socket.on('buzzer_reset_action', (data) => {
+            console.log('🔄 Buzzer reset action received from console:', data);
+            if (window.hotkeysManager) {
+                window.hotkeysManager.handleResetBuzzers();
+            }
+        });
+
+        // Simplified console-to-main page communication events
+        this.socket.on('angel_card_toggle', (data) => {
+            console.log('👼 Angel card toggle received from console:', data);
+            if (window.hotkeysManager) {
+                window.hotkeysManager.handleAngelCard();
+            }
+        });
+
+        this.socket.on('devil_card_toggle', (data) => {
+            console.log('👿 Devil card toggle received from console:', data);
+            if (window.hotkeysManager) {
+                window.hotkeysManager.handleDevilCard();
+            }
+        });
+
+        this.socket.on('challenge_mode_toggle', (data) => {
+            console.log('🎯 Challenge mode toggle received from console:', data);
+            if (window.hotkeysManager) {
+                window.hotkeysManager.handleChallengeMode();
+            }
+        });
+
+        this.socket.on('navigation_previous', (data) => {
+            console.log('⬅️ Navigation previous received from console:', data);
+            if (window.hotkeysManager) {
+                window.hotkeysManager.handleNavigation('previous');
+            }
+        });
+
+        this.socket.on('navigation_next', (data) => {
+            console.log('➡️ Navigation next received from console:', data);
+            if (window.hotkeysManager) {
+                window.hotkeysManager.handleNavigation('next');
+            }
+        });
+
+        this.socket.on('scoring_correct', (data) => {
+            console.log('✅ Scoring correct received from console:', data);
+            if (window.hotkeysManager) {
+                window.hotkeysManager.handleScoring(true);
+            }
+        });
+
+        this.socket.on('scoring_incorrect', (data) => {
+            console.log('❌ Scoring incorrect received from console:', data);
+            if (window.hotkeysManager) {
+                window.hotkeysManager.handleScoring(false);
+            }
+        });
+        
+        // Game state update listener
+        this.socket.on('game_state_update', (data) => {
+            console.log('✅ Game state update received:', data);
+            if (window.gameState && data.path && data.value !== undefined) {
+                window.gameState.update(data.path, data.value);
+            }
         });
     }
     

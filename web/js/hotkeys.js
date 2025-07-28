@@ -246,9 +246,10 @@ class HotkeysManager {
         const currentQuestion = state.currentQuestion || 1;
         const isChallenge = state.currentChallenge === teamId;
         const hasAngel = state.actionCards[teamId].angel;
-        const isVictimWithCross = state.actionCards[teamId].cross && state.attackedTeam === teamId;
+        const isVictimTeam = state.victimTeam === teamId;
+        const attackTeam = state.attackTeam;
         
-        console.log(`🎯 Scoring Debug - Team: ${teamId}, Q: ${currentQuestion}, Angel: ${hasAngel}, Challenge: ${isChallenge}, Victim: ${isVictimWithCross}`);
+        console.log(`🎯 Scoring Debug - Team: ${teamId}, Q: ${currentQuestion}, Angel: ${hasAngel}, Challenge: ${isChallenge}, Victim: ${isVictimTeam}, AttackTeam: ${attackTeam}`);
         
         // Show answer animation first (correct/incorrect)
         console.log(`🎬 About to call showAnswerAnimation with isPositive: ${isPositive}`);
@@ -256,6 +257,18 @@ class HotkeysManager {
         
         // Handle positive scoring (arrow up)
         if (isPositive) {
+            // Check if this is a victim team answering correctly
+            if (isVictimTeam && attackTeam) {
+                console.log(`🎯 Victim team ${teamId} answered correctly - resetting attack tracking`);
+                
+                // Reset attack tracking parameters immediately
+                if (window.gameState) {
+                    window.gameState.set('attackTeam', 0);
+                    window.gameState.set('victimTeam', 0);
+                    console.log('✅ Attack tracking parameters reset (victim answered correctly)');
+                }
+            }
+            
             let scoreChange = 0;
             
             if (isChallenge) {
@@ -272,11 +285,6 @@ class HotkeysManager {
                 const newScore = Math.max(0, team.score + scoreChange);
                 if (window.gameState) {
                     window.gameState.update(`teams.${teamId}.score`, newScore);
-                }
-                
-                // Remove cross protection if this was a devil attack victim who answered correctly
-                if (isVictimWithCross) {
-                    this.removeCrossProtection(teamId);
                 }
                 
                 // Show coin animation after score update
@@ -298,15 +306,19 @@ class HotkeysManager {
         
         // Handle negative scoring (arrow down)
         if (!isPositive) {
+            // Check if this is a victim team answering incorrectly
+            if (isVictimTeam && attackTeam) {
+                console.log(`🎯 Victim team ${teamId} answered incorrectly - handling devil attack consequences`);
+                this.handleDevilAttackVictim(teamId, attackTeam);
+                return;
+            }
+            
             // Q1 Logic
             if (currentQuestion === 1) {
                 // Q1: Challenge cannot apply, only angel protection
                 if (hasAngel) {
                     // Angel protection: no penalty, animate shield
                     this.handleAngelProtection(teamId);
-                } else if (isVictimWithCross) {
-                    // Devil attack victim: attacker gets +2, victim gets -1
-                    this.handleDevilAttackVictim(teamId);
                 } else {
                     // Normal Q1 incorrect: -1 penalty
                     this.handleNormalQ1Incorrect(teamId);
@@ -328,6 +340,9 @@ class HotkeysManager {
                 }
             }
         }
+
+        // DO NOT reset devilUsed for attacking team - it should remain permanently used
+        // The devil card should stay used until game reset
     }
     
     // Helper functions for different scoring scenarios
@@ -368,31 +383,29 @@ class HotkeysManager {
     }
     
     // Handle devil attack victim (attacker gets +2, victim gets -1)
-    handleDevilAttackVictim(teamId) {
+    handleDevilAttackVictim(victimTeamId, attackTeamId) {
         const state = window.gameState?.get();
         if (!state) return;
         
-        // Find the attacking team
-        let attackingTeamId = null;
-        for (let id = 1; id <= 6; id++) {
-            if (state.actionCards[id].devilUsed && id !== teamId) {
-                attackingTeamId = id;
-                break;
-            }
-        }
+        console.log(`🎯 Handling devil attack consequences: Victim ${victimTeamId}, Attacker ${attackTeamId}`);
         
         // Delay score updates until after answer animation (3 seconds)
         setTimeout(() => {
-            if (attackingTeamId) {
+            if (attackTeamId) {
                 // Give +2 points to the attacking team
-                const attackerNewScore = (state.teams[attackingTeamId].score || 0) + 2;
+                const attackerNewScore = (state.teams[attackTeamId].score || 0) + 2;
                 if (window.gameState) {
-                    window.gameState.update(`teams.${attackingTeamId}.score`, attackerNewScore);
+                    window.gameState.update(`teams.${attackTeamId}.score`, attackerNewScore);
+                    console.log(`✅ Attacker Team ${attackTeamId} gets +2 points (new score: ${attackerNewScore})`);
                 }
             }
             
-            // Remove cross protection from victim team
-            this.removeCrossProtection(teamId);
+            // Apply -1 penalty to victim team
+            const victimNewScore = Math.max(0, (state.teams[victimTeamId].score || 0) - 1);
+            if (window.gameState) {
+                window.gameState.update(`teams.${victimTeamId}.score`, victimNewScore);
+                console.log(`✅ Victim Team ${victimTeamId} gets -1 penalty (new score: ${victimNewScore})`);
+            }
             
             // Show coin_minus animation after score update
             setTimeout(() => {
@@ -401,8 +414,29 @@ class HotkeysManager {
             
         }, 2500); // Wait for answer animation to complete
         
+        // Reset attack tracking parameters
+        if (window.gameState) {
+            window.gameState.set('attackTeam', 0);
+            window.gameState.set('victimTeam', 0);
+            console.log('✅ Attack tracking parameters reset');
+        }
+        
         // Trigger auto-navigation after coin animation (additional 2.5 seconds)
         setTimeout(() => {
+            // Ensure cross protection remains visible after victim answers
+            if (window.gameState) {
+                window.gameState.updateTeamDisplays();
+                console.log('✅ Team displays updated to maintain cross protection visibility');
+                
+                // Debug: Check cross protection status for all teams
+                const state = window.gameState.get();
+                for (let teamId = 1; teamId <= 6; teamId++) {
+                    const crossStatus = state.actionCards[teamId].cross;
+                    if (crossStatus) {
+                        console.log(`🛡️ Team ${teamId} cross protection is ACTIVE after victim answer`);
+                    }
+                }
+            }
             this.handleAutoNavigationAfterIncorrect();
         }, 2500); // 0.5s (score delay) + 2s (coin animation)
     }
@@ -429,6 +463,20 @@ class HotkeysManager {
         
         // Trigger auto-navigation after coin animation (additional 2.5 seconds)
         setTimeout(() => {
+            // Ensure cross protection remains visible after victim answers
+            if (window.gameState) {
+                window.gameState.updateTeamDisplays();
+                console.log('✅ Team displays updated to maintain cross protection visibility');
+                
+                // Debug: Check cross protection status for all teams
+                const state = window.gameState.get();
+                for (let teamId = 1; teamId <= 6; teamId++) {
+                    const crossStatus = state.actionCards[teamId].cross;
+                    if (crossStatus) {
+                        console.log(`🛡️ Team ${teamId} cross protection is ACTIVE after victim answer`);
+                    }
+                }
+            }
             this.handleAutoNavigationAfterIncorrect();
         }, 2500); // 0.5s (score delay) + 2s (coin animation)
     }
@@ -455,6 +503,20 @@ class HotkeysManager {
         
         // Trigger auto-navigation after coin animation (additional 2.5 seconds)
         setTimeout(() => {
+            // Ensure cross protection remains visible after victim answers
+            if (window.gameState) {
+                window.gameState.updateTeamDisplays();
+                console.log('✅ Team displays updated to maintain cross protection visibility');
+                
+                // Debug: Check cross protection status for all teams
+                const state = window.gameState.get();
+                for (let teamId = 1; teamId <= 6; teamId++) {
+                    const crossStatus = state.actionCards[teamId].cross;
+                    if (crossStatus) {
+                        console.log(`🛡️ Team ${teamId} cross protection is ACTIVE after victim answer`);
+                    }
+                }
+            }
             this.handleAutoNavigationAfterIncorrect();
         }, 2500); // 0.5s (score delay) + 2s (coin animation)
     }
@@ -485,10 +547,20 @@ class HotkeysManager {
             
             // Trigger auto-navigation after coin animation (additional 2.5 seconds)
             setTimeout(() => {
+                // Ensure cross protection remains visible after victim answers
+                if (window.gameState) {
+                    window.gameState.updateTeamDisplays();
+                    console.log('✅ Team displays updated to maintain cross protection visibility');
+                }
                 this.handleAutoNavigationAfterIncorrect();
             }, 2500); // 0.5s (score delay) + 2s (coin animation)
         } else {
             // Q2-Q4: No penalty, no animation
+            // Ensure cross protection remains visible after victim answers
+            if (window.gameState) {
+                window.gameState.updateTeamDisplays();
+                console.log('✅ Team displays updated to maintain cross protection visibility');
+            }
             // Just trigger auto-navigation immediately
             this.handleAutoNavigationAfterIncorrect();
         }
@@ -575,7 +647,7 @@ class HotkeysManager {
         if (chanceElement) {
             const remainingChances = 3 - attemptNumber;
             if (remainingChances > 0) {
-                chanceElement.textContent = remainingChances === 1 ? '(last chance)' : `(chance: ${remainingChances}/3)`;
+                chanceElement.textContent = remainingChances === 1 ? '(last chance)' : `(${remainingChances} chances left)`;
                 chanceElement.style.display = 'block';
             } else {
                 chanceElement.style.display = 'none';
@@ -821,8 +893,11 @@ class HotkeysManager {
         
         // Check if devil card has been permanently used
         if (state.actionCards[teamId].devilUsed) {
+            console.log(`🚫 Devil card for Team ${teamId} has been permanently used - cannot activate`);
             return;
         }
+        
+        console.log(`👿 Attempting to use devil card for Team ${teamId} (devilUsed: ${state.actionCards[teamId].devilUsed})`);
         
         const modal = document.getElementById('devilAttackModal');
         const isModalOpen = modal && modal.classList.contains('active');
@@ -1008,6 +1083,11 @@ class HotkeysManager {
             // Check if this team can be attacked
             const canAttack = this.canAttackTeam(attackingTeamId, targetTeamId, state);
             
+            // Debug logging for cross protection status
+            if (state?.actionCards?.[targetTeamId]?.cross) {
+                console.log(`🛡️ Team ${targetTeamId} has cross protection - cannot be attacked`);
+            }
+            
             if (canAttack) {
                 option.style.display = 'block';
                 option.style.opacity = '1';
@@ -1047,6 +1127,11 @@ class HotkeysManager {
             return false;
         }
         
+        // Can't attack if there's already an active attack in progress
+        if (state?.attackTeam && state?.victimTeam) {
+            return false;
+        }
+        
         return true;
     }
     
@@ -1069,6 +1154,19 @@ class HotkeysManager {
         
         // Don't allow attacking self
         if (targetTeamId === attackingTeamId) {
+            return;
+        }
+        
+        // Check if target team has cross protection
+        const state = window.gameState?.get();
+        if (state?.actionCards?.[targetTeamId]?.cross) {
+            console.warn(`⚠️ Cannot attack Team ${targetTeamId} - they have cross protection`);
+            return;
+        }
+        
+        // Check if there's already an active attack in progress
+        if (state?.attackTeam && state?.victimTeam) {
+            console.warn(`⚠️ Cannot attack Team ${targetTeamId} - there's already an active attack in progress`);
             return;
         }
         
@@ -1107,19 +1205,42 @@ class HotkeysManager {
             return;
         }
         
+        console.log(`🎯 Devil attack confirmed: Team ${attackingTeamId} attacking Team ${targetTeamId}`);
+        
+        // Set attack tracking parameters in game state
+        if (window.gameState) {
+            window.gameState.set('attackTeam', attackingTeamId);
+            window.gameState.set('victimTeam', targetTeamId);
+            console.log(`✅ Attack tracking set: attackTeam=${attackingTeamId}, victimTeam=${targetTeamId}`);
+        }
+        
         // Mark devil card as permanently used (after confirmation)
         if (window.gameState) {
             window.gameState.update(`actionCards.${attackingTeamId}.devilUsed`, true);
             window.gameState.update(`actionCards.${attackingTeamId}.devil`, false);
-            // update cross protection for victim team
-            window.gameState.update(`actionCards.${targetTeamId}.cross`, true);
+            console.log(`✅ Devil card marked as used for Team ${attackingTeamId}`);
+            
+            // Update team displays to show devil card as used (gray)
+            window.gameState.updateTeamDisplays();
+            console.log(`✅ Team displays updated to show devil card as used for Team ${attackingTeamId}`);
+            
+            // Debug: Verify devil card status
+            const updatedState = window.gameState.get();
+            const devilUsed = updatedState.actionCards[attackingTeamId].devilUsed;
+            const devilActive = updatedState.actionCards[attackingTeamId].devil;
+            console.log(`🔍 Devil card status for Team ${attackingTeamId}: devilUsed=${devilUsed}, devil=${devilActive}`);
         }
+        
+        // IMMEDIATELY activate cross protection for victim team
+        // This ensures the cross protection is active before the animation starts
+        this.activateCrossProtection(targetTeamId);
         
         // Close modal
         modal.classList.remove('active');
         
         // Execute attack animation sequence instead of direct score change
         this.executeAttackAnimation(attackingTeamId, targetTeamId);
+
         
         // Clear stored data
         modal.dataset.attackingTeam = null;
@@ -1142,10 +1263,7 @@ class HotkeysManager {
             // Step 2: Change current character to victim's team color (but keep devil card inactive)
             await this.changeCurrentCharacterToVictimColor(victimColor);
             
-            // Step 3: Display cross action on current character and set team
-            this.activateCrossProtection(targetTeamId);
-            
-            // Step 4: Set current team to victim team
+            // Step 3: Set current team to victim team
             if (window.gameState) {
                 window.gameState.set('currentTeam', targetTeamId);
                 window.gameState.set('attackedTeam', targetTeamId);
@@ -1294,6 +1412,12 @@ class HotkeysManager {
             if (devilIcon) {
                 devilIcon.classList.remove('active');
             }
+
+            //Display the cross protection icon
+            const crossIcon = document.getElementById('mainCharacterCross');
+            if (crossIcon) {
+                crossIcon.classList.add('active');
+            }
             
         } catch (error) {
             console.error('❌ Error changing current character color:', error);
@@ -1308,13 +1432,11 @@ class HotkeysManager {
         if (window.gameState) {
             window.gameState.update(`actionCards.${victimTeamId}.cross`, true);
             console.log(`✅ Game state updated: actionCards.${victimTeamId}.cross = true`);
-        }
-        
-        // Show cross action on main character
-        const crossIcon = document.getElementById('mainCharacterCross');
-        if (crossIcon) {
-            crossIcon.classList.add('active');
-            console.log('✅ Main character cross icon activated');
+            
+            // Verify the update was successful
+            const updatedState = window.gameState.get();
+            const crossStatus = updatedState.actionCards[victimTeamId].cross;
+            console.log(`🔍 Verification: Team ${victimTeamId} cross status is now: ${crossStatus}`);
         }
         
         // Update team card cross display
@@ -1347,11 +1469,11 @@ class HotkeysManager {
     removeCrossProtection(victimTeamId) {
         console.log(`🛡️ Removing cross protection for Team ${victimTeamId}`);
         
-        // // Update game state
-        // if (window.gameState) {
-        //     window.gameState.update(`actionCards.${victimTeamId}.cross`, false);
-        //     console.log(`✅ Game state updated: actionCards.${victimTeamId}.cross = false`);
-        // }
+        // Update game state
+        if (window.gameState) {
+            window.gameState.update(`actionCards.${victimTeamId}.cross`, false);
+            console.log(`✅ Game state updated: actionCards.${victimTeamId}.cross = false`);
+        }
         
         // Remove cross action from main character
         const crossIcon = document.getElementById('mainCharacterCross');
@@ -1360,12 +1482,12 @@ class HotkeysManager {
             console.log('✅ Main character cross icon deactivated');
         }
         
-        // // Update team card cross display
-        // const teamCrossElement = document.getElementById(`teamCross${victimTeamId}`);
-        // if (teamCrossElement) {
-        //     teamCrossElement.classList.remove('active');
-        //     console.log(`✅ Team ${victimTeamId} cross card deactivated in UI`);
-        // }
+        // Update team card cross display
+        const teamCrossElement = document.getElementById(`teamCross${victimTeamId}`);
+        if (teamCrossElement) {
+            teamCrossElement.classList.remove('active');
+            console.log(`✅ Team ${victimTeamId} cross card deactivated in UI`);
+        }
         
         // Force update team displays to ensure cross protection is removed
         if (window.gameState) {
@@ -1663,7 +1785,10 @@ class HotkeysManager {
         if (window.socket && window.socket.connected) {
             window.socket.emit('progress_update', { 
                 setNumber: setNumber, 
-                questionNumber: questionNumber 
+                questionNumber: questionNumber,
+                title: window.gameState?.state?.questionSets[setNumber]?.title || '',
+                subject: window.gameState?.state?.questionSets[setNumber]?.theme || 'general',
+                animateRun: true
             });
         }
         
@@ -1684,6 +1809,9 @@ class HotkeysManager {
         if (window.gameState) {
             window.gameState.set('currentTeam', 0);
             window.gameState.set('currentChallenge', 0);
+            // Reset attack tracking parameters
+            window.gameState.set('attackTeam', 0);
+            window.gameState.set('victimTeam', 0);
         }
         
         // Clear main character action icons
@@ -1714,7 +1842,8 @@ class HotkeysManager {
                 // Reset temporary states but preserve permanent usage
                 window.gameState.update(`actionCards.${teamId}.angel`, false);
                 window.gameState.update(`actionCards.${teamId}.devil`, false);
-                window.gameState.update(`actionCards.${teamId}.cross`, false);
+                // DO NOT reset cross protection - it should remain until game reset
+                // window.gameState.update(`actionCards.${teamId}.cross`, false);
                 // angelUsed and devilUsed remain unchanged to preserve permanent usage
             }
             
@@ -1727,6 +1856,21 @@ class HotkeysManager {
             window.socketManager.resetBuzzers();
         }
         
+        // Ensure cross protection remains visible after buzzer reset
+        if (window.gameState) {
+            window.gameState.updateTeamDisplays();
+            console.log('✅ Team displays updated after buzzer reset to maintain cross protection visibility');
+            
+            // Debug: Check cross protection status for all teams
+            const state = window.gameState.get();
+            for (let teamId = 1; teamId <= 6; teamId++) {
+                const crossStatus = state.actionCards[teamId].cross;
+                if (crossStatus) {
+                    console.log(`🛡️ Team ${teamId} cross protection is ACTIVE after buzzer reset`);
+                }
+            }
+        }
+        
         console.log('✅ Buzzers reset, action card states preserved, visuals updated');
     }
     
@@ -1737,7 +1881,10 @@ class HotkeysManager {
         // Reset entire game state (this should reset all team action cards)
         if (window.gameState) {
             window.gameState.reset();
-            console.log('✅ Game state reset completed (including team action cards)');
+            // Ensure attack tracking parameters are reset
+            window.gameState.set('attackTeam', 0);
+            window.gameState.set('victimTeam', 0);
+            console.log('✅ Game state reset completed (including team action cards and attack tracking)');
         } else {
             console.warn('⚠️ GameState not available for reset');
         }
