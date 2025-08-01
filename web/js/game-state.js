@@ -10,6 +10,7 @@ class GameState {
             currentQuestion: 1,
             currentTeam: 0,
             currentChallenge: 0,
+            angelTeam: 0,
             attackTeam: 0,
             victimTeam: 0,
             isAnimating: false,
@@ -19,16 +20,14 @@ class GameState {
             
             // Question sets with titles and themes
             questionSets: {
-                1: { title: 'General Knowledge', theme: 'general', icon: 'brainstorm' },
-                2: { title: 'Science & Technology', theme: 'science', icon: 'brainstorm' },
-                3: { title: 'History & Geography', theme: 'history', icon: 'brainstorm' },
-                4: { title: 'Arts & Literature', theme: 'arts', icon: 'brainstorm' },
-                5: { title: 'Sports & Entertainment', theme: 'sports', icon: 'brainstorm' },
-                6: { title: 'Mathematics', theme: 'math', icon: 'brainstorm' },
-                7: { title: 'Current Events', theme: 'current', icon: 'brainstorm' },
-                8: { title: 'Mystery & Logic', theme: 'mystery', icon: 'brainstorm' },
-                9: { title: 'Nature & Environment', theme: 'nature', icon: 'brainstorm' },
-                10: { title: 'Final Challenge', theme: 'final', icon: 'brainstorm' }
+                1: { title: 'General Knowledge', theme: 'brainstorm' },
+                2: { title: 'Science & Technology', theme: 'brainstorm' },
+                3: { title: 'History & Geography', theme: 'brainstorm' },
+                4: { title: 'Arts & Literature', theme: 'brainstorm' },
+                5: { title: 'Sports & Entertainment', theme: 'brainstorm' },
+                6: { title: 'Mathematics', theme: 'brainstorm' },
+                7: { title: 'Current Events', theme: 'brainstorm' },
+                8: { title: 'Mystery & Logic', theme: 'brainstorm' }
             },
             
             teams: {
@@ -41,12 +40,12 @@ class GameState {
             },
             
             actionCards: {
-                1: { angel: false, angelUsed: false, devil: false, devilUsed: false, cross: false },
-                2: { angel: false, angelUsed: false, devil: false, devilUsed: false, cross: false },
-                3: { angel: false, angelUsed: false, devil: false, devilUsed: false, cross: false },
-                4: { angel: false, angelUsed: false, devil: false, devilUsed: false, cross: false },
-                5: { angel: false, angelUsed: false, devil: false, devilUsed: false, cross: false },
-                6: { angel: false, angelUsed: false, devil: false, devilUsed: false, cross: false }
+                1: { angel: true, devil: true, cross: false },
+                2: { angel: true, devil: true, cross: false },
+                3: { angel: true, devil: true, cross: false },
+                4: { angel: true, devil: true, cross: false },
+                5: { angel: true, devil: true, cross: false },
+                6: { angel: true, devil: true, cross: false }
             },
             
             rankings: {
@@ -476,27 +475,22 @@ class GameState {
             // Update action cards
             const actionCards = this.state.actionCards[teamId];
             if (actionCards) {
-                // Angel card: Default=active (bright), Used/Permanently Used=not active (gray)
+                // Angel card: true=active (colorful), false=inactive (gray)
                 const angelElement = document.getElementById(`teamAngel${teamId}`);
                 if (angelElement) {
-                    // Card should be inactive (gray) if temporarily active OR permanently used
-                    const shouldBeActive = !actionCards.angel && !actionCards.angelUsed;
-                    angelElement.classList.toggle('active', shouldBeActive);
+                    angelElement.classList.toggle('active', actionCards.angel);
                 }
                 
-                // Devil card: Default=active (bright), Used/Permanently Used=not active (gray) 
+                // Devil card: true=active (colorful), false=inactive (gray) 
                 const devilElement = document.getElementById(`teamDevil${teamId}`);
                 if (devilElement) {
-                    // Card should be inactive (gray) if temporarily active OR permanently used
-                    const shouldBeActive = !actionCards.devil && !actionCards.devilUsed;
-                    devilElement.classList.toggle('active', shouldBeActive);
+                    devilElement.classList.toggle('active', actionCards.devil);
                 }
                 
-                // Cross card: Default=not active (gray), Applied=active (bright)
+                // Cross card: false=inactive (gray), true=active (colorful)
                 const crossElement = document.getElementById(`teamCross${teamId}`);
                 if (crossElement) {
-                    const shouldBeActive = actionCards.cross; // Direct: false=not active, true=active
-                    crossElement.classList.toggle('active', shouldBeActive);
+                    crossElement.classList.toggle('active', actionCards.cross);
                 }
             }
         });
@@ -634,13 +628,18 @@ class GameState {
             const currentSetData = this.state.questionSets[this.state.currentSet];
             if (currentSetData) {
                 setElement.textContent = `${currentSetData.title}`;
-                // update the subject icon by loading the assets/themes and get filename from the icon
-                const themeFolder = `assets/themes/${currentSetData.theme}`;
-                const iconFile = `${themeFolder}/${currentSetData.icon}.png`;
-                subjectElement.src = iconFile;
+                // Update the subject icon using the theme
+                const iconFile = `assets/themes/${currentSetData.theme}.png`;
+                if (subjectElement) {
+                    subjectElement.src = iconFile;
+                    subjectElement.style.display = 'inline-block';
+                }
             } else {
                 setElement.textContent = `Question Set ${this.state.currentSet}`;
-                subjectElement.textContent = `❓`;
+                if (subjectElement) {
+                    subjectElement.textContent = `❓`;
+                    subjectElement.style.display = 'inline-block';
+                }
             }
         }
         
@@ -704,6 +703,9 @@ class GameState {
         this.set('currentQuestion', 1);
         this.set('currentTeam', 0); // Reset current team
         this.set('currentChallenge', 0); // Reset current challenge
+        this.set('angelTeam', 0); // Reset angel team
+        this.set('attackTeam', 0); // Reset attack team
+        this.set('victimTeam', 0); // Reset victim team
         this.set('isAnimating', false);
         this.set('timerValue', 15); // Reset to 15 seconds
         this.set('timerRunning', false);
@@ -714,13 +716,11 @@ class GameState {
             this.state.teams[teamId].score = 0;
         });
         
-        // Reset action cards (including permanent usage flags)
+        // Reset action cards to initial state (all ready to use)
         Object.keys(this.state.actionCards).forEach(teamId => {
             this.update(`actionCards.${teamId}`, {
-                angel: false, 
-                angelUsed: false, 
-                devil: false, 
-                devilUsed: false, 
+                angel: true, 
+                devil: true, 
                 cross: false
             });
         });
@@ -775,10 +775,8 @@ class GameState {
     resetActionCards() {
         for (let teamId = 1; teamId <= 6; teamId++) {
             this.state.actionCards[teamId] = { 
-                angel: false, 
-                angelUsed: false, 
-                devil: false, 
-                devilUsed: false, 
+                angel: true, 
+                devil: true, 
                 cross: false 
             };
             
@@ -788,11 +786,11 @@ class GameState {
             const teamCrossElement = document.getElementById(`teamCross${teamId}`);
             
             if (teamAngelElement) {
-                teamAngelElement.classList.add('active'); // angel=false, angelUsed=false → active
+                teamAngelElement.classList.add('active'); // angel=true → active
                 teamAngelElement.classList.remove('used');
             }
             if (teamDevilElement) {
-                teamDevilElement.classList.add('active'); // devil=false, devilUsed=false → active
+                teamDevilElement.classList.add('active'); // devil=true → active
                 teamDevilElement.classList.remove('used');
             }
             if (teamCrossElement) {
@@ -809,6 +807,11 @@ class GameState {
         if (mainCharacterAngel) mainCharacterAngel.classList.remove('active');
         if (mainCharacterDevil) mainCharacterDevil.classList.remove('active');
         if (mainCharacterCross) mainCharacterCross.classList.remove('active');
+        
+        // Reset action team parameters
+        this.set('angelTeam', 0);
+        this.set('attackTeam', 0);
+        this.set('victimTeam', 0);
         
         // Update team displays to ensure consistency
         this.updateTeamDisplays();
@@ -828,7 +831,9 @@ class GameState {
         this.state.currentQuestion = 1;
         this.state.currentTeam = 0;
         this.state.currentChallenge = 0;
-        this.state.attackedTeam = 0;
+        this.state.angelTeam = 0;
+        this.state.attackTeam = 0;
+        this.state.victimTeam = 0;
         this.state.timerValue = 0;
         this.state.timerRunning = false;
         

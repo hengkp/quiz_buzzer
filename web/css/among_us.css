@@ -218,6 +218,16 @@
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
+    .question-subject {
+        width: clamp(30px, 4vw, 50px);
+        height: clamp(30px, 4vw, 50px);
+        object-fit: contain;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        padding: 4px;
+    }
+
     /* smaller font for chance under question set*/
     .question-set-chance {
         position: absolute;

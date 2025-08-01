@@ -199,15 +199,20 @@ body {
     justify-content: center;
 }
 
-/* ========== PROGRESS CHARACTER SECTION ========== */
+/* ========== GAME STATUS SECTION ========== */
 .progress-section {
     grid-column: span 2;
 }
 
-.progress-character-container {
+.game-status-container {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .question-set-info {
@@ -230,92 +235,61 @@ body {
     color: #86868b;
 }
 
-.character-animation-area {
-    position: relative;
-    height: 200px;
+.current-team-display,
+.current-action-display {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 16px;
-    overflow: hidden;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    margin-bottom: 16px;
 }
 
-.victim-character,
-.main-character {
-    width: 120px;
-    height: 120px;
-    position: absolute;
+.current-team-label,
+.current-action-label {
+    font-weight: 500;
+    color: #1d1d1f;
+    font-size: 16px;
 }
 
-.victim-character {
-    left: 20%;
-    z-index: 1;
-    display: none; /* Hide by default, only show when needed */
+.current-team-value,
+.current-action-value {
+    font-weight: 600;
+    font-size: 18px;
+    color: #007aff;
+    padding: 8px 16px;
+    background: rgba(0, 122, 255, 0.1);
+    border-radius: 8px;
+    min-width: 120px;
+    text-align: center;
 }
 
-.main-character {
-    right: 20%;
-    z-index: 2;
+.current-team-value.active {
+    background: rgba(52, 199, 89, 0.1);
+    color: #34c759;
 }
 
-.character-action-panel {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    display: flex;
-    gap: 8px;
-    z-index: 3;
+.current-action-value.challenge {
+    background: rgba(255, 107, 53, 0.1);
+    color: #ff6b35;
 }
 
-.character-action-icon {
-    width: 32px;
-    height: 32px;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    opacity: 0.8;
-    transition: all 0.2s ease;
+.current-action-value.angel {
+    background: rgba(255, 215, 0, 0.1);
+    color: #ffd700;
 }
 
-.character-action-icon.angel {
-    background-image: url('../assets/cards/card-angel.png');
+.current-action-value.devil {
+    background: rgba(255, 68, 68, 0.1);
+    color: #ff4444;
 }
 
-.character-action-icon.devil {
-    background-image: url('../assets/cards/card-devil.png');
-}
-
-.character-action-icon.cross {
-    background-image: url('../assets/cards/card-cross.png');
-}
-
-.character-action-icon.challenge {
-    background-image: url('../assets/cards/card-challenge.png');
-}
-
-.character-action-icon.active {
-    opacity: 1;
-    transform: scale(1.1);
-}
-
-.score-indicator {
-    position: absolute;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 3;
-}
-
-.score-animation {
-    width: 60px;
-    height: 60px;
-}
-
-.character-controls {
+.game-controls {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 12px;
+    margin-top: 20px;
 }
 
 /* ========== TEAMS SECTION ========== */
@@ -331,12 +305,13 @@ body {
     width: 100%;
     border-collapse: collapse;
     font-size: 14px;
+    text-align: center;
 }
 
 .teams-table th {
     background: rgba(0, 0, 0, 0.02);
     padding: 16px 12px;
-    text-align: left;
+    text-align: center;
     font-weight: 600;
     color: #1d1d1f;
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
@@ -346,12 +321,14 @@ body {
     padding: 16px 12px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     vertical-align: middle;
+    text-align: center;
 }
 
 .team-color-cell {
     display: flex;
     align-items: center;
     gap: 12px;
+    position: relative;
 }
 
 .color-circle {
@@ -396,6 +373,35 @@ body {
     font-weight: 600;
     font-size: 18px;
     text-align: center;
+    position: relative;
+}
+
+.team-score-display {
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.team-score-display:hover {
+    background: rgba(0, 122, 255, 0.1);
+}
+
+.team-score-input {
+    width: 80px;
+    padding: 4px 8px;
+    border: 1px solid #007aff;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 600;
+    background: white;
+    text-align: center;
+    outline: none;
+}
+
+.team-score-input:focus {
+    border-color: #007aff;
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
 }
 
 .team-cards-cell {
@@ -465,12 +471,13 @@ body {
     width: 100%;
     border-collapse: collapse;
     font-size: 14px;
+    text-align: center;
 }
 
 .questions-table th {
     background: rgba(0, 0, 0, 0.02);
     padding: 16px 12px;
-    text-align: left;
+    text-align: center;
     font-weight: 600;
     color: #1d1d1f;
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
@@ -480,6 +487,7 @@ body {
     padding: 16px 12px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     vertical-align: middle;
+    text-align: center;
 }
 
 .question-set-number {
@@ -518,18 +526,37 @@ body {
 }
 
 .question-set-theme {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.theme-display {
     display: flex;
+    flex-direction: column;
     align-items: center;
     gap: 8px;
-    cursor: pointer;
 }
 
 .theme-icon {
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
     border-radius: 4px;
-    background-size: cover;
-    background-position: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.theme-icon.clickable:hover {
+    transform: scale(1.1);
+    border-color: #007aff;
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+}
+
+.theme-toggle-btn {
+    font-size: 12px;
+    padding: 4px 8px;
+    min-width: auto;
 }
 
 .question-buttons {
@@ -886,16 +913,13 @@ body {
 
 /* ========== COLOR DROPDOWN ========== */
 .color-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
+    position: fixed;
     background: white;
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
     border: 1px solid rgba(0, 0, 0, 0.1);
     padding: 16px;
-    z-index: 1000;
+    z-index: 2000;
     min-width: 200px;
     display: none;
     visibility: hidden;
@@ -1112,6 +1136,114 @@ body {
 .question-set-title-input:focus {
     outline: none;
     box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.3);
+}
+
+/* ========== MODAL STYLES ========== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow: hidden;
+    animation: slideIn 0.3s ease-out;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.modal-header h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1d1d1f;
+}
+
+.close {
+    font-size: 24px;
+    font-weight: 300;
+    color: #86868b;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.close:hover {
+    color: #1d1d1f;
+}
+
+.modal-body {
+    padding: 24px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.theme-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 16px;
+}
+
+.theme-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.theme-item:hover {
+    border-color: #007aff;
+    background: rgba(0, 122, 255, 0.05);
+    transform: translateY(-2px);
+}
+
+.theme-item.selected {
+    border-color: #007aff;
+    background: rgba(0, 122, 255, 0.1);
+}
+
+.theme-item-icon {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    margin-bottom: 8px;
+    border-radius: 8px;
+}
+
+.theme-item-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1d1d1f;
+    text-align: center;
 }
 
 /* ========== UTILITY CLASSES ========== */

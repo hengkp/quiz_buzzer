@@ -7,7 +7,6 @@
     <title>Quiz Bowl Console - Moderator Interface</title>
     <link rel="stylesheet" href="/css/console.css?v=1.0.1">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 </head>
 <body class="console-body">
     <!-- Header -->
@@ -69,61 +68,29 @@
                 <!-- Progress Character Section -->
                 <div class="control-section progress-section">
                     <h3 class="section-title">
-                        <span class="section-icon">👾</span>
-                        Progress Character
-                        </h3>
-                    <div class="progress-character-container">
+                        <span class="section-icon">🎮</span>
+                        Game Status
+                    </h3>
+                    <div class="game-status-container">
                         <div class="question-set-info">
                             <div class="set-title" id="currentSetTitle">Question Set 1</div>
                             <div class="set-details">
                                 <span class="set-number" id="currentSetNumber">Set 1</span>
                                 <span class="question-number" id="currentQuestionNumber">Q1</span>
-                                </div>
                             </div>
-                        
-                        <div class="character-animation-area">
-                            <lottie-player 
-                                class="victim-character"
-                                id="victimCharacter"
-                                src="assets/animations/among_us_idle.json"
-                                background="transparent"
-                                speed="1"
-                                loop
-                                autoplay>
-                            </lottie-player>
-
-                            <lottie-player 
-                                class="main-character"
-                                id="progressCharacter"
-                                src="assets/animations/among_us_idle.json"
-                                background="transparent"
-                                speed="1"
-                                loop
-                                autoplay>
-                            </lottie-player>
-                            
-                            <!-- Action Card and Challenge Indicator Panel -->
-                            <div class="character-action-panel" id="characterActionPanel">
-                                <div class="character-action-icon angel" id="mainCharacterAngel"></div>
-                                <div class="character-action-icon devil" id="mainCharacterDevil"></div>
-                                <div class="character-action-icon cross" id="mainCharacterCross"></div>
-                                <div class="character-action-icon challenge" id="mainCharacterChallenge"></div>
-                            </div>
-                            
-                            <!-- Score indicator -->
-                            <div class="score-indicator" id="scoreIndicator">
-                                <lottie-player 
-                                    id="scoreAnimation"
-                                    background="transparent" 
-                                    speed="1" 
-                                    loop
-                                    autoplay="false"
-                                    class="score-animation">
-                                </lottie-player>
                         </div>
-                    </div>
-
-                        <div class="character-controls">
+                        
+                        <div class="current-team-display">
+                            <div class="current-team-label">Current Team:</div>
+                            <div class="current-team-value" id="currentTeamDisplay">None</div>
+                        </div>
+                        
+                        <div class="current-action-display">
+                            <div class="current-action-label">Current Action:</div>
+                            <div class="current-action-value" id="currentActionDisplay">None</div>
+                        </div>
+                        
+                        <div class="game-controls">
                             <button onclick="toggleChallenge()" id="challengeBtn" class="btn btn-challenge">Challenge</button>
                             <button onclick="toggleAngel()" class="btn btn-angel">Angel (Z)</button>
                             <button onclick="toggleDevil()" class="btn btn-devil">Devil (X)</button>
@@ -172,7 +139,7 @@
                                     <th>Set</th>
                                     <th>Title</th>
                                     <th>Theme</th>
-                                    <th>Questions</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="questionsTableBody">
@@ -199,68 +166,20 @@
                     </div>
                 </div>
 
-    <!-- Devil Card Attack Selection Modal -->
-    <div id="devilAttackModal" class="attack-modal">
-        <div class="attack-modal-content">
-            <div class="attack-modal-header">
-                <h3>😈 Devil Card Attack</h3>
-                <p>Select a team to attack:</p>
+    <!-- Theme Dropdown Modal -->
+    <div id="themeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Select Theme</h3>
+                <span class="close" onclick="closeThemeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="themeList" class="theme-list">
+                    <!-- Themes will be populated here -->
+                </div>
+            </div>
+        </div>
     </div>
-
-            <div class="attack-team-grid" id="attackTeamGrid">
-                <!-- Team options will be populated here -->
-    </div>
-
-            <div class="attack-modal-actions">
-                <button class="btn btn-danger" onclick="confirmDevilAttack()" id="confirmAttackBtn" disabled>
-                    Confirm Attack
-                </button>
-                <button class="btn btn-secondary" onclick="cancelDevilAttack()">
-                    Cancel
-                </button>
-                    </div>
-                </div>
-                </div>
-                
-    <!-- Help Modal -->
-    <div id="helpModal" class="help-modal">
-        <div class="help-modal-content">
-            <div class="help-modal-header">
-                <h3>🎮 Keyboard Shortcuts</h3>
-                <button onclick="toggleHelpModal()" class="help-close-btn">×</button>
-                                </div>
-            <div class="help-content">
-                <div class="help-section">
-                    <h4>Navigation</h4>
-                    <div class="shortcut-item"><span class="key">←</span> Previous question</div>
-                    <div class="shortcut-item"><span class="key">→</span> Next question</div>
-                    <div class="shortcut-item"><span class="key">↑</span> Mark correct</div>
-                    <div class="shortcut-item"><span class="key">↓</span> Mark incorrect</div>
-                            </div>
-                <div class="help-section">
-                    <h4>Team Controls</h4>
-                    <div class="shortcut-item"><span class="key">1-6</span> Buzz team 1-6</div>
-                    <div class="shortcut-item"><span class="key">Z</span> Toggle angel card</div>
-                    <div class="shortcut-item"><span class="key">X</span> Toggle devil card</div>
-                    <div class="shortcut-item"><span class="key">C</span> Toggle challenge mode</div>
-                        </div>
-                <div class="help-section">
-                    <h4>Game Controls</h4>
-                    <div class="shortcut-item"><span class="key">R</span> Reset buzzer</div>
-                    <div class="shortcut-item"><span class="key">I</span> Start/pause timer</div>
-                    <div class="shortcut-item"><span class="key">O</span> Stop timer</div>
-                    <div class="shortcut-item"><span class="key">P</span> Reset timer</div>
-                    </div>
-                <div class="help-section">
-                    <h4>Navigation</h4>
-                    <div class="shortcut-item"><span class="key">[</span> Previous set</div>
-                    <div class="shortcut-item"><span class="key">]</span> Next set</div>
-                    <div class="shortcut-item"><span class="key">Q</span> Reset game</div>
-                    <div class="shortcut-item"><span class="key">H</span> Toggle this help</div>
-                </div>
-                </div>
-                    </div>
-                </div>
 
     <!-- Load all JavaScript files -->
     <script src="js/game-state.js"></script>
@@ -268,7 +187,6 @@
     <script src="js/character-colors.js"></script>
     <script src="js/character-controller.js"></script>
     <script src="js/buzzing-system.js"></script>
-    <script src="js/hotkeys.js"></script>
     <script src="js/fullscreen.js"></script>
     <script src="js/main-page.js"></script>
     <script src="js/console-page.js"></script>

@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeTeamsTable();
     initializeQuestionsTable();
     initializeCharacterControls();
-    initializeKeyboardShortcuts();
     initializeLogs();
     
     // Disable character controller on console page to prevent errors
@@ -61,13 +60,11 @@ document.addEventListener('DOMContentLoaded', function() {
     updateCurrentQuestionInfo();
     updateTeamsTable();
     updateQuestionsTable();
+    updateGameStatusDisplay();
     
     // Add initial log entry
     addLog('Console initialized - Ready for moderation', 'success');
-    addLog('Press H for keyboard shortcuts', 'info');
-    
-    // Initialize character display
-    initializeCharacterDisplay();
+    addLog('Click the help button (?) for console controls', 'info');
     
     console.log('✅ Console page initialized successfully');
 });
@@ -369,7 +366,7 @@ function initializeTeamsTable() {
         
         row.innerHTML = `
             <td class="team-color-cell">
-                <div class="color-circle" style="background: ${colorDefinitions[team.color]}" onclick="toggleColorDropdown(${teamId})"></div>
+                <div class="color-circle" style="background: ${colorDefinitions[team.color]}" onclick="toggleColorDropdown(${teamId}, event)"></div>
                 <div class="color-dropdown" id="colorDropdown-${teamId}">
                     <div class="color-grid" id="colorGrid-${teamId}"></div>
                 </div>
@@ -378,7 +375,10 @@ function initializeTeamsTable() {
                 <div class="team-name-display" onclick="editTeamName(${teamId})" id="teamNameDisplay-${teamId}">${team.name}</div>
                 <input type="text" class="team-name-input hidden" id="teamNameInput-${teamId}" value="${team.name}" onblur="saveTeamName(${teamId})" onkeypress="handleTeamNameKeypress(event, ${teamId})">
             </td>
-            <td class="team-score-cell" id="teamScore-${teamId}">${team.score}</td>
+            <td class="team-score-cell">
+                <div class="team-score-display" onclick="editTeamScore(${teamId})" id="teamScoreDisplay-${teamId}">${team.score}</div>
+                <input type="number" class="team-score-input hidden" id="teamScoreInput-${teamId}" value="${team.score}" onblur="saveTeamScore(${teamId})" onkeypress="handleTeamScoreKeypress(event, ${teamId})">
+            </td>
             <td class="team-cards-cell">
                 <div class="team-action-card angel ${gameState.state.actionCards[teamId].angel ? 'active' : ''}" onclick="toggleActionCard(${teamId}, 'angel')" id="angelCard-${teamId}"></div>
                 <div class="team-action-card devil ${gameState.state.actionCards[teamId].devil ? 'active' : ''}" onclick="activateDevil(${teamId})" id="devilCard-${teamId}"></div>
@@ -410,9 +410,9 @@ function updateTeamsTable() {
         }
         
         // Update score
-        const scoreCell = document.getElementById(`teamScore-${teamId}`);
-        if (scoreCell) {
-            scoreCell.textContent = team.score;
+        const scoreDisplay = document.getElementById(`teamScoreDisplay-${teamId}`);
+        if (scoreDisplay) {
+            scoreDisplay.textContent = team.score;
         }
         
         // Update action cards
@@ -453,7 +453,7 @@ function populateColorOptions(teamId) {
     console.log(`🎮 Console: Added ${availableColors.length} color options for team ${teamId}`);
 }
 
-function toggleColorDropdown(teamId) {
+function toggleColorDropdown(teamId, event) {
     const dropdown = document.getElementById(`colorDropdown-${teamId}`);
     
     if (!dropdown) {
@@ -461,16 +461,53 @@ function toggleColorDropdown(teamId) {
         return;
     }
     
-    const isActive = dropdown.classList.contains('active');
-    
-    // Close all other dropdowns
+    // Close all other dropdowns first
     document.querySelectorAll('.color-dropdown').forEach(d => {
         if (d !== dropdown) {
             d.classList.remove('active');
         }
     });
     
+    const isActive = dropdown.classList.contains('active');
+    
     if (!isActive) {
+        // Position the dropdown relative to the click position
+        if (event) {
+            const rect = event.target.getBoundingClientRect();
+            
+            // Calculate position relative to viewport
+            const viewportX = rect.left + rect.width / 2;
+            const viewportY = rect.bottom + 8;
+            
+            // Ensure dropdown stays within viewport bounds
+            const dropdownWidth = 200; // min-width from CSS
+            const dropdownHeight = 120; // approximate height
+            
+            let finalX = viewportX;
+            let finalY = viewportY;
+            
+            // Adjust if dropdown would go off the right edge
+            if (finalX + dropdownWidth / 2 > window.innerWidth) {
+                finalX = window.innerWidth - dropdownWidth / 2 - 16;
+            }
+            
+            // Adjust if dropdown would go off the left edge
+            if (finalX - dropdownWidth / 2 < 0) {
+                finalX = dropdownWidth / 2 + 16;
+            }
+            
+            // Adjust if dropdown would go off the bottom edge
+            if (finalY + dropdownHeight > window.innerHeight) {
+                finalY = rect.top - dropdownHeight - 8;
+            }
+            
+            // Set position
+            dropdown.style.left = `${finalX}px`;
+            dropdown.style.top = `${finalY}px`;
+            dropdown.style.transform = 'translateX(-50%)';
+        }
+        
+        dropdown.classList.add('active');
         dropdown.classList.add('active');
         populateColorOptions(teamId);
         console.log(`🎮 Console: Color dropdown opened for team ${teamId}`);
@@ -566,6 +603,63 @@ function handleTeamNameKeypress(event, teamId) {
     }
 }
 
+function editTeamScore(teamId) {
+    const scoreDisplay = document.getElementById(`teamScoreDisplay-${teamId}`);
+    const scoreInput = document.getElementById(`teamScoreInput-${teamId}`);
+    
+    if (scoreDisplay && scoreInput) {
+        scoreDisplay.classList.add('hidden');
+        scoreInput.classList.remove('hidden');
+        scoreInput.focus();
+        scoreInput.select();
+        console.log(`🎮 Console: Editing team ${teamId} score`);
+    } else {
+        console.error(`❌ Console: Team score elements not found for team ${teamId}`);
+    }
+}
+
+function saveTeamScore(teamId) {
+    const scoreDisplay = document.getElementById(`teamScoreDisplay-${teamId}`);
+    const scoreInput = document.getElementById(`teamScoreInput-${teamId}`);
+    
+    if (!scoreDisplay || !scoreInput) {
+        console.error(`❌ Console: Team score elements not found for team ${teamId}`);
+        return;
+    }
+    
+    const newScore = parseInt(scoreInput.value) || 0;
+    const oldScore = gameState.state.teams[teamId].score;
+    
+    if (newScore !== oldScore) {
+        gameState.state.teams[teamId].score = newScore;
+        
+        scoreDisplay.textContent = newScore;
+        
+        // Emit socket events for main page updates
+        socket.emit('game_state_update', {
+            path: `teams.${teamId}.score`,
+            value: newScore
+        });
+        
+        socket.emit('team_update', {
+            teamId: teamId,
+            updates: { score: newScore }
+        });
+        
+        addLog(`Team ${teamId} score: ${oldScore} → ${newScore}`, 'info');
+        console.log(`🎮 Console: Team ${teamId} score saved: ${newScore}`);
+    }
+    
+    scoreDisplay.classList.remove('hidden');
+    scoreInput.classList.add('hidden');
+}
+
+function handleTeamScoreKeypress(event, teamId) {
+    if (event.key === 'Enter') {
+        saveTeamScore(teamId);
+    }
+}
+
 function updateActionCardDisplay(teamId) {
     const actionCards = gameState.state.actionCards[teamId];
     
@@ -589,31 +683,77 @@ function updateActionCardDisplay(teamId) {
 }
 
 function toggleActionCard(teamId, cardType) {
+    const actionCards = gameState.state.actionCards[teamId];
+    
     if (cardType === 'angel') {
-        if (gameState.state.actionCards[teamId].angelUsed) {
+        if (actionCards.angelUsed) {
             addLog(`Team ${teamId} angel card already used`, 'warning');
             return;
         }
         
-        const isActive = gameState.state.actionCards[teamId].angel;
-        gameState.state.actionCards[teamId].angel = !isActive;
+        const isActive = actionCards.angel;
+        actionCards.angel = !isActive;
         
         updateActionCardDisplay(teamId);
         
-        // Emit for main page compatibility
+        // Emit socket events for main page updates
+        socket.emit('game_state_update', {
+            path: `actionCards.${teamId}.angel`,
+            value: actionCards.angel
+        });
+        
         socket.emit('card_update', {
             teamId: teamId,
             cardType: cardType,
-            active: gameState.state.actionCards[teamId].angel
+            active: actionCards.angel
         });
         
-        // Also emit for hotkeys manager compatibility
-        socket.emit('angel_activated', { 
-            teamId: teamId, 
-            activated: gameState.state.actionCards[teamId].angel 
+        addLog(`Team ${teamId} angel card: ${isActive ? 'disabled' : 'enabled'}`, 'info');
+        
+    } else if (cardType === 'devil') {
+        if (actionCards.devilUsed) {
+            addLog(`Team ${teamId} devil card already used`, 'warning');
+            return;
+        }
+        
+        const isActive = actionCards.devil;
+        actionCards.devil = !isActive;
+        
+        updateActionCardDisplay(teamId);
+        
+        // Emit socket events for main page updates
+        socket.emit('game_state_update', {
+            path: `actionCards.${teamId}.devil`,
+            value: actionCards.devil
         });
         
-        addLog(`Team ${teamId} angel card ${isActive ? 'deactivated' : 'activated'}`, 'info');
+        socket.emit('card_update', {
+            teamId: teamId,
+            cardType: cardType,
+            active: actionCards.devil
+        });
+        
+        addLog(`Team ${teamId} devil card: ${isActive ? 'disabled' : 'enabled'}`, 'info');
+        
+    } else if (cardType === 'cross') {
+        const isActive = actionCards.cross;
+        actionCards.cross = !isActive;
+        
+        updateActionCardDisplay(teamId);
+        
+        // Emit socket events for main page updates
+        socket.emit('game_state_update', {
+            path: `actionCards.${teamId}.cross`,
+            value: actionCards.cross
+        });
+        
+        socket.emit('card_update', {
+            teamId: teamId,
+            cardType: cardType,
+            active: actionCards.cross
+        });
+        
+        addLog(`Team ${teamId} cross card: ${isActive ? 'disabled' : 'enabled'}`, 'info');
     }
 }
 
@@ -698,10 +838,7 @@ function selectAttackTarget(teamId) {
 function confirmDevilAttack() {
     if (!selectedAttackTarget) return;
     
-    // Find the attacker (the team that clicked the devil card)
-    const attackerId = Array.from(document.querySelectorAll('.attack-team-option')).findIndex(option => 
-        !option.classList.contains('selected')
-    ) + 1;
+    const attackerId = gameState.state.attackTeam;
     
     // Check if target has cross protection
     if (gameState.state.actionCards[selectedAttackTarget].cross) {
@@ -710,29 +847,28 @@ function confirmDevilAttack() {
         return;
     }
     
-    // Mark devil card as used
-    gameState.state.actionCards[attackerId].devilUsed = true;
+    // Set victim team
+    gameState.state.victimTeam = selectedAttackTarget;
     
     addLog(`Team ${attackerId} devil attacked Team ${selectedAttackTarget} - CHALLENGE MODE activated!`, 'error');
     addLog(`Team ${selectedAttackTarget} must answer: Correct = Attacker -1, Target +1 | Wrong = Attacker +2, Target -1`, 'info');
     
-    // Update card displays
-    updateActionCardDisplay(attackerId);
+    // Update game status display
+    updateGameStatusDisplay();
     
-    // Emit socket events for main page compatibility
-    socket.emit('card_update', {
-        teamId: attackerId,
-        cardType: 'devil',
-        used: true
+    // Emit game state updates
+    socket.emit('game_state_update', {
+        path: 'victimTeam',
+        value: selectedAttackTarget
     });
     
+    socket.emit('game_state_update', {
+        path: 'attackTeam',
+        value: attackerId
+    });
+    
+    // Also emit for main page compatibility
     socket.emit('devil_attack', {
-        attackerId: attackerId,
-        targetId: selectedAttackTarget
-    });
-    
-    // Also emit for hotkeys manager compatibility
-    socket.emit('devil_attack_executed', {
         attackerId: attackerId,
         targetId: selectedAttackTarget
     });
@@ -744,6 +880,18 @@ function cancelDevilAttack() {
     document.getElementById('devilAttackModal').classList.remove('active');
     document.getElementById('confirmAttackBtn').disabled = true;
     selectedAttackTarget = null;
+    
+    // Reset attack team if no attack was confirmed
+    if (gameState.state.victimTeam === 0) {
+        gameState.state.attackTeam = 0;
+        updateGameStatusDisplay();
+        
+        // Emit game state update
+        socket.emit('game_state_update', {
+            path: 'attackTeam',
+            value: 0
+        });
+    }
 }
 
 // ========== QUESTIONS MANAGEMENT ==========
@@ -751,8 +899,10 @@ function initializeQuestionsTable() {
     const tableBody = document.getElementById('questionsTableBody');
     tableBody.innerHTML = '';
     
-    for (let setNumber = 1; setNumber <= 10; setNumber++) {
+    for (let setNumber = 1; setNumber <= 8; setNumber++) {
         const setInfo = gameState.state.questionSets[setNumber];
+        if (!setInfo) continue;
+        
         const row = document.createElement('tr');
         
         row.innerHTML = `
@@ -764,9 +914,8 @@ function initializeQuestionsTable() {
                        onblur="saveQuestionSetTitle(${setNumber})" 
                        onkeypress="handleQuestionSetTitleKeypress(event, ${setNumber})">
             </td>
-            <td class="question-set-theme" onclick="toggleThemeDropdown(${setNumber})">
-                <div class="theme-icon" style="background-image: url('assets/themes/${setInfo.icon}.png')" id="themeIcon-${setNumber}"></div>
-                <div class="theme-dropdown" id="themeDropdown-${setNumber}"></div>
+            <td class="question-set-theme">
+                <img src="assets/themes/${setInfo.theme}.png" alt="${setInfo.theme}" class="theme-icon clickable" id="themeIcon-${setNumber}" onclick="toggleThemeDropdown(${setNumber})" title="Click to change theme">
             </td>
             <td class="question-buttons">
                 <button class="question-btn" onclick="goToQuestion(${setNumber}, 1)">Q1</button>
@@ -796,6 +945,18 @@ function updateQuestionsTable() {
         activeBtn.classList.add('active');
     }
     
+    // Update theme icons
+    for (let setNumber = 1; setNumber <= 8; setNumber++) {
+        const setInfo = gameState.state.questionSets[setNumber];
+        if (setInfo) {
+            const themeIcon = document.getElementById(`themeIcon-${setNumber}`);
+            if (themeIcon) {
+                themeIcon.src = `assets/themes/${setInfo.theme}.png`;
+                themeIcon.alt = setInfo.theme;
+            }
+        }
+    }
+    
     // Update current question info
     updateCurrentQuestionInfo();
 }
@@ -805,7 +966,15 @@ function updateCurrentQuestionInfo() {
     const currentQuestion = gameState.state.currentQuestion;
     const setInfo = gameState.state.questionSets[currentSet];
     
-    document.getElementById('currentSetTitle').textContent = setInfo.title;
+    // Update the current set title with theme icon
+    const currentSetTitle = document.getElementById('currentSetTitle');
+    if (currentSetTitle && setInfo) {
+        currentSetTitle.innerHTML = `
+            <img src="assets/themes/${setInfo.theme}.png" alt="${setInfo.theme}" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle;">
+            ${setInfo.title}
+        `;
+    }
+    
     document.getElementById('currentSetNumber').textContent = `Set ${currentSet}`;
     document.getElementById('currentQuestionNumber').textContent = `Q${currentQuestion}`;
 }
@@ -874,68 +1043,82 @@ function handleQuestionSetTitleKeypress(event, setNumber) {
 }
 
 function toggleThemeDropdown(setNumber) {
-    const dropdown = document.getElementById(`themeDropdown-${setNumber}`);
-    const isActive = dropdown.classList.contains('active');
+    // Store the current set number for the modal
+    window.currentThemeSetNumber = setNumber;
     
-    // Close all other dropdowns
-    document.querySelectorAll('.theme-dropdown').forEach(d => {
-        if (d !== dropdown) {
-            d.classList.remove('active');
-        }
-    });
+    // Show the theme modal
+    const modal = document.getElementById('themeModal');
+    modal.classList.add('active');
     
-    if (!isActive) {
-        dropdown.classList.add('active');
-        populateThemeOptions(setNumber);
-    } else {
-        dropdown.classList.remove('active');
-    }
+    // Populate theme options
+    populateThemeOptions();
 }
 
-function populateThemeOptions(setNumber) {
-    const dropdown = document.getElementById(`themeDropdown-${setNumber}`);
-    dropdown.innerHTML = '';
+function populateThemeOptions() {
+    const themeList = document.getElementById('themeList');
+    themeList.innerHTML = '';
     
-    // Add theme options (you can expand this list)
+    // Available themes from assets/themes directory
     const themes = [
         { name: 'Brainstorm', icon: 'brainstorm' },
-        { name: 'Science', icon: 'brainstorm' },
-        { name: 'History', icon: 'brainstorm' },
-        { name: 'Arts', icon: 'brainstorm' },
-        { name: 'Sports', icon: 'brainstorm' },
-        { name: 'Math', icon: 'brainstorm' },
-        { name: 'Current Events', icon: 'brainstorm' },
-        { name: 'Mystery', icon: 'brainstorm' }
+        { name: 'DNA', icon: 'DNA' },
+        { name: 'Flask', icon: 'Flask' },
+        { name: 'Oil', icon: 'Oil' }
     ];
     
     themes.forEach(theme => {
-        const option = document.createElement('div');
-        option.className = 'theme-option';
-        option.onclick = () => selectTheme(setNumber, theme.icon, theme.name);
+        const themeItem = document.createElement('div');
+        themeItem.className = 'theme-item';
+        themeItem.onclick = () => selectTheme(theme.icon, theme.name);
         
-        option.innerHTML = `
-            <div class="theme-option-icon" style="background-image: url('assets/themes/${theme.icon}.png')"></div>
-            <span>${theme.name}</span>
+        themeItem.innerHTML = `
+            <img src="assets/themes/${theme.icon}.png" alt="${theme.name}" class="theme-item-icon">
+            <div class="theme-item-name">${theme.name}</div>
         `;
         
-        dropdown.appendChild(option);
+        themeList.appendChild(themeItem);
     });
 }
 
-function selectTheme(setNumber, icon, name) {
-    gameState.state.questionSets[setNumber].icon = icon;
+function selectTheme(icon, name) {
+    const setNumber = window.currentThemeSetNumber;
     
-    // Update theme icon
-    const themeIcon = document.getElementById(`themeIcon-${setNumber}`);
-    if (themeIcon) {
-        themeIcon.style.backgroundImage = `url('assets/themes/${icon}.png')`;
+    // Update the theme in game state
+    gameState.state.questionSets[setNumber].theme = icon;
+    
+    // Update the questions table to reflect the change
+    updateQuestionsTable();
+    
+    // Update the current question set display if this is the current set
+    if (setNumber === gameState.state.currentSet) {
+        gameState.updateQuestionSetDisplay();
     }
     
-    // Close dropdown
-    document.getElementById(`themeDropdown-${setNumber}`).classList.remove('active');
+    // Emit socket events for main page updates
+    socket.emit('game_state_update', {
+        path: `questionSets.${setNumber}.theme`,
+        value: icon
+    });
+    
+    socket.emit('question_set_update', {
+        setNumber: setNumber,
+        updates: { theme: icon }
+    });
+    
+    // Close modal
+    closeThemeModal();
     
     addLog(`Set ${setNumber} theme updated: ${name}`, 'info');
 }
+
+function closeThemeModal() {
+    const modal = document.getElementById('themeModal');
+    modal.classList.remove('active');
+    window.currentThemeSetNumber = null;
+}
+
+// Make closeThemeModal available globally
+window.closeThemeModal = closeThemeModal;
 
 function goToQuestion(setNumber, questionNumber) {
     console.log(`🎮 Console: Moving to Set ${setNumber}, Question ${questionNumber}`);
@@ -997,16 +1180,23 @@ function initializeCharacterControls() {
     window.toggleAngel = function() {
         const currentTeam = gameState.state.currentTeam;
         if (currentTeam > 0) {
-            // Emit the same event that main page hotkeys manager uses
-            socket.emit('angel_card_action', {
-                teamId: currentTeam,
-                action: 'toggle'
+            // Toggle angel team state
+            if (gameState.state.angelTeam === currentTeam) {
+                gameState.state.angelTeam = 0;
+                addLog(`Angel protection removed from Team ${currentTeam}`, 'info');
+            } else {
+                gameState.state.angelTeam = currentTeam;
+                addLog(`Angel protection activated for Team ${currentTeam}`, 'success');
+            }
+            
+            // Update game status display
+            updateGameStatusDisplay();
+            
+            // Emit game state update
+            socket.emit('game_state_update', {
+                path: 'angelTeam',
+                value: gameState.state.angelTeam
             });
-            
-            // Also call the local function for console updates
-            toggleActionCard(currentTeam, 'angel');
-            
-            addLog(`Team ${currentTeam} angel card toggled`, 'info');
         } else {
             addLog('No team selected for angel card', 'warning');
         }
@@ -1015,48 +1205,48 @@ function initializeCharacterControls() {
     window.toggleDevil = function() {
         const currentTeam = gameState.state.currentTeam;
         if (currentTeam > 0) {
-            // Emit the same event that main page hotkeys manager uses
-            socket.emit('devil_card_action', {
-                teamId: currentTeam,
-                action: 'toggle'
-            });
+            // Set attack team to current team
+            gameState.state.attackTeam = currentTeam;
             
-            // Also call the local function for console updates
-            activateDevil(currentTeam);
+            // Show devil attack modal to select victim
+            showDevilAttackModal(currentTeam);
             
-            addLog(`Team ${currentTeam} devil card toggled`, 'info');
+            addLog(`Devil attack initiated by Team ${currentTeam}`, 'info');
         } else {
             addLog('No team selected for devil card', 'warning');
         }
     };
     
     window.toggleChallenge = function() {
+        const currentTeam = gameState.state.currentTeam;
         const isActive = gameState.state.currentChallenge > 0;
+        
         if (isActive) {
             gameState.state.currentChallenge = 0;
             addLog('Challenge mode disabled', 'info');
         } else {
-            gameState.state.currentChallenge = 1;
-            addLog('Challenge mode enabled (2x points)', 'success');
+            if (currentTeam > 0) {
+                gameState.state.currentChallenge = currentTeam;
+                addLog(`Challenge mode enabled (2x points) for Team ${currentTeam}`, 'success');
+            } else {
+                gameState.state.currentChallenge = 1; // Default to team 1 if no team selected
+                addLog('Challenge mode enabled (2x points) for Team 1', 'success');
+            }
         }
         
-        // Update character action panel
-        updateCharacterActionPanel();
+        // Update game status display
+        updateGameStatusDisplay();
         
-        // Emit the same event that main page hotkeys manager uses
-        socket.emit('challenge_mode_action', {
+        // Emit for main page compatibility
+        socket.emit('challenge_update', { 
             enabled: !isActive,
-            teamId: gameState.state.currentTeam,
-            action: 'toggle'
+            teamId: gameState.state.currentChallenge 
         });
         
-        // Also emit for main page compatibility
-        socket.emit('challenge_update', { enabled: !isActive });
-        
-        // Also emit for hotkeys manager compatibility
-        socket.emit('challenge_mode_toggled', { 
-            enabled: !isActive,
-            teamId: gameState.state.currentTeam 
+        // Also emit game state update
+        socket.emit('game_state_update', {
+            path: 'currentChallenge',
+            value: gameState.state.currentChallenge
         });
     };
     
@@ -1079,15 +1269,6 @@ function initializeCharacterControls() {
         
         console.log(`🎮 Console: Moving previous from Set ${currentSet} Q${currentQuestion} to Set ${newSet} Q${newQuestion}`);
         
-        // Emit the same event that main page hotkeys manager uses
-        socket.emit('navigation_action', {
-            direction: 'previous',
-            fromSet: currentSet,
-            fromQuestion: currentQuestion,
-            toSet: newSet,
-            toQuestion: newQuestion
-        });
-        
         goToQuestion(newSet, newQuestion);
     };
     
@@ -1105,29 +1286,13 @@ function initializeCharacterControls() {
         
         console.log(`🎮 Console: Moving next from Set ${currentSet} Q${currentQuestion} to Set ${newSet} Q${newQuestion}`);
         
-        // Emit the same event that main page hotkeys manager uses
-        socket.emit('navigation_action', {
-            direction: 'next',
-            fromSet: currentSet,
-            fromQuestion: currentQuestion,
-            toSet: newSet,
-            toQuestion: newQuestion
-        });
-        
         goToQuestion(newSet, newQuestion);
     };
     
     window.markCorrect = function() {
         const currentTeam = gameState.state.currentTeam;
         if (currentTeam > 0) {
-            // Emit the same event that main page hotkeys manager uses
-            socket.emit('scoring_action', {
-                teamId: currentTeam,
-                isPositive: true,
-                action: 'correct'
-            });
-            
-            // Also call the local function for console updates
+            // Call the local function for console updates
             adjustScore(currentTeam, 1);
             
             addLog(`Team ${currentTeam} marked correct`, 'success');
@@ -1139,14 +1304,7 @@ function initializeCharacterControls() {
     window.markIncorrect = function() {
         const currentTeam = gameState.state.currentTeam;
         if (currentTeam > 0) {
-            // Emit the same event that main page hotkeys manager uses
-            socket.emit('scoring_action', {
-                teamId: currentTeam,
-                isPositive: false,
-                action: 'incorrect'
-            });
-            
-            // Also call the local function for console updates
+            // Call the local function for console updates
             adjustScore(currentTeam, -1);
             
             addLog(`Team ${currentTeam} marked incorrect`, 'error');
@@ -1157,33 +1315,8 @@ function initializeCharacterControls() {
 }
 
 function updateCharacterActionPanel() {
-    const angelIcon = document.getElementById('mainCharacterAngel');
-    const devilIcon = document.getElementById('mainCharacterDevil');
-    const crossIcon = document.getElementById('mainCharacterCross');
-    const challengeIcon = document.getElementById('mainCharacterChallenge');
-    
-    // Update angel icon
-    if (angelIcon) {
-        angelIcon.classList.toggle('active', gameState.state.currentTeam > 0 && 
-            gameState.state.actionCards[gameState.state.currentTeam].angel);
-    }
-    
-    // Update devil icon
-    if (devilIcon) {
-        devilIcon.classList.toggle('active', gameState.state.currentTeam > 0 && 
-            gameState.state.actionCards[gameState.state.currentTeam].devil);
-    }
-    
-    // Update cross icon
-    if (crossIcon) {
-        crossIcon.classList.toggle('active', gameState.state.currentTeam > 0 && 
-            gameState.state.actionCards[gameState.state.currentTeam].cross);
-    }
-    
-    // Update challenge icon
-    if (challengeIcon) {
-        challengeIcon.classList.toggle('active', gameState.state.currentChallenge > 0);
-    }
+    // Update the new game status display instead of character action panel
+    updateGameStatusDisplay();
 }
 
 function adjustScore(teamId, adjustment) {
@@ -1234,14 +1367,6 @@ function adjustScore(teamId, adjustment) {
         correct: adjustment > 0
     });
     
-    // Also emit for hotkeys manager compatibility
-    socket.emit('scoring_result', {
-        teamId: teamId,
-        isCorrect: adjustment > 0,
-        scoreChange: actualAdjustment,
-        newScore: gameState.state.teams[teamId].score
-    });
-    
     const actionText = adjustment > 0 ? 'correct' : 'incorrect';
     const challengeText = multiplier > 1 ? ' (2x)' : '';
     addLog(`Team ${teamId} ${actionText}: ${oldScore} → ${gameState.state.teams[teamId].score}${challengeText}`, 
@@ -1258,9 +1383,6 @@ function buzzTeam(teamId) {
     // Emit to main page for immediate feedback
     socket.emit('buzzer_pressed', { teamId: teamId });
     
-    // Also emit simulate_buzzer for hotkeys manager compatibility
-    socket.emit('simulate_buzzer', { teamId: teamId });
-    
     // Also emit test buzzer for Arduino compatibility
     socket.emit('test_buzzer', { teamId: teamId });
     
@@ -1268,233 +1390,95 @@ function buzzTeam(teamId) {
 }
 
 function clearBuzzers() {
+    // Reset all game state parameters
     gameState.state.currentTeam = 0;
-    updateCharacterActionPanel();
+    gameState.state.currentChallenge = 0;
+    gameState.state.angelTeam = 0;
+    gameState.state.attackTeam = 0;
+    gameState.state.victimTeam = 0;
     
-    // Emit the same event that main page hotkeys manager uses
-    socket.emit('buzzer_reset_action', {
-        action: 'clear_all',
-        reason: 'manual_reset'
+    updateGameStatusDisplay();
+    
+    // Emit game state updates
+    socket.emit('game_state_update', {
+        path: 'currentTeam',
+        value: 0
+    });
+    socket.emit('game_state_update', {
+        path: 'currentChallenge',
+        value: 0
+    });
+    socket.emit('game_state_update', {
+        path: 'angelTeam',
+        value: 0
+    });
+    socket.emit('game_state_update', {
+        path: 'attackTeam',
+        value: 0
+    });
+    socket.emit('game_state_update', {
+        path: 'victimTeam',
+        value: 0
     });
     
     // Emit for main page compatibility
     socket.emit('clear_buzzers');
     
-    // Also emit for hotkeys manager compatibility
-    socket.emit('reset_buzzers');
-    
-    addLog('All buzzers cleared', 'info');
+    addLog('All buzzers and game state cleared', 'info');
 }
 
-// ========== KEYBOARD SHORTCUTS ==========
-function initializeKeyboardShortcuts() {
-    // DISABLED: Console page now uses the unified hotkeys manager from hotkeys.js
-    // All keyboard shortcuts are handled by window.hotkeysManager
-    console.log('🎮 Console: Using unified hotkeys manager');
-    return;
+// ========== GAME STATUS DISPLAY ==========
+function updateGameStatusDisplay() {
+    updateCurrentTeamDisplay();
+    updateCurrentActionDisplay();
+}
+
+function updateCurrentTeamDisplay() {
+    const currentTeam = gameState.state.currentTeam;
+    const teamDisplay = document.getElementById('currentTeamDisplay');
     
-    /* DISABLED - Using hotkeys manager instead
-    document.addEventListener('keydown', function(event) {
-        // Ignore if user is typing in an input field
-        if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-            return;
+    if (teamDisplay) {
+        if (currentTeam > 0) {
+            const team = gameState.state.teams[currentTeam];
+            teamDisplay.textContent = `Team ${currentTeam} (${team.name})`;
+            teamDisplay.className = 'current-team-value active';
+        } else {
+            teamDisplay.textContent = 'None';
+            teamDisplay.className = 'current-team-value';
+        }
+    }
+}
+
+function updateCurrentActionDisplay() {
+    const currentChallenge = gameState.state.currentChallenge;
+    const angelTeam = gameState.state.angelTeam;
+    const attackTeam = gameState.state.attackTeam;
+    const victimTeam = gameState.state.victimTeam;
+    const actionDisplay = document.getElementById('currentActionDisplay');
+    
+    if (actionDisplay) {
+        let actionText = 'None';
+        let actionClass = 'current-action-value';
+        
+        // Check for challenge mode first
+        if (currentChallenge > 0) {
+            actionText = `Challenge Mode (2x) - Team ${currentChallenge}`;
+            actionClass = 'current-action-value challenge';
+        }
+        // Check for angel team
+        else if (angelTeam > 0) {
+            actionText = `Angel Protection - Team ${angelTeam}`;
+            actionClass = 'current-action-value angel';
+        }
+        // Check for devil attack
+        else if (attackTeam > 0 && victimTeam > 0) {
+            actionText = `Devil Attack: Team ${attackTeam} → Team ${victimTeam}`;
+            actionClass = 'current-action-value devil';
         }
         
-        const key = event.key.toLowerCase();
-        
-        switch(key) {
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-                event.preventDefault();
-                const teamId = parseInt(key);
-                console.log(`🎮 Console: Buzzing team ${teamId}`);
-                // Emit the same event as main page hotkeys manager
-                socket.emit('simulate_buzzer', { teamId: teamId });
-                break;
-            case 'z':
-                event.preventDefault();
-                console.log('🎮 Console: Toggle Angel card');
-                // Emit the same event as main page hotkeys manager
-                socket.emit('angel_card_toggle', { teamId: gameState.state.currentTeam });
-                break;
-            case 'x':
-                event.preventDefault();
-                console.log('🎮 Console: Toggle Devil card');
-                // Emit the same event as main page hotkeys manager
-                socket.emit('devil_card_toggle', { teamId: gameState.state.currentTeam });
-                break;
-            case 'c':
-                event.preventDefault();
-                console.log('🎮 Console: Toggle Challenge mode');
-                // Emit the same event as main page hotkeys manager
-                socket.emit('challenge_mode_toggle', { teamId: gameState.state.currentTeam });
-                break;
-            case 'r':
-                event.preventDefault();
-                console.log('🎮 Console: Reset buzzers (R key pressed)');
-                // Emit the same event as main page hotkeys manager
-                socket.emit('reset_buzzers');
-                // Also call the local function for immediate feedback
-                clearBuzzers();
-                break;
-            case 'i':
-                event.preventDefault();
-                console.log('🎮 Console: Start/Pause timer');
-                socket.emit('start_timer');
-                break;
-            case 'o':
-                event.preventDefault();
-                console.log('🎮 Console: Stop timer');
-                socket.emit('stop_timer');
-                break;
-            case 'p':
-                event.preventDefault();
-                console.log('🎮 Console: Reset timer');
-                socket.emit('reset_timer', { value: 15 });
-                break;
-            case 'arrowleft':
-                event.preventDefault();
-                console.log('🎮 Console: Move to previous question');
-                // Use the same logic as main page for consistency
-                const currentSetLeft = gameState.state.currentSet;
-                const currentQuestionLeft = gameState.state.currentQuestion;
-                
-                let newSetLeft = currentSetLeft;
-                let newQuestionLeft = currentQuestionLeft;
-                
-                if (currentQuestionLeft > 1) {
-                    newQuestionLeft = currentQuestionLeft - 1;
-                } else if (currentSetLeft > 1) {
-                    newSetLeft = currentSetLeft - 1;
-                    newQuestionLeft = 4;
-                }
-                
-                // Emit only progress_update for main page (let character controller handle game state)
-                console.log('🎮 Console: Emitting progress_update for arrow left:', {
-                    setNumber: newSetLeft,
-                    questionNumber: newQuestionLeft,
-                    animateRun: true
-                });
-                socket.emit('progress_update', {
-                    setNumber: newSetLeft,
-                    questionNumber: newQuestionLeft,
-                    title: gameState.state.questionSets[newSetLeft].title,
-                    subject: gameState.state.questionSets[newSetLeft].theme,
-                    animateRun: true
-                });
-                
-                addLog(`Moved to Set ${newSetLeft}, Question ${newQuestionLeft}`, 'info');
-                break;
-            case 'arrowright':
-                event.preventDefault();
-                console.log('🎮 Console: Move to next question');
-                // Use the same logic as main page for consistency
-                const currentSetRight = gameState.state.currentSet;
-                const currentQuestionRight = gameState.state.currentQuestion;
-                
-                let newSetRight = currentSetRight;
-                let newQuestionRight = currentQuestionRight;
-                
-                if (currentQuestionRight < 4) {
-                    newQuestionRight = currentQuestionRight + 1;
-                } else if (currentSetRight < 10) {
-                    newSetRight = currentSetRight + 1;
-                    newQuestionRight = 1;
-                }
-                
-                // Emit only progress_update for main page (let character controller handle game state)
-                console.log('🎮 Console: Emitting progress_update for arrow right:', {
-                    setNumber: newSetRight,
-                    questionNumber: newQuestionRight,
-                    animateRun: true
-                });
-                socket.emit('progress_update', {
-                    setNumber: newSetRight,
-                    questionNumber: newQuestionRight,
-                    title: gameState.state.questionSets[newSetRight].title,
-                    subject: gameState.state.questionSets[newSetRight].theme,
-                    animateRun: true
-                });
-                
-                addLog(`Moved to Set ${newSetRight}, Question ${newQuestionRight}`, 'info');
-                break;
-            case 'arrowup':
-                event.preventDefault();
-                console.log('🎮 Console: Mark correct');
-                // Emit the same event as main page hotkeys manager
-                socket.emit('scoring_correct', { teamId: gameState.state.currentTeam });
-                break;
-            case 'arrowdown':
-                event.preventDefault();
-                console.log('🎮 Console: Mark incorrect');
-                // Emit the same event as main page hotkeys manager
-                socket.emit('scoring_incorrect', { teamId: gameState.state.currentTeam });
-                break;
-            case '[':
-                event.preventDefault();
-                console.log('🎮 Console: Previous set');
-                const prevSet = gameState.state.currentSet;
-                if (prevSet > 1) {
-                    socket.emit('progress_update', {
-                        setNumber: prevSet - 1,
-                        questionNumber: 1,
-                        animateRun: true
-                    });
-                }
-                break;
-            case ']':
-                event.preventDefault();
-                console.log('🎮 Console: Next set');
-                const nextSetBracket = gameState.state.currentSet;
-                if (nextSetBracket < 10) {
-                    socket.emit('progress_update', {
-                        setNumber: nextSetBracket + 1,
-                        questionNumber: 1,
-                        animateRun: true
-                    });
-                }
-                break;
-            case 'q':
-                event.preventDefault();
-                
-                // Prevent multiple rapid triggers
-                if (window.lastQKeyPress && Date.now() - window.lastQKeyPress < 1000) {
-                    console.log('⚠️ Console: Q key pressed too quickly, ignoring');
-                    return;
-                }
-                window.lastQKeyPress = Date.now();
-                
-                console.log('🎮 Console: Full game reset');
-                
-                // Reset local game state
-                if (gameState) {
-                    gameState.reset();
-                    console.log('✅ Console: Game state reset completed');
-                }
-                
-                // Update UI
-                updateTeamsTable();
-                updateQuestionsTable();
-                updateCurrentQuestionInfo();
-                
-                // Sync with server for full game reset
-                socket.emit('admin_reset', {});
-                console.log('✅ Console: Full game reset synced with server');
-                
-                addLog('Full game reset completed', 'info');
-                break;
-            case 'h':
-                event.preventDefault();
-                console.log('🎮 Console: Toggle help modal');
-                toggleHelpModal();
-                break;
-        }
-    });
-    */
+        actionDisplay.textContent = actionText;
+        actionDisplay.className = actionClass;
+    }
 }
 
 // ========== HELP MODAL ==========
@@ -1588,12 +1572,14 @@ function resetGame() {
     if (confirm('Reset entire game? This will clear all scores, action cards, and return to Set 1 Q1.')) {
         gameState.resetGame();
         
+        // Reset all game state parameters
+        resetGameStateParameters();
+        
         // Update all displays
         updateTimerDisplay();
         updateTeamsTable();
         updateQuestionsTable();
         updateCurrentQuestionInfo();
-        updateCharacterActionPanel();
         
         // Clear logs
         clearLogs();
@@ -1602,38 +1588,33 @@ function resetGame() {
     }
 }
 
-// ========== CHARACTER DISPLAY INITIALIZATION ==========
-function initializeCharacterDisplay() {
-    // Hide victim character by default
-    const victimCharacter = document.getElementById('victimCharacter');
-    if (victimCharacter) {
-        victimCharacter.style.display = 'none';
-    }
+// ========== GAME STATUS DISPLAY INITIALIZATION ==========
+function initializeGameStatusDisplay() {
+    // Initialize the game status display
+    updateGameStatusDisplay();
+    console.log('🎮 Game status display initialized');
+}
+
+// Function to reset all game state parameters
+function resetGameStateParameters() {
+    gameState.state.currentTeam = 0;
+    gameState.state.currentChallenge = 0;
+    gameState.state.angelTeam = 0;
+    gameState.state.attackTeam = 0;
+    gameState.state.victimTeam = 0;
     
-    // Show only progress character in white
-    const progressCharacter = document.getElementById('progressCharacter');
-    if (progressCharacter) {
-        progressCharacter.style.display = 'block';
-        // Set to white character (default state)
-        progressCharacter.src = 'assets/animations/among_us_idle.json';
-    }
+    updateGameStatusDisplay();
     
-    // Initialize action panel (all cards inactive)
-    const actionPanel = document.getElementById('characterActionPanel');
-    if (actionPanel) {
-        const cards = actionPanel.querySelectorAll('.character-action-icon');
-        cards.forEach(card => {
-            card.classList.remove('active');
+    // Emit all game state updates
+    const parameters = ['currentTeam', 'currentChallenge', 'angelTeam', 'attackTeam', 'victimTeam'];
+    parameters.forEach(param => {
+        socket.emit('game_state_update', {
+            path: param,
+            value: 0
         });
-    }
+    });
     
-    // Hide score indicator by default
-    const scoreIndicator = document.getElementById('scoreIndicator');
-    if (scoreIndicator) {
-        scoreIndicator.style.display = 'none';
-    }
-    
-    console.log('🎭 Character display initialized - showing only progress character in white');
+    addLog('All game state parameters reset', 'info');
 }
 
 // ========== SOCKET EVENT LISTENERS ==========
@@ -1670,7 +1651,7 @@ function setupSocketListeners() {
                 gameState.state.actionCards[teamId].cross = data.active;
             }
             updateActionCardDisplay(teamId);
-            updateCharacterActionPanel();
+            updateGameStatusDisplay();
         }
     });
 
@@ -1687,7 +1668,21 @@ function setupSocketListeners() {
     });
 
     socket.on('buzzer_pressed', (data) => {
+        // Update local game state
+        gameState.state.currentTeam = data.teamId;
+        updateGameStatusDisplay();
         addLog(`Team ${data.teamId} buzzed in!`, 'success');
+    });
+
+    socket.on('clear_buzzers', () => {
+        // Update local game state - reset all parameters
+        gameState.state.currentTeam = 0;
+        gameState.state.currentChallenge = 0;
+        gameState.state.angelTeam = 0;
+        gameState.state.attackTeam = 0;
+        gameState.state.victimTeam = 0;
+        updateGameStatusDisplay();
+        addLog('All buzzers and game state cleared', 'info');
     });
 
     socket.on('log_update', (data) => {
@@ -1703,7 +1698,56 @@ function setupSocketListeners() {
             // Update console UI
             updateQuestionsTable();
             updateCurrentQuestionInfo();
+            updateGameStatusDisplay();
         }
+    });
+
+    // Listen for game state updates to sync console state
+    socket.on('game_state_update', (data) => {
+        if (data.path && data.value !== undefined) {
+            // Update the specific game state parameter
+            gameState.update(data.path, data.value);
+            
+            // Update console UI based on what changed
+            if (data.path.startsWith('currentSet') || data.path.startsWith('currentQuestion')) {
+                updateQuestionsTable();
+                updateCurrentQuestionInfo();
+            }
+            if (data.path.startsWith('currentTeam') || data.path.startsWith('currentChallenge') || 
+                data.path.startsWith('angelTeam') || data.path.startsWith('attackTeam') || 
+                data.path.startsWith('victimTeam')) {
+                updateGameStatusDisplay();
+            }
+            if (data.path.startsWith('teams.')) {
+                updateTeamsTable();
+            }
+        }
+    });
+
+    // Listen for specific game state parameter updates
+    socket.on('currentChallenge_update', (data) => {
+        gameState.state.currentChallenge = data.teamId || 0;
+        updateGameStatusDisplay();
+    });
+
+    socket.on('angelTeam_update', (data) => {
+        gameState.state.angelTeam = data.teamId || 0;
+        updateGameStatusDisplay();
+    });
+
+    socket.on('attackTeam_update', (data) => {
+        gameState.state.attackTeam = data.teamId || 0;
+        updateGameStatusDisplay();
+    });
+
+    socket.on('victimTeam_update', (data) => {
+        gameState.state.victimTeam = data.teamId || 0;
+        updateGameStatusDisplay();
+    });
+
+    socket.on('currentTeam_update', (data) => {
+        gameState.state.currentTeam = data.teamId || 0;
+        updateGameStatusDisplay();
     });
 }
 
