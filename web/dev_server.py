@@ -266,8 +266,10 @@ class ArduinoSerial:
                 data = self.write_queue.get(timeout=0.1)
                 
                 if self.serial_port and self.is_connected:
+                    logger.info(f"📤 Writing to Arduino: '{data.strip()}'")
                     self.serial_port.write(data.encode('utf-8'))
                     self.serial_port.flush()
+                    logger.info(f"✅ Successfully wrote to Arduino: '{data.strip()}'")
                     consecutive_errors = 0  # Reset on successful write
                     
                 self.write_queue.task_done()
@@ -336,7 +338,9 @@ class ArduinoSerial:
     def write(self, data):
         """Queue data for writing to Arduino"""
         if self.is_connected:
+            logger.info(f"📝 Queuing data for Arduino: '{data.strip()}'")
             self.write_queue.put(data)
+            logger.info(f"✅ Data queued successfully, queue size: {self.write_queue.qsize()}")
         else:
             logger.warning(f"Arduino not connected, cannot send: {data.strip()}")
     
@@ -381,12 +385,12 @@ game_state = {
     'connected_clients': 0,
     'arduino_connected': False,
     'teams': {
-        1: {'name': 'Team 1', 'score': 0, 'color': 'red', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0},
-        2: {'name': 'Team 2', 'score': 0, 'color': 'blue', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0},
-        3: {'name': 'Team 3', 'score': 0, 'color': 'lime', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0},
-        4: {'name': 'Team 4', 'score': 0, 'color': 'orange', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0},
-        5: {'name': 'Team 5', 'score': 0, 'color': 'purple', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0},
-        6: {'name': 'Team 6', 'score': 0, 'color': 'cyan', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0}
+        1: {'name': 'Team A', 'score': 0, 'color': 'red', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0},
+        2: {'name': 'Team B', 'score': 0, 'color': 'blue', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0},
+        3: {'name': 'Team C', 'score': 0, 'color': 'lime', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0},
+        4: {'name': 'Team D', 'score': 0, 'color': 'orange', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0},
+        5: {'name': 'Team E', 'score': 0, 'color': 'pink', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0},
+        6: {'name': 'Team F', 'score': 0, 'color': 'yellow', 'cards': {'angel': False, 'devil': False, 'cross': False, 'angelUsed': False, 'devilUsed': False}, 'rank': 0}
     },
     'timer': {
         'value': 15,
@@ -396,7 +400,7 @@ game_state = {
     'question_set': {
         'current': 1,
         'subject': 'general',
-        'title': '',
+        'title': 'General Knowledge',
         'sub_question': 0
     },
     'challenge_2x': False,
@@ -529,12 +533,15 @@ def index():
 
 @app.route('/console')
 def console():
-    """Serve the console window interface"""
-    try:
-        with open('console.html', 'r') as f:
-            return f.read()
-    except FileNotFoundError:
-        return "<h1>Error: console.html not found</h1>", 404
+    """Serve the console page"""
+    with open('console.html', 'r', encoding='utf-8') as f:
+        return f.read()
+
+@app.route('/test-state-persistence')
+def test_state_persistence():
+    """Serve the state persistence test page"""
+    with open('tests/test_state_persistence.html', 'r', encoding='utf-8') as f:
+        return f.read()
 
 
 
@@ -576,20 +583,34 @@ def handle_disconnect_arduino():
     socketio.emit('arduino_status', {'connected': False, 'message': 'Arduino disconnected'})
     socketio.emit('log', {'message': 'Arduino disconnected'})
 
+@socketio.on('get_arduino_status')
+def handle_get_arduino_status():
+    """Send current Arduino connection status to client"""
+    logger.info('📊 Arduino status request received')
+    status = {
+        'connected': arduino.is_connected,
+        'message': 'Arduino connected' if arduino.is_connected else 'Arduino not connected'
+    }
+    socketio.emit('arduino_status', status)
+
 @socketio.on('reset_buzzers')
 def handle_reset(data=None):
     """Handle reset command - send to Arduino if connected"""
-    logger.info('Reset command received')
+    logger.info('🔄 Reset command received from client')
     
     if arduino.is_connected:
         # Send reset to real Arduino
+        logger.info('📤 Sending RESET command to Arduino...')
         arduino.write('RESET\n')
         socketio.emit('log', {'message': 'Reset sent to Arduino'})
+        logger.info('✅ RESET command sent to Arduino successfully')
     else:
         # Simulate reset if no Arduino
+        logger.warning('⚠️ Arduino not connected, simulating reset')
         game_state['winner'] = None
         socketio.emit('buzzer_data', 'READY')
         socketio.emit('log', {'message': 'System reset (simulated)'})
+        logger.info('✅ Simulated reset completed')
 
 @socketio.on('simulate_buzzer')
 def handle_simulate_buzzer(data):
@@ -610,7 +631,7 @@ def handle_simulate_buzzer(data):
     logger.info(f"✅ Simulated Team {team_id} buzzed in successfully")
 
 @socketio.on('admin_reset')
-def handle_admin_reset():
+def handle_admin_reset(data=None):
     """Handle admin reset - FIXED: Now clears card status"""
     logger.info('Admin reset - clearing all game state including cards')
     
@@ -678,8 +699,12 @@ def handle_team_update(data):
     team_id = data.get('teamId')
     updates = data.get('updates', {})
     
+    logger.info(f"🔄 Team update received: Team {team_id}, Updates: {updates}")
+    
     if team_id in game_state['teams']:
+        old_state = game_state['teams'][team_id].copy()
         game_state['teams'][team_id].update(updates)
+        logger.info(f"✅ Team {team_id} updated: {old_state} → {game_state['teams'][team_id]}")
         
         # Broadcast update to all clients
         socketio.emit('team_update', {
@@ -692,6 +717,8 @@ def handle_team_update(data):
             add_log(f"Team {team_id} name changed to '{updates['name']}'")
         if 'color' in updates:
             add_log(f"Team {team_id} color changed to {updates['color']}")
+    else:
+        logger.error(f"❌ Team {team_id} not found in game state")
 
 @socketio.on('score_update')
 def handle_score_update(data):
@@ -1261,6 +1288,16 @@ def handle_game_state_update(data):
         
         add_log(f"Game state updated: {path} = {value}")
         logger.info(f"✅ Game state update broadcast: {path} = {value}")
+
+@socketio.on('get_server_state')
+def handle_get_server_state(data):
+    """Return current server state to client"""
+    logger.info("📤 Sending server state to client")
+    logger.info(f"📊 Current teams: {game_state['teams']}")
+    
+    # Emit the current game state back to the requesting client
+    emit('server_state_response', game_state)
+    logger.info("✅ Server state sent successfully")
 
 def add_log(message, type='info'):
     """Add entry to game logs"""

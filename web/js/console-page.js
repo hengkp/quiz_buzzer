@@ -55,9 +55,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up socket event listeners
     setupSocketListeners();
     
+    // Set up game state subscriptions for real-time updates
+    setupGameStateSubscriptions();
+    
+    // Setup server state response listener after socket connects
+    socket.on('connect', () => {
+        console.log('🔌 Socket connected, setting up server state listener');
+        setupServerStateListener();
+        loadServerState();
+    });
+    
     // Update initial displays
     updateTimerDisplay();
-    updateCurrentQuestionInfo();
     updateTeamsTable();
     updateQuestionsTable();
     updateGameStatusDisplay();
@@ -65,6 +74,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add initial log entry
     addLog('Console initialized - Ready for moderation', 'success');
     addLog('Click the help button (?) for console controls', 'info');
+    
+
     
     console.log('✅ Console page initialized successfully');
 });
@@ -93,104 +104,25 @@ function initializeTabs() {
 
 // ========== ARDUINO CONNECTION ==========
 function initializeArduinoConnection() {
-    window.toggleConnection = async function() {
-        if (isConnected) {
-            await disconnectArduino();
+    // Use server-side Arduino connection instead of client-side
+    window.toggleConnection = function() {
+        if (window.arduinoConnected) {
+            window.socketManager.disconnectArduino();
         } else {
-            await connectArduino();
+            window.socketManager.connectArduino();
         }
     };
-}
-
-async function connectArduino() {
-    if ('serial' in navigator) {
-        try {
-            addLog('Requesting Arduino port...', 'info');
-            
-            // Request port from user
-            port = await navigator.serial.requestPort({
-                filters: [
-                    { usbVendorId: 0x10C4 }, // Silicon Labs
-                    { usbVendorId: 0x1A86 }, // QinHeng Electronics  
-                    { usbVendorId: 0x0403 }, // FTDI
-                    { usbVendorId: 0x2341 }, // Arduino LLC
-                    { usbVendorId: 0x239A }, // Adafruit
-                    { usbVendorId: 0x303A }  // Espressif
-                ]
-            });
-            
-            addLog('Opening port...', 'info');
-            
-            // Open the port with proper settings
-            await port.open({ 
-                baudRate: 9600,
-                dataBits: 8,
-                stopBits: 1,
-                parity: 'none',
-                flowControl: 'none'
-            });
-            
-            addLog('Setting up data streams...', 'info');
-            
-            // Set up writer first
-            const textEncoder = new TextEncoderStream();
-            const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
-            writer = textEncoder.writable.getWriter();
-            
-            // Set up reader
-            const textDecoder = new TextDecoderStream();
-            const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
-            reader = textDecoder.readable.getReader();
-            
-            // Update connection state
-            isConnected = true;
-            updateConnectionUI();
-            
-            addLog('Arduino connected successfully', 'success');
-            addLog('Waiting for Arduino messages...', 'info');
-            
-            // Start reading data
-            readArduinoData();
-            
-            // Send initial test
-            setTimeout(() => {
-                sendResetToArduino();
-            }, 1000);
-            
-        } catch (error) {
-            console.error('Connection failed:', error);
-            addLog(`Connection failed: ${error.message}`, 'error');
-            isConnected = false;
-            updateConnectionUI();
-        }
-    } else {
-        addLog('Web Serial API not supported in this browser. Please use Chrome or Edge.', 'error');
-    }
-}
-
-async function disconnectArduino() {
-    try {
-        if (reader) {
-            await reader.cancel();
-            reader = null;
-        }
-        if (writer) {
-            await writer.close();
-            writer = null;
-        }
-        if (port) {
-            await port.close();
-            port = null;
-        }
-        
-        isConnected = false;
+    
+    // Listen for Arduino status changes
+    document.addEventListener('arduinoStatusChanged', (event) => {
+        const { connected, message } = event.detail;
+        window.arduinoConnected = connected;
         updateConnectionUI();
-        addLog('Arduino disconnected', 'info');
-        
-    } catch (error) {
-        console.error('Disconnect error:', error);
-        addLog(`Disconnect error: ${error.message}`, 'error');
-    }
+        addLog(message, connected ? 'success' : 'info');
+    });
+    
+    // Get initial Arduino status
+    window.socketManager.getArduinoStatus();
 }
 
 function updateConnectionUI() {
@@ -198,7 +130,7 @@ function updateConnectionUI() {
     const statusText = document.getElementById('arduinoText');
     const connectBtn = document.getElementById('connectBtn');
     
-    if (isConnected) {
+    if (window.arduinoConnected) {
         statusIndicator.classList.remove('disconnected');
         statusIndicator.classList.add('connected');
         statusText.textContent = 'Connected';
@@ -215,71 +147,12 @@ function updateConnectionUI() {
     }
 }
 
-async function readArduinoData() {
-    let buffer = '';
-    
-    try {
-        while (isConnected && reader) {
-            const { value, done } = await reader.read();
-            if (done) {
-                console.log('Arduino reader done');
-                break;
-            }
-            
-            // Accumulate data in buffer
-            buffer += value;
-            console.log('Raw Arduino data:', value);
-            
-            // Process complete lines
-            let lines = buffer.split('\n');
-            buffer = lines.pop(); // Keep incomplete line in buffer
-            
-            for (let line of lines) {
-                const data = line.trim();
-                if (data.length === 0) continue;
-                
-                console.log('Processing Arduino message:', data);
-                
-                // Handle Arduino messages based on actual protocol
-                if (data === 'READY') {
-                    addLog('Arduino ready - clearing web buzzers', 'success');
-                    clearBuzzers(true);
-                } else if (data.startsWith('WINNER:')) {
-                    const teamId = parseInt(data.replace('WINNER:', ''));
-                    if (teamId >= 1 && teamId <= 6) {
-                        addLog(`🚨 Team ${teamId} buzzed in!`, 'success');
-                        buzzTeam(teamId);
-                        socket.emit('test_buzzer', { teamId: teamId });
-                    }
-                } else {
-                    addLog(`Arduino: ${data}`, 'info');
-                }
-            }
-        }
-    } catch (error) {
-        if (isConnected) {
-            console.error('Error reading Arduino data:', error);
-            addLog(`Arduino communication error: ${error.message}`, 'error');
-            
-            // Auto-reconnect attempt
-            isConnected = false;
-            updateConnectionUI();
-            
-            addLog('Attempting to reconnect...', 'warning');
-            setTimeout(() => {
-                if (!isConnected) {
-                    connectArduino();
-                }
-            }, 2000);
-        }
-    }
-}
-
+// Server-side Arduino reset function
 async function sendResetToArduino() {
-    if (isConnected && writer) {
+    if (window.arduinoConnected) {
         try {
-            console.log('Sending RESET command to Arduino');
-            await writer.write('RESET\n');
+            console.log('Sending RESET command to Arduino via server');
+            window.socketManager.resetBuzzers();
             addLog('✅ Reset command sent to Arduino', 'info');
         } catch (error) {
             console.error('Error sending reset:', error);
@@ -289,6 +162,9 @@ async function sendResetToArduino() {
         addLog('❌ Cannot send reset - Arduino not connected', 'warning');
     }
 }
+
+// Make function globally available for hotkeys
+window.sendResetToArduino = sendResetToArduino;
 
 // ========== TIMER CONTROLS ==========
 function initializeTimer() {
@@ -367,9 +243,6 @@ function initializeTeamsTable() {
         row.innerHTML = `
             <td class="team-color-cell">
                 <div class="color-circle" style="background: ${colorDefinitions[team.color]}" onclick="toggleColorDropdown(${teamId}, event)"></div>
-                <div class="color-dropdown" id="colorDropdown-${teamId}">
-                    <div class="color-grid" id="colorGrid-${teamId}"></div>
-                </div>
             </td>
             <td class="team-name-cell">
                 <div class="team-name-display" onclick="editTeamName(${teamId})" id="teamNameDisplay-${teamId}">${team.name}</div>
@@ -455,6 +328,7 @@ function populateColorOptions(teamId) {
 
 function toggleColorDropdown(teamId, event) {
     const dropdown = document.getElementById(`colorDropdown-${teamId}`);
+    const backdrop = document.getElementById('colorDropdownBackdrop');
     
     if (!dropdown) {
         console.error(`❌ Console: Color dropdown not found for team ${teamId}`);
@@ -471,50 +345,22 @@ function toggleColorDropdown(teamId, event) {
     const isActive = dropdown.classList.contains('active');
     
     if (!isActive) {
-        // Position the dropdown relative to the click position
-        if (event) {
-            const rect = event.target.getBoundingClientRect();
-            
-            // Calculate position relative to viewport
-            const viewportX = rect.left + rect.width / 2;
-            const viewportY = rect.bottom + 8;
-            
-            // Ensure dropdown stays within viewport bounds
-            const dropdownWidth = 200; // min-width from CSS
-            const dropdownHeight = 120; // approximate height
-            
-            let finalX = viewportX;
-            let finalY = viewportY;
-            
-            // Adjust if dropdown would go off the right edge
-            if (finalX + dropdownWidth / 2 > window.innerWidth) {
-                finalX = window.innerWidth - dropdownWidth / 2 - 16;
-            }
-            
-            // Adjust if dropdown would go off the left edge
-            if (finalX - dropdownWidth / 2 < 0) {
-                finalX = dropdownWidth / 2 + 16;
-            }
-            
-            // Adjust if dropdown would go off the bottom edge
-            if (finalY + dropdownHeight > window.innerHeight) {
-                finalY = rect.top - dropdownHeight - 8;
-            }
-            
-            // Set position
-            dropdown.style.left = `${finalX}px`;
-            dropdown.style.top = `${finalY}px`;
-            dropdown.style.transform = 'translateX(-50%)';
-        }
-        
         dropdown.classList.add('active');
-        dropdown.classList.add('active');
+        backdrop.classList.add('active');
         populateColorOptions(teamId);
         console.log(`🎮 Console: Color dropdown opened for team ${teamId}`);
     } else {
         dropdown.classList.remove('active');
+        backdrop.classList.remove('active');
         console.log(`🎮 Console: Color dropdown closed for team ${teamId}`);
     }
+}
+
+function closeAllColorDropdowns() {
+    document.querySelectorAll('.color-dropdown').forEach(dropdown => {
+        dropdown.classList.remove('active');
+    });
+    document.getElementById('colorDropdownBackdrop').classList.remove('active');
 }
 
 function changeTeamColor(teamId, color) {
@@ -524,8 +370,8 @@ function changeTeamColor(teamId, color) {
     // Update UI
     updateTeamsTable();
     
-    // Close dropdown
-    document.getElementById(`colorDropdown-${teamId}`).classList.remove('active');
+    // Close dropdown and backdrop
+    closeAllColorDropdowns();
     
     // Update all color dropdowns
     populateAllColorOptions();
@@ -550,11 +396,17 @@ function editTeamName(teamId) {
     const nameInput = document.getElementById(`teamNameInput-${teamId}`);
     
     if (nameDisplay && nameInput) {
+        // Get the current name from game state instead of display element
+        const currentName = gameState.state.teams[teamId].name;
+        
+        // Update the input value with the current game state value
+        nameInput.value = currentName;
+        
         nameDisplay.classList.add('hidden');
         nameInput.classList.remove('hidden');
         nameInput.focus();
         nameInput.select();
-        console.log(`🎮 Console: Editing team ${teamId} name`);
+        console.log(`🎮 Console: Editing team ${teamId} name: "${currentName}"`);
     } else {
         console.error(`❌ Console: Team name elements not found for team ${teamId}`);
     }
@@ -608,11 +460,17 @@ function editTeamScore(teamId) {
     const scoreInput = document.getElementById(`teamScoreInput-${teamId}`);
     
     if (scoreDisplay && scoreInput) {
+        // Get the current score from game state instead of display element
+        const currentScore = gameState.state.teams[teamId].score;
+        
+        // Update the input value with the current game state value
+        scoreInput.value = currentScore;
+        
         scoreDisplay.classList.add('hidden');
         scoreInput.classList.remove('hidden');
         scoreInput.focus();
         scoreInput.select();
-        console.log(`🎮 Console: Editing team ${teamId} score`);
+        console.log(`🎮 Console: Editing team ${teamId} score: ${currentScore}`);
     } else {
         console.error(`❌ Console: Team score elements not found for team ${teamId}`);
     }
@@ -958,37 +816,27 @@ function updateQuestionsTable() {
     }
     
     // Update current question info
-    updateCurrentQuestionInfo();
+    // Removed updateCurrentQuestionInfo call
 }
 
-function updateCurrentQuestionInfo() {
-    const currentSet = gameState.state.currentSet;
-    const currentQuestion = gameState.state.currentQuestion;
-    const setInfo = gameState.state.questionSets[currentSet];
-    
-    // Update the current set title with theme icon
-    const currentSetTitle = document.getElementById('currentSetTitle');
-    if (currentSetTitle && setInfo) {
-        currentSetTitle.innerHTML = `
-            <img src="assets/themes/${setInfo.theme}.png" alt="${setInfo.theme}" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle;">
-            ${setInfo.title}
-        `;
-    }
-    
-    document.getElementById('currentSetNumber').textContent = `Set ${currentSet}`;
-    document.getElementById('currentQuestionNumber').textContent = `Q${currentQuestion}`;
-}
+
 
 function editQuestionSetTitle(setNumber) {
     const titleDisplay = document.getElementById(`questionSetTitleDisplay-${setNumber}`);
     const titleInput = document.getElementById(`questionSetTitleInput-${setNumber}`);
     
     if (titleDisplay && titleInput) {
+        // Get the current title from game state instead of display element
+        const currentTitle = gameState.state.questionSets[setNumber].title;
+        
+        // Update the input value with the current game state value
+        titleInput.value = currentTitle;
+        
         titleDisplay.classList.add('hidden');
         titleInput.classList.remove('hidden');
         titleInput.focus();
         titleInput.select();
-        console.log(`🎮 Console: Editing question set ${setNumber} title`);
+        console.log(`🎮 Console: Editing question set ${setNumber} title: "${currentTitle}"`);
     } else {
         console.error(`❌ Console: Question set title elements not found for set ${setNumber}`);
     }
@@ -1013,7 +861,7 @@ function saveQuestionSetTitle(setNumber) {
         
         // Update current question info if this is the active set
         if (setNumber === gameState.state.currentSet) {
-            updateCurrentQuestionInfo();
+            // Removed updateCurrentQuestionInfo call
         }
         
         // Emit for main page game state update
@@ -1179,6 +1027,8 @@ function initializeCharacterControls() {
     
     window.toggleAngel = function() {
         const currentTeam = gameState.state.currentTeam;
+        console.log('🎮 Angel button clicked:', { currentTeam });
+        
         if (currentTeam > 0) {
             // Toggle angel team state
             if (gameState.state.angelTeam === currentTeam) {
@@ -1188,6 +1038,8 @@ function initializeCharacterControls() {
                 gameState.state.angelTeam = currentTeam;
                 addLog(`Angel protection activated for Team ${currentTeam}`, 'success');
             }
+            
+            console.log('🎮 Angel state updated:', gameState.state.angelTeam);
             
             // Update game status display
             updateGameStatusDisplay();
@@ -1221,6 +1073,8 @@ function initializeCharacterControls() {
         const currentTeam = gameState.state.currentTeam;
         const isActive = gameState.state.currentChallenge > 0;
         
+        console.log('🎮 Challenge button clicked:', { currentTeam, isActive });
+        
         if (isActive) {
             gameState.state.currentChallenge = 0;
             addLog('Challenge mode disabled', 'info');
@@ -1233,6 +1087,8 @@ function initializeCharacterControls() {
                 addLog('Challenge mode enabled (2x points) for Team 1', 'success');
             }
         }
+        
+        console.log('🎮 Challenge state updated:', gameState.state.currentChallenge);
         
         // Update game status display
         updateGameStatusDisplay();
@@ -1254,6 +1110,8 @@ function initializeCharacterControls() {
         clearBuzzers();
         addLog('Buzzer reset', 'info');
     };
+    
+
     
     window.movePrevious = function() {
         const currentSet = gameState.state.currentSet;
@@ -1389,7 +1247,13 @@ function buzzTeam(teamId) {
     addLog(`Team ${teamId} buzzed in!`, 'success');
 }
 
-function clearBuzzers() {
+function clearBuzzers(fromArduino = false) {
+    // Send RESET command to Arduino first (but not if called from Arduino data handler)
+    if (!fromArduino && window.sendResetToArduino) {
+        window.sendResetToArduino();
+        console.log('✅ RESET command sent to Arduino during clear buzzers');
+    }
+    
     // Reset all game state parameters
     gameState.state.currentTeam = 0;
     gameState.state.currentChallenge = 0;
@@ -1429,57 +1293,14 @@ function clearBuzzers() {
 
 // ========== GAME STATUS DISPLAY ==========
 function updateGameStatusDisplay() {
-    updateCurrentTeamDisplay();
-    updateCurrentActionDisplay();
+    // Removed game status functions
 }
 
-function updateCurrentTeamDisplay() {
-    const currentTeam = gameState.state.currentTeam;
-    const teamDisplay = document.getElementById('currentTeamDisplay');
-    
-    if (teamDisplay) {
-        if (currentTeam > 0) {
-            const team = gameState.state.teams[currentTeam];
-            teamDisplay.textContent = `Team ${currentTeam} (${team.name})`;
-            teamDisplay.className = 'current-team-value active';
-        } else {
-            teamDisplay.textContent = 'None';
-            teamDisplay.className = 'current-team-value';
-        }
-    }
-}
 
-function updateCurrentActionDisplay() {
-    const currentChallenge = gameState.state.currentChallenge;
-    const angelTeam = gameState.state.angelTeam;
-    const attackTeam = gameState.state.attackTeam;
-    const victimTeam = gameState.state.victimTeam;
-    const actionDisplay = document.getElementById('currentActionDisplay');
-    
-    if (actionDisplay) {
-        let actionText = 'None';
-        let actionClass = 'current-action-value';
-        
-        // Check for challenge mode first
-        if (currentChallenge > 0) {
-            actionText = `Challenge Mode (2x) - Team ${currentChallenge}`;
-            actionClass = 'current-action-value challenge';
-        }
-        // Check for angel team
-        else if (angelTeam > 0) {
-            actionText = `Angel Protection - Team ${angelTeam}`;
-            actionClass = 'current-action-value angel';
-        }
-        // Check for devil attack
-        else if (attackTeam > 0 && victimTeam > 0) {
-            actionText = `Devil Attack: Team ${attackTeam} → Team ${victimTeam}`;
-            actionClass = 'current-action-value devil';
-        }
-        
-        actionDisplay.textContent = actionText;
-        actionDisplay.className = actionClass;
-    }
-}
+
+
+
+
 
 // ========== HELP MODAL ==========
 function toggleHelpModal() {
@@ -1570,21 +1391,95 @@ function undoAction(actionIndex) {
 // ========== GAME RESET ==========
 function resetGame() {
     if (confirm('Reset entire game? This will clear all scores, action cards, and return to Set 1 Q1.')) {
-        gameState.resetGame();
+        console.log('🔄 Console: FULL RESET initiated');
         
-        // Reset all game state parameters
-        resetGameStateParameters();
+        // Send RESET command to Arduino first
+        if (window.sendResetToArduino) {
+            window.sendResetToArduino();
+            console.log('✅ RESET command sent to Arduino during game reset');
+        }
         
-        // Update all displays
+        // Use the same comprehensive reset as hotkeys
+        if (window.gameState) {
+            window.gameState.reset();
+            // Ensure attack tracking parameters are reset
+            window.gameState.set('angelTeam', 0);
+            window.gameState.set('attackTeam', 0);
+            window.gameState.set('victimTeam', 0);
+            console.log('✅ Game state reset completed (including team action cards and attack tracking)');
+        } else {
+            console.warn('⚠️ GameState not available for reset');
+        }
+        
+        // Clear all action card icons on main character
+        document.querySelectorAll('.character-action-icon').forEach(icon => {
+            icon.classList.remove('active');
+        });
+        console.log('✅ Main character action card icons cleared');
+        
+        // Reset character to white directly
+        const progressCharacter = document.getElementById('progressCharacter');
+        if (progressCharacter) {
+            progressCharacter.src = 'assets/animations/among_us_idle.json';
+            console.log('✅ Character reset to white (direct)');
+        } else {
+            console.warn('⚠️ progressCharacter element not found');
+        }
+        
+        // Reset all gray team characters back to default state
+        if (window.hotkeysManager) {
+            window.hotkeysManager.resetTeamGraying();
+            console.log('✅ All team characters reset from gray to default state');
+        }
+        
+        // Clear all Q1 failure tracking states for all sets
+        if (window.gameState) {
+            for (let setNumber = 1; setNumber <= 10; setNumber++) {
+                if (window.hotkeysManager) {
+                    window.hotkeysManager.clearQ1FailedTeams(setNumber);
+                }
+                const attemptsKey = `q1Attempts_${setNumber}`;
+                window.gameState.set(attemptsKey, 0);
+            }
+            console.log('✅ All Q1 failure tracking states cleared');
+        }
+        
+        // Hide chance display
+        if (window.hotkeysManager) {
+            window.hotkeysManager.hideChanceDisplay();
+            console.log('✅ Chance display hidden');
+        }
+        
+        // Clear buzzing modal
+        if (window.buzzingSystem) {
+            window.buzzingSystem.clearAll();
+            console.log('✅ Buzzing system cleared');
+        } else {
+            console.warn('⚠️ BuzzingSystem not available');
+        }
+        
+        // Force update team displays to show reset action cards
+        if (window.gameState) {
+            window.gameState.updateTeamDisplays();
+            console.log('✅ Team displays updated to show reset action cards');
+        }
+        
+        // Sync with server for full game reset
+        if (window.socketManager) {
+            window.socketManager.send('admin_reset', {});
+            console.log('✅ Full game reset synced with server');
+        }
+        
+        // Update all console displays
         updateTimerDisplay();
         updateTeamsTable();
         updateQuestionsTable();
-        updateCurrentQuestionInfo();
         
         // Clear logs
         clearLogs();
         
         addLog('Game completely reset to defaults', 'success');
+        console.log('🔄 FULL game reset completed - everything back to default');
     }
 }
 
@@ -1603,8 +1498,6 @@ function resetGameStateParameters() {
     gameState.state.attackTeam = 0;
     gameState.state.victimTeam = 0;
     
-    updateGameStatusDisplay();
-    
     // Emit all game state updates
     const parameters = ['currentTeam', 'currentChallenge', 'angelTeam', 'attackTeam', 'victimTeam'];
     parameters.forEach(param => {
@@ -1615,6 +1508,90 @@ function resetGameStateParameters() {
     });
     
     addLog('All game state parameters reset', 'info');
+}
+
+// ========== SERVER STATE SYNC ==========
+function loadServerState() {
+    console.log('🔄 Loading server state...');
+    
+    // Request current server state
+    socket.emit('get_server_state', {});
+}
+
+
+
+function setupServerStateListener() {
+    socket.on('server_state_response', (serverState) => {
+        if (serverState) {
+            console.log('📥 Received server state:', serverState);
+            syncClientStateWithServer(serverState);
+        } else {
+            console.log('⚠️ No server state received, using defaults');
+        }
+    });
+}
+
+function syncClientStateWithServer(serverState) {
+    // Sync team data
+    if (serverState.teams) {
+        Object.keys(serverState.teams).forEach(teamId => {
+            const serverTeam = serverState.teams[teamId];
+            const clientTeam = gameState.state.teams[teamId];
+            
+            if (clientTeam && serverTeam) {
+                // Update team name if different
+                if (serverTeam.name && serverTeam.name !== clientTeam.name) {
+                    gameState.state.teams[teamId].name = serverTeam.name;
+                    console.log(`🔄 Synced team ${teamId} name: "${clientTeam.name}" → "${serverTeam.name}"`);
+                }
+                
+                // Update team score if different
+                if (serverTeam.score !== undefined && serverTeam.score !== clientTeam.score) {
+                    gameState.state.teams[teamId].score = serverTeam.score;
+                    console.log(`🔄 Synced team ${teamId} score: ${clientTeam.score} → ${serverTeam.score}`);
+                }
+                
+                // Update team color if different
+                if (serverTeam.color && serverTeam.color !== clientTeam.color) {
+                    gameState.state.teams[teamId].color = serverTeam.color;
+                    console.log(`🔄 Synced team ${teamId} color: ${clientTeam.color} → ${serverTeam.color}`);
+                }
+            }
+        });
+    }
+    
+    // Sync timer data
+    if (serverState.timer) {
+        if (serverState.timer.value !== undefined && serverState.timer.value !== gameState.state.timerValue) {
+            gameState.state.timerValue = serverState.timer.value;
+            console.log(`🔄 Synced timer value: ${gameState.state.timerValue} → ${serverState.timer.value}`);
+        }
+        
+        if (serverState.timer.running !== undefined && serverState.timer.running !== gameState.state.timerRunning) {
+            gameState.state.timerRunning = serverState.timer.running;
+            console.log(`🔄 Synced timer running: ${gameState.state.timerRunning} → ${serverState.timer.running}`);
+        }
+    }
+    
+    // Sync question set data
+    if (serverState.question_set) {
+        if (serverState.question_set.current !== undefined && serverState.question_set.current !== gameState.state.currentSet) {
+            gameState.state.currentSet = serverState.question_set.current;
+            console.log(`🔄 Synced current set: ${gameState.state.currentSet} → ${serverState.question_set.current}`);
+        }
+        
+        if (serverState.question_set.title && gameState.state.questionSets[gameState.state.currentSet]) {
+            gameState.state.questionSets[gameState.state.currentSet].title = serverState.question_set.title;
+            console.log(`🔄 Synced question set title: "${serverState.question_set.title}"`);
+        }
+    }
+    
+    // Update UI after syncing
+    updateTeamsTable();
+    updateTimerDisplay();
+    updateQuestionsTable();
+    
+    console.log('✅ Server state sync completed');
 }
 
 // ========== SOCKET EVENT LISTENERS ==========
@@ -1651,7 +1628,6 @@ function setupSocketListeners() {
                 gameState.state.actionCards[teamId].cross = data.active;
             }
             updateActionCardDisplay(teamId);
-            updateGameStatusDisplay();
         }
     });
 
@@ -1670,8 +1646,9 @@ function setupSocketListeners() {
     socket.on('buzzer_pressed', (data) => {
         // Update local game state
         gameState.state.currentTeam = data.teamId;
-        updateGameStatusDisplay();
         addLog(`Team ${data.teamId} buzzed in!`, 'success');
+        
+
     });
 
     socket.on('clear_buzzers', () => {
@@ -1681,7 +1658,6 @@ function setupSocketListeners() {
         gameState.state.angelTeam = 0;
         gameState.state.attackTeam = 0;
         gameState.state.victimTeam = 0;
-        updateGameStatusDisplay();
         addLog('All buzzers and game state cleared', 'info');
     });
 
@@ -1697,8 +1673,6 @@ function setupSocketListeners() {
             gameState.state.currentQuestion = data.questionNumber;
             // Update console UI
             updateQuestionsTable();
-            updateCurrentQuestionInfo();
-            updateGameStatusDisplay();
         }
     });
 
@@ -1711,12 +1685,6 @@ function setupSocketListeners() {
             // Update console UI based on what changed
             if (data.path.startsWith('currentSet') || data.path.startsWith('currentQuestion')) {
                 updateQuestionsTable();
-                updateCurrentQuestionInfo();
-            }
-            if (data.path.startsWith('currentTeam') || data.path.startsWith('currentChallenge') || 
-                data.path.startsWith('angelTeam') || data.path.startsWith('attackTeam') || 
-                data.path.startsWith('victimTeam')) {
-                updateGameStatusDisplay();
             }
             if (data.path.startsWith('teams.')) {
                 updateTeamsTable();
@@ -1727,44 +1695,43 @@ function setupSocketListeners() {
     // Listen for specific game state parameter updates
     socket.on('currentChallenge_update', (data) => {
         gameState.state.currentChallenge = data.teamId || 0;
-        updateGameStatusDisplay();
     });
 
     socket.on('angelTeam_update', (data) => {
         gameState.state.angelTeam = data.teamId || 0;
-        updateGameStatusDisplay();
     });
 
     socket.on('attackTeam_update', (data) => {
         gameState.state.attackTeam = data.teamId || 0;
-        updateGameStatusDisplay();
     });
 
     socket.on('victimTeam_update', (data) => {
         gameState.state.victimTeam = data.teamId || 0;
-        updateGameStatusDisplay();
     });
 
     socket.on('currentTeam_update', (data) => {
         gameState.state.currentTeam = data.teamId || 0;
-        updateGameStatusDisplay();
     });
+}
+
+// ========== GAME STATE SUBSCRIPTIONS ==========
+function setupGameStateSubscriptions() {
+    // Removed game status subscriptions
 }
 
 // ========== CLICK OUTSIDE HANDLERS ==========
 document.addEventListener('click', function(event) {
     // Close color dropdowns when clicking outside
     if (!event.target.closest('.color-circle') && !event.target.closest('.color-dropdown')) {
-        document.querySelectorAll('.color-dropdown').forEach(dropdown => {
-            dropdown.classList.remove('active');
-        });
+        closeAllColorDropdowns();
     }
     
-    // Close theme dropdowns when clicking outside
-    if (!event.target.closest('.question-set-theme') && !event.target.closest('.theme-dropdown')) {
-        document.querySelectorAll('.theme-dropdown').forEach(dropdown => {
-            dropdown.classList.remove('active');
-        });
+    // Close theme modal when clicking outside
+    if (!event.target.closest('.question-set-theme') && !event.target.closest('#themeModal')) {
+        const themeModal = document.getElementById('themeModal');
+        if (themeModal && themeModal.classList.contains('active')) {
+            closeThemeModal();
+        }
     }
 });
 

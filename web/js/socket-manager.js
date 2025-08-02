@@ -98,8 +98,22 @@ class SocketManager {
                 window.gameState.set('timerValue', 0);
                 window.gameState.triggerEmergencyMeeting();
             }
-            this.emit('local:timer_ended');
         });
+        
+        // Arduino connection status
+        this.socket.on('arduino_status', (data) => {
+            console.log('🔌 Arduino status received:', data);
+            this.emit('local:arduino_status', data);
+            
+            // Update global Arduino connection state
+            window.arduinoConnected = data.connected;
+            
+            // Trigger custom event for UI updates
+            const event = new CustomEvent('arduinoStatusChanged', { detail: data });
+            document.dispatchEvent(event);
+        });
+        
+        this.emit('local:timer_ended');
         
         this.socket.on('score_update', (data) => {
             window.gameState?.update(`teams.${data.teamId}.score`, data.score);
@@ -456,6 +470,34 @@ class SocketManager {
             timestamp: Date.now()
         };
         this.send('action_card_usage', data);
+    }
+    
+    // Arduino connection methods
+    connectArduino(port = null, baudrate = 9600) {
+        if (this.socket && this.socket.connected) {
+            this.socket.emit('connect_arduino', { port, baudrate });
+            console.log('🔌 Arduino connection request sent');
+        } else {
+            console.warn('⚠️ Socket not connected - cannot connect Arduino');
+        }
+    }
+    
+    disconnectArduino() {
+        if (this.socket && this.socket.connected) {
+            this.socket.emit('disconnect_arduino');
+            console.log('🔌 Arduino disconnection request sent');
+        } else {
+            console.warn('⚠️ Socket not connected - cannot disconnect Arduino');
+        }
+    }
+    
+    getArduinoStatus() {
+        if (this.socket && this.socket.connected) {
+            this.socket.emit('get_arduino_status');
+            console.log('📊 Arduino status request sent');
+        } else {
+            console.warn('⚠️ Socket not connected - cannot get Arduino status');
+        }
     }
 }
 

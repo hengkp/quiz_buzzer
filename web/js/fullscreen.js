@@ -1,7 +1,7 @@
 // Console window functionality
 function openConsoleWindow() {
     const consoleUrl = 'console.html';
-    const features = 'width=1200,height=800,scrollbars=yes,resizable=yes';
+    const features = 'width=1920,height=1080,scrollbars=yes,resizable=yes';
     window.open(consoleUrl, 'QuizBowlConsole', features);
 }
 

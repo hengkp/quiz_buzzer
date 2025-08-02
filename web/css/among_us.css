@@ -316,6 +316,12 @@
         animation: floatCloud2 2s infinite alternate;
     }
 
+    .cloud3 {
+        top: 14%;
+        right: 2%;
+        animation: floatCloud3 2s infinite alternate;
+    }
+
     @keyframes floatCloud1 {
         0% { transform: translateX(-20px); }
         100% { transform: translateX(20px); }
@@ -324,6 +330,24 @@
     @keyframes floatCloud2 {
         0% { transform: translateX(20px); }
         100% { transform: translateX(-20px); }
+    }
+
+    @keyframes floatCloud3 {
+        0% { transform: translateX(-15px); }
+        100% { transform: translateX(15px); }
+    }
+
+    /* Arduino connection states */
+    .cloud3.connected {
+        background: rgba(76, 175, 80, 0.9);
+        color: white;
+        box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+    }
+
+    .cloud3.disconnected {
+        background: rgba(244, 67, 54, 0.9);
+        color: white;
+        box-shadow: 0 0 20px rgba(244, 67, 54, 0.6);
     }
 
     /* ========== PLANET BLOCKS ========== */

@@ -361,6 +361,14 @@ class BuzzingSystem {
     
     // Reset buzzers (integrated with hotkeys)
     resetBuzzers() {
+        // Send RESET command to Arduino via server
+        if (window.socketManager) {
+            window.socketManager.resetBuzzers();
+            console.log('✅ RESET command sent to Arduino from buzzing system (via server)');
+        } else {
+            console.log('⚠️ No Arduino communication available in buzzing system');
+        }
+        
         this.clearAll();
     }
     

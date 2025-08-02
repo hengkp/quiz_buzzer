@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <title>Quiz Bowl Console - Moderator Interface</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <link rel="stylesheet" href="/css/console.css?v=1.0.1">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 </head>
@@ -65,43 +66,7 @@
                         </div>
                     </div>
 
-                <!-- Progress Character Section -->
-                <div class="control-section progress-section">
-                    <h3 class="section-title">
-                        <span class="section-icon">🎮</span>
-                        Game Status
-                    </h3>
-                    <div class="game-status-container">
-                        <div class="question-set-info">
-                            <div class="set-title" id="currentSetTitle">Question Set 1</div>
-                            <div class="set-details">
-                                <span class="set-number" id="currentSetNumber">Set 1</span>
-                                <span class="question-number" id="currentQuestionNumber">Q1</span>
-                            </div>
-                        </div>
-                        
-                        <div class="current-team-display">
-                            <div class="current-team-label">Current Team:</div>
-                            <div class="current-team-value" id="currentTeamDisplay">None</div>
-                        </div>
-                        
-                        <div class="current-action-display">
-                            <div class="current-action-label">Current Action:</div>
-                            <div class="current-action-value" id="currentActionDisplay">None</div>
-                        </div>
-                        
-                        <div class="game-controls">
-                            <button onclick="toggleChallenge()" id="challengeBtn" class="btn btn-challenge">Challenge</button>
-                            <button onclick="toggleAngel()" class="btn btn-angel">Angel (Z)</button>
-                            <button onclick="toggleDevil()" class="btn btn-devil">Devil (X)</button>
-                            <button onclick="resetBuzzer()" class="btn btn-secondary">Reset Buzzer (R)</button>
-                            <button onclick="movePrevious()" class="btn btn-nav">← Previous</button>
-                            <button onclick="moveNext()" class="btn btn-nav">Next →</button>
-                            <button onclick="markCorrect()" class="btn btn-correct">Correct ↑</button>
-                            <button onclick="markIncorrect()" class="btn btn-incorrect">Incorrect ↓</button>
-                        </div>
-                    </div>
-                </div>
+
 
                 <!-- Teams Management Section -->
                 <div class="control-section teams-section">
@@ -179,6 +144,53 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Color Dropdown Backdrop -->
+    <div id="colorDropdownBackdrop" class="color-dropdown-backdrop" onclick="closeAllColorDropdowns()"></div>
+
+    <!-- Color Dropdowns -->
+    <div id="colorDropdown-1" class="color-dropdown">
+        <div class="color-dropdown-header">
+            <h3>Select Team Color</h3>
+            <span class="close" onclick="closeAllColorDropdowns()">&times;</span>
+        </div>
+        <div class="color-grid" id="colorGrid-1"></div>
+    </div>
+    <div id="colorDropdown-2" class="color-dropdown">
+        <div class="color-dropdown-header">
+            <h3>Select Team Color</h3>
+            <span class="close" onclick="closeAllColorDropdowns()">&times;</span>
+        </div>
+        <div class="color-grid" id="colorGrid-2"></div>
+    </div>
+    <div id="colorDropdown-3" class="color-dropdown">
+        <div class="color-dropdown-header">
+            <h3>Select Team Color</h3>
+            <span class="close" onclick="closeAllColorDropdowns()">&times;</span>
+        </div>
+        <div class="color-grid" id="colorGrid-3"></div>
+    </div>
+    <div id="colorDropdown-4" class="color-dropdown">
+        <div class="color-dropdown-header">
+            <h3>Select Team Color</h3>
+            <span class="close" onclick="closeAllColorDropdowns()">&times;</span>
+        </div>
+        <div class="color-grid" id="colorGrid-4"></div>
+    </div>
+    <div id="colorDropdown-5" class="color-dropdown">
+        <div class="color-dropdown-header">
+            <h3>Select Team Color</h3>
+            <span class="close" onclick="closeAllColorDropdowns()">&times;</span>
+        </div>
+        <div class="color-grid" id="colorGrid-5"></div>
+    </div>
+    <div id="colorDropdown-6" class="color-dropdown">
+        <div class="color-dropdown-header">
+            <h3>Select Team Color</h3>
+            <span class="close" onclick="closeAllColorDropdowns()">&times;</span>
+        </div>
+        <div class="color-grid" id="colorGrid-6"></div>
     </div>
 
     <!-- Load all JavaScript files -->

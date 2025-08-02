@@ -1851,6 +1851,14 @@ class HotkeysManager {
     handleResetBuzzers() {
         console.log('🔄 HotkeysManager: Resetting buzzers...');
         
+        // Send RESET command to Arduino via server
+        if (window.socketManager) {
+            window.socketManager.resetBuzzers();
+            console.log('✅ RESET command sent to Arduino via server');
+        } else {
+            console.log('⚠️ No Arduino communication available');
+        }
+        
         // Reset game state
         if (window.gameState) {
             window.gameState.set('currentTeam', 0);
@@ -1892,11 +1900,6 @@ class HotkeysManager {
                 // DO NOT reset cross protection - it should remain until game reset
                 // window.gameState.update(`actionCards.${teamId}.cross`, false);
             }
-        }
-        
-        // Sync with server
-        if (window.socketManager) {
-            window.socketManager.resetBuzzers();
         }
         
         // Ensure cross protection remains visible after buzzer reset

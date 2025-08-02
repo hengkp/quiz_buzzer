@@ -12,7 +12,8 @@ class MainPageApp {
             'Socket Manager',
             'Character Controller',
             'Buzzing System',
-            'Hotkeys Manager'
+            'Hotkeys Manager',
+            'Arduino Connection'
         ];
         this.completedSteps = 0;
     }
@@ -94,9 +95,21 @@ class MainPageApp {
             () => this.initializeSocketManager(),
             () => this.initializeCharacterController(),
             () => this.initializeBuzzingSystem(),
-            () => this.initializeHotkeys()
+            () => this.initializeHotkeys(),
+            () => this.initializeArduinoConnection()
         ];
         
+        // Execute all systems in order
+        for (let i = 0; i < systems.length; i++) {
+            try {
+                await systems[i]();
+                this.completedSteps++;
+                console.log(`✅ ${this.initializationSteps[i]} initialized`);
+            } catch (error) {
+                console.error(`❌ Failed to initialize ${this.initializationSteps[i]}:`, error);
+                throw error;
+            }
+        }
     }
     
     // Initialize game state
@@ -105,7 +118,111 @@ class MainPageApp {
             throw new Error('Game state not available');
         }
         
+        // Load server state and sync with client state
+        this.loadServerState();
+        
         return Promise.resolve();
+    }
+    
+    // Load server state and sync with client state
+    loadServerState() {
+        console.log('🔄 Loading server state for main page...');
+        
+        // Setup server state listener after socket connects
+        if (window.socketManager && window.socketManager.socket) {
+            window.socketManager.socket.on('connect', () => {
+                console.log('🔌 Main page socket connected, setting up server state listener');
+                this.setupServerStateListener();
+                this.requestServerState();
+            });
+        } else {
+            console.warn('⚠️ Socket manager not available for server state loading');
+        }
+    }
+    
+    // Request server state
+    requestServerState() {
+        if (window.socketManager && window.socketManager.socket) {
+            window.socketManager.socket.emit('get_server_state', {});
+        }
+    }
+    
+    // Add event listener for server state response
+    setupServerStateListener() {
+        if (window.socketManager && window.socketManager.socket) {
+            window.socketManager.socket.on('server_state_response', (serverState) => {
+                if (serverState) {
+                    console.log('📥 Received server state for main page:', serverState);
+                    this.syncClientStateWithServer(serverState);
+                } else {
+                    console.log('⚠️ No server state received for main page, using defaults');
+                }
+            });
+        }
+    }
+    
+    // Sync client state with server state
+    syncClientStateWithServer(serverState) {
+        // Sync team data
+        if (serverState.teams) {
+            Object.keys(serverState.teams).forEach(teamId => {
+                const serverTeam = serverState.teams[teamId];
+                const clientTeam = window.gameState.state.teams[teamId];
+                
+                if (clientTeam && serverTeam) {
+                    // Update team name if different
+                    if (serverTeam.name && serverTeam.name !== clientTeam.name) {
+                        window.gameState.state.teams[teamId].name = serverTeam.name;
+                        console.log(`🔄 Main page synced team ${teamId} name: "${clientTeam.name}" → "${serverTeam.name}"`);
+                    }
+                    
+                    // Update team score if different
+                    if (serverTeam.score !== undefined && serverTeam.score !== clientTeam.score) {
+                        window.gameState.state.teams[teamId].score = serverTeam.score;
+                        console.log(`🔄 Main page synced team ${teamId} score: ${clientTeam.score} → ${serverTeam.score}`);
+                    }
+                    
+                    // Update team color if different
+                    if (serverTeam.color && serverTeam.color !== clientTeam.color) {
+                        window.gameState.state.teams[teamId].color = serverTeam.color;
+                        console.log(`🔄 Main page synced team ${teamId} color: ${clientTeam.color} → ${serverTeam.color}`);
+                    }
+                }
+            });
+        }
+        
+        // Sync timer data
+        if (serverState.timer) {
+            if (serverState.timer.value !== undefined && serverState.timer.value !== window.gameState.state.timerValue) {
+                window.gameState.state.timerValue = serverState.timer.value;
+                console.log(`🔄 Main page synced timer value: ${window.gameState.state.timerValue} → ${serverState.timer.value}`);
+            }
+            
+            if (serverState.timer.running !== undefined && serverState.timer.running !== window.gameState.state.timerRunning) {
+                window.gameState.state.timerRunning = serverState.timer.running;
+                console.log(`🔄 Main page synced timer running: ${window.gameState.state.timerRunning} → ${serverState.timer.running}`);
+            }
+        }
+        
+        // Sync question set data
+        if (serverState.question_set) {
+            if (serverState.question_set.current !== undefined && serverState.question_set.current !== window.gameState.state.currentSet) {
+                window.gameState.state.currentSet = serverState.question_set.current;
+                console.log(`🔄 Main page synced current set: ${window.gameState.state.currentSet} → ${serverState.question_set.current}`);
+            }
+            
+            if (serverState.question_set.title && window.gameState.state.questionSets[window.gameState.state.currentSet]) {
+                window.gameState.state.questionSets[window.gameState.state.currentSet].title = serverState.question_set.title;
+                console.log(`🔄 Main page synced question set title: "${serverState.question_set.title}"`);
+            }
+        }
+        
+        // Update UI after syncing
+        window.gameState.updateTeamDisplays();
+        window.gameState.updateTimerDisplay();
+        window.gameState.updateQuestionSetDisplay();
+        
+        console.log('✅ Main page server state sync completed');
     }
     
     // Initialize socket manager
@@ -279,6 +396,73 @@ class MainPageApp {
             totalSteps: this.initializationSteps.length,
             systems: this.systems
         };
+    }
+    
+    initializeArduinoConnection() {
+        console.log('🔌 Initializing Arduino connection system...');
+        
+        // Initialize Arduino connection status
+        window.arduinoConnected = false;
+        
+        // Listen for Arduino status changes
+        document.addEventListener('arduinoStatusChanged', (event) => {
+            const { connected, message } = event.detail;
+            window.arduinoConnected = connected;
+            this.updateArduinoUI();
+            console.log(`🔌 Arduino ${connected ? 'connected' : 'disconnected'}: ${message}`);
+        });
+        
+        // Get initial Arduino status
+        if (window.socketManager) {
+            console.log('🔌 Requesting initial Arduino status...');
+            window.socketManager.getArduinoStatus();
+        } else {
+            console.warn('⚠️ Socket manager not available for Arduino status');
+        }
+        
+        // Set up global Arduino toggle function
+        window.toggleArduinoConnection = () => {
+            console.log('🔌 toggleArduinoConnection called, arduinoConnected:', window.arduinoConnected);
+            if (window.arduinoConnected) {
+                console.log('🔌 Disconnecting Arduino...');
+                window.socketManager.disconnectArduino();
+            } else {
+                console.log('🔌 Connecting Arduino...');
+                window.socketManager.connectArduino();
+            }
+        };
+        
+        // Set initial UI state
+        this.updateArduinoUI();
+        
+        console.log('✅ Arduino connection system initialized');
+        return Promise.resolve();
+    }
+    
+    updateArduinoUI() {
+        const arduinoToggle = document.getElementById('arduinoToggle');
+        const arduinoIcon = document.getElementById('arduinoIcon');
+        
+        if (!arduinoToggle || !arduinoIcon) {
+            console.warn('⚠️ Arduino UI elements not found');
+            return;
+        }
+        
+        console.log('🔌 Updating Arduino UI, connected:', window.arduinoConnected);
+        
+        if (window.arduinoConnected) {
+            arduinoToggle.classList.add('connected');
+            arduinoToggle.classList.remove('disconnected');
+            arduinoIcon.className = 'ri-cpu-fill';
+            arduinoToggle.title = 'Disconnect Arduino';
+            console.log('🔌 Arduino UI set to connected state');
+        } else {
+            arduinoToggle.classList.add('disconnected');
+            arduinoToggle.classList.remove('connected');
+            arduinoIcon.className = 'ri-cpu-line';
+            arduinoToggle.title = 'Connect Arduino';
+            console.log('🔌 Arduino UI set to disconnected state');
+        }
     }
 }
 
