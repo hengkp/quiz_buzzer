@@ -3,14 +3,15 @@
 
 // Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-    authDomain: "quiz-buzzer-xxxxx.firebaseapp.com",
-    databaseURL: "https://quiz-buzzer-xxxxx-default-rtdb.firebaseio.com",
-    projectId: "quiz-buzzer-xxxxx",
-    storageBucket: "quiz-buzzer-xxxxx.appspot.com",
-    messagingSenderId: "123456789012",
-    appId: "1:123456789012:web:abcdefghijklmnop"
-};
+    apiKey: "AIzaSyBEXWLAFrNExQr5JVmV2lQJCQJi4GNvH0s",
+    authDomain: "quiz-buzzer-301b2.firebaseapp.com",
+    databaseURL: "https://quiz-buzzer-301b2-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "quiz-buzzer-301b2",
+    storageBucket: "quiz-buzzer-301b2.firebasestorage.app",
+    messagingSenderId: "141387397520",
+    appId: "1:141387397520:web:c4e39b44c1b0e175051b15",
+    measurementId: "G-7ESDW46GTY"
+  };
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
