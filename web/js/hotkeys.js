@@ -76,6 +76,17 @@ class HotkeysManager {
             this.handleGameReset();
         }, 'Reset game state');
         
+        this.bind('/', (event) => {
+            event.preventDefault();
+            this.handleOpenConsole();
+        }, 'Open console window');
+        
+        // Help hotkey - always available
+        this.bind('h', (event) => {
+            event.preventDefault();
+            this.toggleHelpDialog();
+        }, 'Toggle help dialog');
+        
         // Action card hotkeys - only when there's a buzzer team
         this.bind('z', (event) => {
             event.preventDefault();
@@ -132,20 +143,15 @@ class HotkeysManager {
         
         // Console-specific hotkeys
         if (this.pageType === 'console') {
-            this.bind('t', (event) => {
-                event.preventDefault();
-                this.switchTab('timer');
-            }, 'Switch to timer tab');
-            
             this.bind('g', (event) => {
                 event.preventDefault();
                 this.switchTab('game');
             }, 'Switch to game tab');
             
-            this.bind('h', (event) => {
+            this.bind('l', (event) => {
                 event.preventDefault();
-                this.switchTab('hardware');
-            }, 'Switch to hardware tab');
+                this.switchTab('log');
+            }, 'Switch to log tab');
         }
         
         // Test emergency meeting (temporary for debugging)
@@ -157,14 +163,8 @@ class HotkeysManager {
         // Development hotkeys (only in debug mode)
         if (this.isDebugMode()) {
             this.bind('Escape', () => {
-                this.showHelpDialog();
-            }, 'Show help');
-            
-            // Use different key for help on console to avoid conflict with hardware tab
-            const helpKey = this.pageType === 'console' ? 'F1' : 'h';
-            this.bind(helpKey, () => {
-                this.showHelpDialog();
-            }, 'Show help');
+                this.toggleHelpDialog();
+            }, 'Toggle help');
         }
     }
     
@@ -732,6 +732,15 @@ class HotkeysManager {
         const chanceElement = document.getElementById('chanceQuestion');
         if (chanceElement) {
             chanceElement.style.display = 'none';
+        }
+    }
+    
+    // Set chance display to default
+    setChanceDisplayToDefault() {
+        const chanceElement = document.getElementById('chanceQuestion');
+        if (chanceElement) {
+            chanceElement.textContent = '(3/3 chances)';
+            chanceElement.style.display = 'block';
         }
     }
     
@@ -1922,74 +1931,50 @@ class HotkeysManager {
     
     // Handle game state reset (resets everything including team action cards)
     handleGameReset() {
-        console.log('🔄 handleGameReset called - FULL RESET');
-        
-        // Reset entire game state (this should reset all team action cards)
+        if (window.gameState && window.gameState.isResetting) {
+            console.log('⚠️ Reset already in progress, skipping...');
+            return;
+        }
+        console.log('🔄 handleGameReset called - FULL RESET (console-style)');
+        if (window.gameState) {
+            window.gameState.isResetting = true;
+        }
+        localStorage.removeItem('quizBowlGameState');
+        console.log('✅ localStorage cleared');
         if (window.gameState) {
             window.gameState.reset();
-            // Ensure attack tracking parameters are reset
-            window.gameState.set('angelTeam', 0);
-            window.gameState.set('attackTeam', 0);
-            window.gameState.set('victimTeam', 0);
-            console.log('✅ Game state reset completed (including team action cards and attack tracking)');
-        } else {
-            console.warn('⚠️ GameState not available for reset');
+            console.log('✅ Local game state reset');
         }
-        
-        // Clear all action card icons on main character
-        document.querySelectorAll('.character-action-icon').forEach(icon => {
-            icon.classList.remove('active');
-        });
-        console.log('✅ Main character action card icons cleared');
-        
-        // Reset character to white directly
-        const progressCharacter = document.getElementById('progressCharacter');
-        if (progressCharacter) {
-            progressCharacter.src = 'assets/animations/among_us_idle.json';
-            console.log('✅ Character reset to white (direct)');
-        } else {
-            console.warn('⚠️ progressCharacter element not found');
-        }
-        
-        // Reset all gray team characters back to default state
-        this.resetTeamGraying();
-        console.log('✅ All team characters reset from gray to default state');
-        
-        // Clear all Q1 failure tracking states for all sets
-        if (window.gameState) {
-            for (let setNumber = 1; setNumber <= 10; setNumber++) {
-                this.clearQ1FailedTeams(setNumber);
-                const attemptsKey = `q1Attempts_${setNumber}`;
-                window.gameState.set(attemptsKey, 0);
-            }
-            console.log('✅ All Q1 failure tracking states cleared');
-        }
-        
-        // Hide chance display
-        this.hideChanceDisplay();
-        console.log('✅ Chance display hidden');
-        
-        // Clear buzzing modal
-        if (window.buzzingSystem) {
-            window.buzzingSystem.clearAll();
-            console.log('✅ Buzzing system cleared');
-        } else {
-            console.warn('⚠️ BuzzingSystem not available');
-        }
-        
-        // Force update team displays to show reset action cards
-        if (window.gameState) {
-            window.gameState.updateTeamDisplays();
-            console.log('✅ Team displays updated to show reset action cards');
-        }
-        
-        // Sync with server for full game reset
         if (window.socketManager) {
             window.socketManager.send('admin_reset', {});
-            console.log('✅ Full game reset synced with server');
+            console.log('✅ admin_reset sent to server');
         }
-        
-        console.log('🔄 FULL game reset completed - everything back to default');
+        setTimeout(() => {
+            this.setChanceDisplayToDefault();
+            if (window.gameState) {
+                window.gameState.updateTeamDisplays();
+            }
+            console.log('✅ UI updated after reset');
+        }, 100);
+        setTimeout(() => {
+            if (window.gameState) {
+                window.gameState.isResetting = false;
+            }
+        }, 1000);
+        console.log('🔄 FULL game reset completed - console-style');
+    }
+    
+    handleOpenConsole() {
+        console.log('🖥️ Opening console window...');
+        if (typeof openConsoleWindow === 'function') {
+            openConsoleWindow();
+        } else {
+            console.warn('⚠️ openConsoleWindow function not available');
+            // Fallback: open console in new window
+            const consoleUrl = 'console.html';
+            const features = 'width=1920,height=1080,scrollbars=yes,resizable=yes';
+            window.open(consoleUrl, 'QuizBowlConsole', features);
+        }
     }
     
     // Handle timer toggle for both pages
@@ -2397,37 +2382,138 @@ class HotkeysManager {
         setTimeout(() => this.setEnabled(true), 100);
     }
     
+    // Toggle help dialog (show/hide)
+    toggleHelpDialog() {
+        let modal = document.getElementById('hotkeys-help-modal');
+        
+        if (!modal) {
+            this.showHelpDialog();
+            return;
+        }
+        
+        const isVisible = modal.style.display === 'flex';
+        
+        if (isVisible) {
+            modal.style.display = 'none';
+        } else {
+            this.showHelpDialog();
+        }
+    }
+    
     // Generate help content
     generateHelpContent() {
         const categories = {
             'Team Controls': ['1', '2', '3', '4', '5', '6'],
             'Navigation': ['arrowleft', 'arrowright'],
-            'Game Controls': ['r', 'q'],
+            'Scoring': ['arrowup', 'arrowdown'],
+            'Game Controls': ['r', 'q', '/'],
+            'Action Cards': ['z', 'x', 'c', 'enter'],
             'Timer Controls': ['i', 'o', 'p', '[', ']'],
-            'Display Controls': ['f']
+            'Display Controls': ['f', 'h']
         };
         
         // Add console-specific categories
         if (this.pageType === 'console') {
-            categories['Console Tabs'] = ['t', 'g', 'h'];
+            categories['Console Tabs'] = ['g', 'l'];
         }
         
-        let html = `<h3>Available Hotkeys (${this.pageType.toUpperCase()} Page)</h3>`;
+        let html = `
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h2 style="
+                    margin: 0 0 10px 0;
+                    color: #2c3e50;
+                    font-size: 28px;
+                    font-weight: 600;
+                ">🎮 Hotkeys Guide</h2>
+                <p style="
+                    margin: 0;
+                    color: #6c757d;
+                    font-size: 16px;
+                ">${this.pageType.toUpperCase()} Page</p>
+            </div>
+        `;
         
-        Object.entries(categories).forEach(([category, keys]) => {
-            html += `<div class="help-category"><h4>${category}</h4><ul>`;
+        // Convert categories to array for three-column layout
+        const categoryEntries = Object.entries(categories);
+        const itemsPerColumn = Math.ceil(categoryEntries.length / 3);
+        
+        html += '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">';
+        
+        // Create three columns
+        for (let col = 0; col < 3; col++) {
+            html += '<div style="display: flex; flex-direction: column; gap: 20px;">';
             
-            keys.forEach(key => {
-                const handlers = this.bindings.get(key);
-                if (handlers && handlers.length > 0) {
-                    const description = handlers[0].description;
-                    const displayKey = this.getDisplayKey(key);
-                    html += `<li><kbd>${displayKey}</kbd> - ${description}</li>`;
-                }
-            });
+            const startIndex = col * itemsPerColumn;
+            const endIndex = Math.min((col + 1) * itemsPerColumn, categoryEntries.length);
             
-            html += '</ul></div>';
-        });
+            for (let i = startIndex; i < endIndex; i++) {
+                const [category, keys] = categoryEntries[i];
+                
+                html += `
+                    <div style="
+                        background: #f8f9fa;
+                        border-radius: 12px;
+                        padding: 20px;
+                        border-left: 4px solid #667eea;
+                    ">
+                        <h3 style="
+                            margin: 0 0 15px 0;
+                            color: #2c3e50;
+                            font-size: 16px;
+                            font-weight: 600;
+                        ">${category}</h3>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                `;
+                
+                keys.forEach(key => {
+                    const handlers = this.bindings.get(key);
+                    if (handlers && handlers.length > 0) {
+                        const description = handlers[0].description;
+                        const displayKey = this.getDisplayKey(key);
+                        html += `
+                            <div style="
+                                display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                                padding: 8px 12px;
+                                background: white;
+                                border-radius: 8px;
+                                border: 1px solid #e9ecef;
+                            ">
+                                <span style="
+                                    color: #495057;
+                                    font-size: 13px;
+                                    flex: 1;
+                                    margin-right: 10px;
+                                ">${description}</span>
+                                <kbd style="
+                                    background: #667eea;
+                                    color: white;
+                                    border: none;
+                                    border-radius: 6px;
+                                    padding: 4px 8px;
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    font-family: monospace;
+                                    min-width: 20px;
+                                    text-align: center;
+                                    flex-shrink: 0;
+                                ">${displayKey}</kbd>
+                            </div>
+                        `;
+                    }
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+        }
+        
+        html += '</div>';
         
         return html;
     }
@@ -2439,7 +2525,13 @@ class HotkeysManager {
             'arrowleft': '←',
             'arrowright': '→',
             'arrowup': '↑',
-            'arrowdown': '↓'
+            'arrowdown': '↓',
+            '/': '/',
+            'escape': 'Esc',
+            'enter': 'Enter',
+            'tab': 'Tab',
+            'backspace': '⌫',
+            'delete': 'Del'
         };
         
         return displayMap[key] || key.toUpperCase();
@@ -2455,22 +2547,86 @@ class HotkeysManager {
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
             display: none;
             align-items: center;
             justify-content: center;
             z-index: 10000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         `;
         
         modal.innerHTML = `
-            <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; max-height: 80vh; overflow-y: auto;">
-                <div class="help-content"></div>
-                <button onclick="this.closest('#hotkeys-help-modal').style.display='none'" 
-                        style="margin-top: 20px; padding: 8px 16px; background: #007AFF; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                    Close
-                </button>
+            <div style="
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                padding: 0;
+                border-radius: 20px;
+                max-width: 95vw;
+                max-height: 90vh;
+                overflow: hidden;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                transform: scale(0.9);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            ">
+                <div style="
+                    background: white;
+                    margin: 3px;
+                    border-radius: 17px;
+                    padding: 40px;
+                    max-height: calc(90vh - 6px);
+                    overflow-y: auto;
+                    position: relative;
+                ">
+                    <div style="
+                        position: absolute;
+                        top: 15px;
+                        right: 15px;
+                        width: 30px;
+                        height: 30px;
+                        border-radius: 50%;
+                        background: #f8f9fa;
+                        border: none;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 18px;
+                        color: #6c757d;
+                        transition: all 0.2s ease;
+                    " onclick="this.closest('#hotkeys-help-modal').style.display='none'">
+                        ×
+                    </div>
+                    
+                    <div class="help-content" style="margin-top: 10px;"></div>
+                    
+                    <div style="
+                        margin-top: 25px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e9ecef;
+                        text-align: center;
+                        color: #6c757d;
+                        font-size: 14px;
+                    ">
+                        Press <kbd style="
+                            background: #f8f9fa;
+                            border: 1px solid #dee2e6;
+                            border-radius: 4px;
+                            padding: 2px 6px;
+                            font-size: 12px;
+                            font-family: monospace;
+                        ">H</kbd> to toggle help • Click outside to close
+                    </div>
+                </div>
             </div>
         `;
+        
+        // Add animation when modal is shown
+        setTimeout(() => {
+            const modalContent = modal.querySelector('div');
+            if (modalContent) {
+                modalContent.style.transform = 'scale(1)';
+            }
+        }, 10);
         
         return modal;
     }

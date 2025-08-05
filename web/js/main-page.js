@@ -13,7 +13,8 @@ class MainPageApp {
             'Character Controller',
             'Buzzing System',
             'Hotkeys Manager',
-            'Arduino Connection'
+            'Arduino Connection',
+            'Cloud Group'
         ];
         this.completedSteps = 0;
     }
@@ -100,7 +101,8 @@ class MainPageApp {
             () => this.initializeCharacterController(),
             () => this.initializeBuzzingSystem(),
             () => this.initializeHotkeys(),
-            () => this.initializeArduinoConnection()
+            () => this.initializeArduinoConnection(),
+            () => this.initializeCloudGroup()
         ];
         
         // Execute all systems in order
@@ -408,6 +410,96 @@ class MainPageApp {
         }
     }
     
+    // Initialize cloud group interactions
+    initializeCloudGroup() {
+        if (window.location.pathname.includes('console.html')) {
+            return;
+        }
+        
+        const cloudGroup = document.getElementById('cloudGroup');
+        const cloudGroupMain = document.getElementById('cloudGroupMain');
+        
+        if (!cloudGroup || !cloudGroupMain) {
+            console.warn('⚠️ Cloud group elements not found');
+            return;
+        }
+        
+        console.log('🔄 Initializing cloud group...');
+        
+        // Simple toggle with debugging
+        cloudGroupMain.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const isActive = cloudGroup.classList.contains('active');
+            cloudGroup.classList.toggle('active');
+            
+            console.log('🔄 Cloud group toggled:', !isActive);
+            
+            // Debug: Check if cloud options are visible
+            const cloudOptions = cloudGroup.querySelectorAll('.cloud-option');
+            console.log('🔍 Cloud options found:', cloudOptions.length);
+            cloudOptions.forEach((option, index) => {
+                const isVisible = window.getComputedStyle(option).display !== 'none';
+                console.log(`🔍 Cloud option ${index + 1} (${option.id}): visible=${isVisible}`);
+            });
+        });
+        
+        // Close when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!cloudGroup.contains(e.target)) {
+                cloudGroup.classList.remove('active');
+            }
+        });
+        
+        // Handle individual cloud button clicks with debugging
+        const cloudOptions = cloudGroup.querySelectorAll('.cloud-option');
+        cloudOptions.forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('🔄 Cloud option clicked:', option.id);
+                console.log('🔄 onclick attribute:', option.getAttribute('onclick'));
+                
+                // Close the cloud group after a short delay
+                setTimeout(() => {
+                    cloudGroup.classList.remove('active');
+                    console.log('🔄 Cloud group closed after button click');
+                }, 200);
+            });
+        });
+        
+        console.log('✅ Cloud group initialized successfully');
+        
+        // Ensure global functions are available
+        if (!window.toggleArduinoConnection) {
+            window.toggleArduinoConnection = () => {
+                console.log('🔌 toggleArduinoConnection called (fallback)');
+                if (window.socketManager) {
+                    if (window.arduinoConnected) {
+                        window.socketManager.disconnectArduino();
+                    } else {
+                        window.socketManager.connectArduino();
+                    }
+                } else {
+                    console.warn('⚠️ Socket manager not available for Arduino toggle');
+                }
+            };
+        }
+        
+        if (!window.resetGameFromMain) {
+            window.resetGameFromMain = () => {
+                console.log('🔄 resetGameFromMain called (fallback)');
+                if (window.hotkeysManager) {
+                    window.hotkeysManager.handleGameReset();
+                } else {
+                    console.warn('⚠️ Hotkeys manager not available for reset');
+                }
+            };
+        }
+    }
+    
     
     // Get initialization status
     getStatus() {
@@ -483,17 +575,69 @@ class MainPageApp {
         console.log('🔌 Updating Arduino UI, connected:', window.arduinoConnected);
         
         if (window.arduinoConnected) {
-            arduinoToggle.classList.add('connected');
-            arduinoToggle.classList.remove('disconnected');
             arduinoIcon.className = 'ri-cpu-fill';
             arduinoToggle.title = 'Disconnect Arduino';
             console.log('🔌 Arduino UI set to connected state');
         } else {
-            arduinoToggle.classList.add('disconnected');
-            arduinoToggle.classList.remove('connected');
             arduinoIcon.className = 'ri-cpu-line';
             arduinoToggle.title = 'Connect Arduino';
             console.log('🔌 Arduino UI set to disconnected state');
+        }
+    }
+    
+    // Reset game from main page
+    resetGameFromMain() {
+        // Prevent infinite loops - don't reset if already resetting
+        if (window.gameState && window.gameState.isResetting) {
+            console.log('⚠️ Main page: Reset already in progress, skipping...');
+            return;
+        }
+        
+        console.log('🔄 Main page: Initiating game reset...');
+        
+        // Set resetting flag to prevent loops
+        if (window.gameState) {
+            window.gameState.isResetting = true;
+        }
+        
+        if (window.hotkeysManager) {
+            window.hotkeysManager.handleGameReset();
+        } else {
+            console.warn('⚠️ HotkeysManager not available, using fallback reset');
+            // Fallback reset
+            if (window.gameState) {
+                window.gameState.reset();
+            }
+            if (window.socketManager) {
+                window.socketManager.send('admin_reset', {});
+            }
+        }
+        
+        // Show reset confirmation
+        this.showResetConfirmation();
+        
+        // Clear resetting flag after a short delay
+        setTimeout(() => {
+            if (window.gameState) {
+                window.gameState.isResetting = false;
+            }
+        }, 1000);
+    }
+    
+    // Show reset confirmation
+    showResetConfirmation() {
+        const resetToggle = document.getElementById('resetToggle');
+        if (resetToggle) {
+            const originalIcon = resetToggle.innerHTML;
+            resetToggle.innerHTML = '<i class="ri-check-line"></i>';
+            resetToggle.style.background = 'rgba(76, 175, 80, 0.9)';
+            resetToggle.style.color = 'white';
+            
+            setTimeout(() => {
+                resetToggle.innerHTML = originalIcon;
+                resetToggle.style.background = '';
+                resetToggle.style.color = '';
+            }, 2000);
         }
     }
 }
@@ -510,3 +654,15 @@ if (document.readyState === 'loading') {
 
 // Export for global access
 window.mainPageApp = mainPageApp;
+
+// Global function for reset button
+window.resetGameFromMain = () => {
+    if (window.mainPageApp) {
+        window.mainPageApp.resetGameFromMain();
+    } else {
+        console.warn('⚠️ MainPageApp not available, using direct reset');
+        if (window.hotkeysManager) {
+            window.hotkeysManager.handleGameReset();
+        }
+    }
+};

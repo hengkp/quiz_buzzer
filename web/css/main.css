@@ -287,68 +287,151 @@
         animation: emergencyGlow 1s ease-in-out;
     }
 
-    /* ========== CLOUDS ========== */
-    .cloud {
+    /* ========== PROFESSIONAL CLOUD DROPDOWN ========== */
+    .cloud-group {
         position: absolute;
-        background: rgba(255, 255, 255, 0.8);
-        border-radius: 50px;
-        opacity: 0.7;
-        z-index: 15;
-        font-size: clamp(1rem, 2vw, 1.5rem);
-        color: #301F5C;
-        text-align: center;
+        top: 3%;
+        right: 3%;
+        z-index: 1000;
+    }
+
+    .cloud-group-main {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        border: none;
+        cursor: pointer;
+        font-size: 1.3rem;
+        color: white;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         display: flex;
         align-items: center;
         justify-content: center;
-        width: clamp(30px, 4vw, 40px);
-        height: clamp(30px, 4vw, 40px);
     }
 
-    .cloud1 {
-        top: 2%;
-        right: 2%;
-        animation: floatCloud1 2s infinite alternate;
+    .cloud-group-main:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
     }
 
-    .cloud2 {
-        top: 8%;
-        right: 2%;
-        animation: floatCloud2 2s infinite alternate;
+    .cloud-group-main.active {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        transform: scale(1.05);
     }
 
-    .cloud3 {
-        top: 14%;
-        right: 2%;
-        animation: floatCloud3 2s infinite alternate;
-    }
-
-    @keyframes floatCloud1 {
-        0% { transform: translateX(-20px); }
-        100% { transform: translateX(20px); }
-    }
-
-    @keyframes floatCloud2 {
-        0% { transform: translateX(20px); }
-        100% { transform: translateX(-20px); }
-    }
-
-    @keyframes floatCloud3 {
-        0% { transform: translateX(-15px); }
-        100% { transform: translateX(15px); }
-    }
-
-    /* Arduino connection states */
-    .cloud3.connected {
-        background: rgba(76, 175, 80, 0.9);
+    .cloud-option {
+        position: absolute;
+        top: 60px;
+        right: 0;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        border-radius: 50%;
+        width: 45px;
+        height: 45px;
+        border: none;
+        cursor: pointer;
+        font-size: 1.1rem;
         color: white;
-        box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+        box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transform: translateY(-10px) scale(0.8);
     }
 
-    .cloud3.disconnected {
-        background: rgba(244, 67, 54, 0.9);
-        color: white;
-        box-shadow: 0 0 20px rgba(244, 67, 54, 0.6);
+    .cloud-group.active .cloud-option {
+        display: flex;
+        opacity: 1;
+        transform: translateY(0) scale(1);
     }
+
+    .cloud-option:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(240, 147, 251, 0.6);
+    }
+
+    /* Staggered animation for cloud options */
+    .cloud-group.active .cloud-console {
+        transition-delay: 0.1s;
+    }
+
+    .cloud-group.active .cloud-arduino {
+        transition-delay: 0.2s;
+    }
+
+    .cloud-group.active .cloud-fullscreen {
+        transition-delay: 0.3s;
+    }
+
+    .cloud-group.active .cloud-reset {
+        transition-delay: 0.4s;
+    }
+
+    /* Position each cloud with proper spacing */
+    .cloud-console { top: 60px; }
+    .cloud-arduino { top: 110px; }
+    .cloud-fullscreen { top: 160px; }
+    .cloud-reset { top: 210px; }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .cloud-group {
+            top: 2%;
+            right: 2%;
+        }
+        
+        .cloud-group-main {
+            width: 45px;
+            height: 45px;
+            font-size: 1.2rem;
+        }
+        
+        .cloud-option {
+            width: 40px;
+            height: 40px;
+            font-size: 1rem;
+        }
+        
+        .cloud-console { top: 55px; }
+        .cloud-arduino { top: 100px; }
+        .cloud-fullscreen { top: 145px; }
+        .cloud-reset { top: 190px; }
+    }
+
+    @media (max-width: 480px) {
+        .cloud-group {
+            top: 1%;
+            right: 1%;
+        }
+        
+        .cloud-group-main {
+            width: 40px;
+            height: 40px;
+            font-size: 1.1rem;
+        }
+        
+        .cloud-option {
+            width: 35px;
+            height: 35px;
+            font-size: 0.9rem;
+        }
+        
+        .cloud-console { top: 50px; }
+        .cloud-arduino { top: 90px; }
+        .cloud-fullscreen { top: 130px; }
+        .cloud-reset { top: 170px; }
+    }
+
+
+
+
+
+    /* All clouds have the same color - no status indicators */
+
+
 
     /* ========== PLANET BLOCKS ========== */
     .planet-blocks {

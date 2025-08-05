@@ -13,7 +13,7 @@
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
     
     <!-- Main Stylesheet -->
-    <link rel="stylesheet" href="css/among_us.css">
+    <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
     
@@ -56,20 +56,30 @@
         <!-- Timer -->
         <div class="timer-value" id="timerDisplay">0:00</div>
         
-        <!-- Console Toggle Cloud -->
-        <button class="cloud cloud1" id="consoleToggle" onclick="openConsoleWindow()">
-            <i class="ri-settings-3-line"></i>
-        </button>
+        <!-- Grouped Cloud Controls -->
+        <div class="cloud-group" id="cloudGroup">
+            <!-- Main Group Cloud -->
+            <button class="cloud-group-main" id="cloudGroupMain">
+                <i class="ri-more-2-fill"></i>
+            </button>
+            
+            <!-- Individual Cloud Buttons (hidden by default) -->
+            <button class="cloud-option cloud-console" id="consoleToggle" onclick="openConsoleWindow();" title="Console">
+                <i class="ri-settings-3-line"></i>
+            </button>
 
-        <!-- Arduino Connection Cloud -->
-        <button class="cloud cloud3" id="arduinoToggle" onclick="toggleArduinoConnection()">
-            <i class="ri-cpu-line" id="arduinoIcon"></i>
-        </button>
+            <button class="cloud-option cloud-arduino" id="arduinoToggle" onclick="window.toggleArduinoConnection();" title="Arduino">
+                <i class="ri-cpu-line" id="arduinoIcon"></i>
+            </button>
 
-        <!-- Fullscreen Toggle Button -->
-        <button class="cloud cloud2" id="fullscreenToggle" onclick="toggleFullscreen()">
-            <i class="ri-fullscreen-line" id="fullscreenIcon"></i>
-        </button>
+            <button class="cloud-option cloud-fullscreen" id="fullscreenToggle" onclick="toggleFullscreen();" title="Fullscreen">
+                <i class="ri-fullscreen-line" id="fullscreenIcon"></i>
+            </button>
+
+            <button class="cloud-option cloud-reset" id="resetToggle" onclick="window.resetGameFromMain();" title="Reset Game (Q)">
+                <i class="ri-refresh-line"></i>
+            </button>
+        </div>
 
         <!-- Character -->
         <div class="character-container-main">

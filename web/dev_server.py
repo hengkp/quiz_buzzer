@@ -626,40 +626,58 @@ def handle_simulate_buzzer(data):
 
 @socketio.on('admin_reset')
 def handle_admin_reset(data=None):
-    """Handle admin reset - FIXED: Now clears card status"""
-    logger.info('Admin reset - clearing all game state including cards')
+    """Handle admin reset - Complete game state reset"""
+    logger.info('🔄 Admin reset - clearing all game state including cards and scores')
     
-    # FIXED: Reset all team card states
+    # Reset all team scores and card states
     for team_id in game_state['teams']:
+        game_state['teams'][team_id]['score'] = 0
         game_state['teams'][team_id]['cards'] = {
-            'angel': False, 
-            'devil': False, 
-            'cross': False, 
+            'angel': True,  # Reset to available
+            'devil': True,  # Reset to available
+            'cross': False, # Reset to not active
             'angelUsed': False, 
             'devilUsed': False
         }
-        logger.info(f'Cleared card status for Team {team_id}')
+        logger.info(f'✅ Reset Team {team_id}: score=0, cards=available')
     
-    # Clear challenge state
+    # Reset game progress
+    game_state['current_set'] = 1
+    game_state['current_question'] = 1
+    game_state['current_team'] = 0
     game_state['challenge_2x'] = False
     game_state['winner'] = None
+    game_state['angel_team'] = 0
+    game_state['attack_team'] = 0
+    game_state['victim_team'] = 0
     
-    # Broadcast card updates to all clients
-    socketio.emit('card_status_reset', {
+    # Reset timer
+    game_state['timer_value'] = 15
+    game_state['timer_running'] = False
+    
+    # Clear all Q1 failure tracking
+    for set_number in range(1, 11):
+        game_state[f'q1_failed_teams_{set_number}'] = []
+        game_state[f'q1_attempts_{set_number}'] = 0
+    
+    # Broadcast complete reset to all OTHER clients (not the one that initiated it)
+    socketio.emit('game_state_reset', {
         'teams': game_state['teams'],
-        'challenge_2x': game_state['challenge_2x']
-    })
+        'current_set': game_state['current_set'],
+        'current_question': game_state['current_question'],
+        'timer_value': game_state['timer_value'],
+        'timer_running': game_state['timer_running']
+    }, skip_sid=request.sid)  # Skip the client that initiated the reset
     
+    # Reset Arduino if connected
     if arduino.is_connected:
-        # Send reset to real Arduino
         arduino.write('RESET\n')
-        socketio.emit('log', {'message': 'Admin reset sent to Arduino - Cards cleared'})
+        socketio.emit('log', {'message': '🔄 Admin reset sent to Arduino - Complete game reset'})
     else:
-        # Simulate reset
         socketio.emit('buzzer_data', 'READY')
-        socketio.emit('log', {'message': 'Admin reset (simulated) - Cards cleared'})
+        socketio.emit('log', {'message': '🔄 Admin reset (simulated) - Complete game reset'})
     
-    logger.info('✅ Admin reset completed with card status clearing')
+    logger.info('✅ Admin reset completed - all game state cleared')
 
 @socketio.on('get_serial_ports')
 def handle_get_serial_ports():

@@ -100,6 +100,43 @@ class SocketManager {
             }
         });
         
+        this.socket.on('game_state_reset', (data) => {
+            console.log('🔄 SocketManager: game_state_reset received:', data);
+            
+            // Set server-initiated flag to prevent loops
+            if (window.gameState) {
+                window.gameState.serverInitiatedReset = true;
+            }
+            
+            // Clear localStorage
+            localStorage.removeItem('quizBowlGameState');
+            
+            // Reset local game state
+            if (window.gameState) {
+                window.gameState.reset();
+            }
+            
+            // Update UI elements
+            if (window.gameState) {
+                window.gameState.updateTeamDisplays();
+                window.gameState.updateTimerDisplay();
+                window.gameState.updateQuestionSetDisplay();
+                window.gameState.setChanceDisplayToDefault();
+            }
+            
+            // Reset character to white
+            if (window.characterController) {
+                window.characterController.updateProgressCharacterColor(0);
+            }
+            
+            // Clear buzzing system
+            if (window.buzzingSystem) {
+                window.buzzingSystem.clearAll();
+            }
+            
+            console.log('✅ SocketManager: Game state reset completed from server');
+        });
+        
         // Arduino connection status
         this.socket.on('arduino_status', (data) => {
             console.log('🔌 Arduino status received:', data);

@@ -5,7 +5,7 @@
 
 class GameState {
     constructor() {
-        this.state = {
+        this.defaultState = {
             currentSet: 1,
             currentQuestion: 1,
             currentTeam: 0,
@@ -87,8 +87,57 @@ class GameState {
             }
         };
         
+        // Load state from localStorage or use default
+        this.state = this.loadFromLocalStorage();
+        
         this.listeners = new Map();
         this.initializeUI();
+        this.isResetting = false; // Initialize resetting flag
+        this.serverInitiatedReset = false; // Initialize server-initiated reset flag
+    }
+    
+    // Load state from localStorage
+    loadFromLocalStorage() {
+        try {
+            const savedState = localStorage.getItem('quizBowlGameState');
+            if (savedState) {
+                const parsedState = JSON.parse(savedState);
+                // Merge with default state to ensure all properties exist
+                return this.mergeWithDefaults(parsedState);
+            }
+        } catch (error) {
+            console.warn('⚠️ Error loading from localStorage:', error);
+        }
+        return JSON.parse(JSON.stringify(this.defaultState)); // Deep copy default state
+    }
+    
+    // Save state to localStorage
+    saveToLocalStorage() {
+        try {
+            localStorage.setItem('quizBowlGameState', JSON.stringify(this.state));
+        } catch (error) {
+            console.warn('⚠️ Error saving to localStorage:', error);
+        }
+    }
+    
+    // Merge saved state with defaults to ensure all properties exist
+    mergeWithDefaults(savedState) {
+        const merged = JSON.parse(JSON.stringify(this.defaultState));
+        
+        // Recursively merge objects
+        const mergeObjects = (target, source) => {
+            for (const key in source) {
+                if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+                    if (!target[key]) target[key] = {};
+                    mergeObjects(target[key], source[key]);
+                } else {
+                    target[key] = source[key];
+                }
+            }
+        };
+        
+        mergeObjects(merged, savedState);
+        return merged;
     }
     
     // Initialize UI elements
@@ -206,6 +255,7 @@ class GameState {
         const oldValue = this.state[key];
         this.state[key] = value;
         this.notify(key, value, oldValue);
+        this.saveToLocalStorage(); // Auto-save to localStorage
     }
     
     // Update nested state
@@ -222,6 +272,7 @@ class GameState {
         current[lastKey] = value;
         
         this.notify(path, value, oldValue);
+        this.saveToLocalStorage(); // Auto-save to localStorage
     }
     
     // Subscribe to state changes
@@ -314,6 +365,15 @@ class GameState {
         const chanceElement = document.getElementById('chanceQuestion');
         if (chanceElement) {
             chanceElement.style.display = 'none';
+        }
+    }
+    
+    // Set chance display to default
+    setChanceDisplayToDefault() {
+        const chanceElement = document.getElementById('chanceQuestion');
+        if (chanceElement) {
+            chanceElement.textContent = '(3/3 chances)';
+            chanceElement.style.display = 'block';
         }
     }
     
@@ -709,6 +769,21 @@ class GameState {
     
     // Reset game
     reset() {
+        // Prevent infinite loops - don't reset if already resetting
+        if (this.isResetting) {
+            console.log('⚠️ GameState: Reset already in progress, skipping...');
+            return;
+        }
+        
+        console.log('🔄 GameState: Starting reset...');
+        
+        // Set resetting flag to prevent loops
+        this.isResetting = true;
+        
+        // Clear localStorage completely
+        localStorage.removeItem('quizBowlGameState');
+        
+        // Reset to default state
         this.set('currentSet', 1);
         this.set('currentQuestion', 1);
         this.set('currentTeam', 0); // Reset current team
@@ -735,12 +810,40 @@ class GameState {
             });
         });
         
+        // Clear all Q1 failure tracking states for all sets
+        for (let setNumber = 1; setNumber <= 10; setNumber++) {
+            const failedTeamsKey = `q1FailedTeams_${setNumber}`;
+            const attemptsKey = `q1Attempts_${setNumber}`;
+            this.state[failedTeamsKey] = [];
+            this.state[attemptsKey] = 0;
+        }
+        
+        // Save the reset state to localStorage
+        this.saveToLocalStorage();
+        
         // Update all UI elements
         this.updatePlanetBlocks();
         this.updateTeamDisplays();
         this.updateTimerDisplay();
         this.updateQuestionSetDisplay();
         
+        // Set chance display to default
+        this.setChanceDisplayToDefault();
+        
+        // Only sync with server if this is a client-initiated reset (not server-initiated)
+        if (window.socketManager && !this.serverInitiatedReset) {
+            window.socketManager.send('admin_reset', {});
+        }
+        
+        // Clear server-initiated flag
+        this.serverInitiatedReset = false;
+        
+        // Clear resetting flag after a short delay
+        setTimeout(() => {
+            this.isResetting = false;
+        }, 1000);
+        
+        console.log('✅ Game state reset completed with localStorage clearing and server sync');
     }
 
     // Change progress character to team color
@@ -849,6 +952,9 @@ class GameState {
         
         // Reset action cards
         this.resetActionCards();
+        
+        // Save to localStorage
+        this.saveToLocalStorage();
         
         // Update all UI elements
         this.initializeUI();
