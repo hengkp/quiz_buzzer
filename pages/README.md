@@ -51,16 +51,23 @@ If you want Arduino connectivity:
 
 1. **Push to GitHub:**
    ```bash
-   git add pages/
-   git commit -m "Add GitHub Pages version"
-   git push
+   git add .
+   git commit -m "Add GitHub Pages version with GitHub Actions"
+   git push origin main
    ```
 
-2. **Enable GitHub Pages:**
+2. **Configure GitHub Pages:**
    - Go to your repository settings
-   - Enable GitHub Pages
-   - Set source to `/pages` directory
+   - Navigate to Settings → Pages
+   - Set source to **"Deploy from a branch"**
+   - Select **"gh-pages"** branch
+   - Select **"/ (root)"** folder
+   - Click **"Save"**
+
+3. **Automatic Deployment:**
+   - GitHub Actions will automatically deploy when you push to main
    - Your site will be available at `https://username.github.io/repository-name/`
+   - Check the "Actions" tab to monitor deployment status
 
 ## 📁 File Structure
 
