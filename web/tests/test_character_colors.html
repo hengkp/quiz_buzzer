@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Character Colors</title>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .character-test {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .character-test h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .lottie-container {
+            position: relative;
+            display: inline-block;
+        }
+        lottie-player {
+            width: 80px;
+            height: 80px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .color-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Among Us Character Color Test</h1>
+    <p>Testing the enhanced color changing system for lottie-player elements.</p>
+    
+    <div class="test-container">
+        <div class="character-test">
+            <h3>Red</h3>
+            <div class="lottie-container">
+                <lottie-player id="char-red" src="assets/animations/Among Us - Idle.json" background="transparent" speed="1" loop autoplay></lottie-player>
+            </div>
+            <button onclick="testColor('char-red', 'red')">Apply Red</button>
+        </div>
+        
+        <div class="character-test">
+            <h3>Blue</h3>
+            <div class="lottie-container">
+                <lottie-player id="char-blue" src="assets/animations/Among Us - Idle.json" background="transparent" speed="1" loop autoplay></lottie-player>
+            </div>
+            <button onclick="testColor('char-blue', 'blue')">Apply Blue</button>
+        </div>
+        
+        <div class="character-test">
+            <h3>Lime</h3>
+            <div class="lottie-container">
+                <lottie-player id="char-lime" src="assets/animations/Among Us - Idle.json" background="transparent" speed="1" loop autoplay></lottie-player>
+            </div>
+            <button onclick="testColor('char-lime', 'lime')">Apply Lime</button>
+        </div>
+        
+        <div class="character-test">
+            <h3>Orange</h3>
+            <div class="lottie-container">
+                <lottie-player id="char-orange" src="assets/animations/Among Us - Idle.json" background="transparent" speed="1" loop autoplay></lottie-player>
+            </div>
+            <button onclick="testColor('char-orange', 'orange')">Apply Orange</button>
+        </div>
+        
+        <div class="character-test">
+            <h3>Purple</h3>
+            <div class="lottie-container">
+                <lottie-player id="char-purple" src="assets/animations/Among Us - Idle.json" background="transparent" speed="1" loop autoplay></lottie-player>
+            </div>
+            <button onclick="testColor('char-purple', 'purple')">Apply Purple</button>
+        </div>
+        
+        <div class="character-test">
+            <h3>Cyan</h3>
+            <div class="lottie-container">
+                <lottie-player id="char-cyan" src="assets/animations/Among Us - Idle.json" background="transparent" speed="1" loop autoplay></lottie-player>
+            </div>
+            <button onclick="testColor('char-cyan', 'cyan')">Apply Cyan</button>
+        </div>
+        
+        <div class="character-test">
+            <h3>Pink</h3>
+            <div class="lottie-container">
+                <lottie-player id="char-pink" src="assets/animations/Among Us - Idle.json" background="transparent" speed="1" loop autoplay></lottie-player>
+            </div>
+            <button onclick="testColor('char-pink', 'pink')">Apply Pink</button>
+        </div>
+        
+        <div class="character-test">
+            <h3>Yellow</h3>
+            <div class="lottie-container">
+                <lottie-player id="char-yellow" src="assets/animations/Among Us - Idle.json" background="transparent" speed="1" loop autoplay></lottie-player>
+            </div>
+            <button onclick="testColor('char-yellow', 'yellow')">Apply Yellow</button>
+        </div>
+        
+        <div class="character-test">
+            <h3>White (Default)</h3>
+            <div class="lottie-container">
+                <lottie-player id="char-white" src="assets/animations/Among Us - Idle.json" background="transparent" speed="1" loop autoplay></lottie-player>
+            </div>
+            <button onclick="testColor('char-white', 'white')">Apply White</button>
+        </div>
+    </div>
+    
+    <div style="margin-top: 30px;">
+        <button onclick="testAllColors()" style="background: #28a745; font-size: 16px; padding: 12px 24px;">Test All Colors (JSON Method)</button>
+        <button onclick="resetAllColors()" style="background: #dc3545; font-size: 16px; padding: 12px 24px; margin-left: 10px;">Reset All</button>
+        <div id="status" style="margin-top: 15px; font-style: italic; color: #666;"></div>
+    </div>
+    
+    <div style="margin-top: 20px; padding: 15px; background: #e8f5e8; border-radius: 8px; font-size: 14px;">
+        <h4 style="margin: 0 0 10px 0; color: #2d6a2d;">✨ Enhanced Color System</h4>
+        <p style="margin: 0; line-height: 1.4;">This test uses the new JSON-based color replacement method that directly modifies the character colors in the animation data. The visor and its internal shadow stay the original blue colors while only the body and body shadow colors change to team colors. No more filters or overlays - pure character color changes that preserve the background transparency!</p>
+    </div>
+
+    <script>
+        // Animation cache for loaded JSON files
+        const animationCache = {};
+        
+        // Color mapping for different team colors
+        function getTeamColors(color) {
+            const colorMap = {
+                'red': {
+                    primary: [0.843, 0.118, 0.216, 1],     // Main body color
+                    secondary: [0.545, 0.094, 0.157, 1],   // Shadow/dark areas
+                    light: [0.969, 0.8, 0.8, 1]           // Light areas (not visor - keeps default)
+                },
+                'blue': {
+                    primary: [0.114, 0.235, 0.914, 1],
+                    secondary: [0.078, 0.161, 0.627, 1],
+                    light: [0.8, 0.9, 0.996, 1]
+                },
+                'lime': {
+                    primary: [0.357, 0.996, 0.294, 1],
+                    secondary: [0.235, 0.667, 0.196, 1],
+                    light: [0.9, 0.996, 0.9, 1]
+                },
+                'orange': {
+                    primary: [1.0, 0.553, 0.110, 1],
+                    secondary: [0.667, 0.369, 0.073, 1],
+                    light: [0.996, 0.92, 0.8, 1]
+                },
+                'purple': {
+                    primary: [0.471, 0.239, 0.824, 1],
+                    secondary: [0.314, 0.161, 0.549, 1],
+                    light: [0.9, 0.8, 0.996, 1]
+                },
+                'cyan': {
+                    primary: [0.267, 1.0, 0.969, 1],
+                    secondary: [0.180, 0.667, 0.647, 1],
+                    light: [0.8, 0.996, 0.996, 1]
+                },
+                'pink': {
+                    primary: [1.0, 0.412, 0.706, 1],
+                    secondary: [0.667, 0.275, 0.471, 1],
+                    light: [0.996, 0.8, 0.92, 1]
+                },
+                'yellow': {
+                    primary: [1.0, 0.843, 0.0, 1],
+                    secondary: [0.667, 0.561, 0.0, 1],
+                    light: [0.996, 0.996, 0.8, 1]
+                },
+                'white': {
+                    primary: [0.969, 0.996, 0.996, 1],
+                    secondary: [0.667, 0.725, 0.725, 1],
+                    light: [0.996, 0.996, 0.996, 1]
+                }
+            };
+            return colorMap[color] || colorMap['red'];
+        }
+
+        async function loadAnimationData(animationSrc) {
+            if (animationCache[animationSrc]) {
+                return JSON.parse(JSON.stringify(animationCache[animationSrc]));
+            }
+            
+            try {
+                const response = await fetch(animationSrc);
+                const data = await response.json();
+                animationCache[animationSrc] = data;
+                return JSON.parse(JSON.stringify(data));
+            } catch (error) {
+                console.error('Error loading animation:', error);
+                return null;
+            }
+        }
+
+        function colorDistance(color1, color2) {
+            const dr = color1[0] - color2[0];
+            const dg = color1[1] - color2[1];
+            const db = color1[2] - color2[2];
+            return Math.sqrt(dr * dr + dg * dg + db * db);
+        }
+
+        function isMainCharacterColor(color) {
+            const originalMain = [0.784, 0.125, 0.055, 1];
+            // Note: We keep the visor color as default, so we don't include it here
+            return colorDistance(color, originalMain) < 0.1;
+        }
+
+        function isShadowColor(color) {
+            // Original shadow/dark colors from the JSON
+            const originalShadow = [0.545, 0.094, 0.157, 1]; // Dark red shadow
+            const originalVisorShadow = [0.278, 0.38, 0.424, 1]; // Dark blue visor shadow - keep this original
+            
+            // Don't change the visor shadow color
+            if (colorDistance(color, originalVisorShadow) < 0.1) {
+                return false;
+            }
+            
+            return colorDistance(color, originalShadow) < 0.1;
+        }
+
+        function isLightColor(color) {
+            // Original light reflection colors (but NOT the visor)
+            const originalLight = [0.969, 0.996, 0.996, 1]; // Very light reflection
+            const originalVisor = [0.576, 0.788, 0.855, 1]; // Light blue visor - keep this default
+            
+            // Don't change the visor color
+            if (colorDistance(color, originalVisor) < 0.1) {
+                return false;
+            }
+            
+            return colorDistance(color, originalLight) < 0.1 || 
+                   (color[0] > 0.95 && color[1] > 0.95 && color[2] > 0.95);
+        }
+
+        function replaceColorsInLayer(layer, teamColors) {
+            if (layer.shapes) {
+                layer.shapes.forEach(shape => {
+                    if (shape.it) {
+                        shape.it.forEach(item => {
+                            if (item.ty === 'fl' && item.c && item.c.k) {
+                                const currentColor = item.c.k;
+                                
+                                // Check if this is the main character color (red body)
+                                if (isMainCharacterColor(currentColor)) {
+                                    item.c.k = teamColors.primary;
+                                }
+                                // Check if this is the shadow/dark color (NOT visor shadow - visor shadow stays original)
+                                else if (isShadowColor(currentColor)) {
+                                    item.c.k = teamColors.secondary;
+                                }
+                                // Check if this is a light reflection color (NOT visor or visor shadow - they stay original)
+                                else if (isLightColor(currentColor)) {
+                                    item.c.k = teamColors.light;
+                                }
+                            }
+                        });
+                    }
+                    
+                    if (shape.shapes) {
+                        replaceColorsInLayer(shape, teamColors);
+                    }
+                });
+            }
+            
+            return layer;
+        }
+
+        async function applyColorToLottiePlayer(player, color) {
+            const teamColors = getTeamColors(color);
+            const currentSrc = player.getAttribute('src');
+            
+            if (!currentSrc) return;
+
+            player.style.filter = '';
+            
+            const existingOverlay = player.parentNode.querySelector('.color-overlay');
+            if (existingOverlay) {
+                existingOverlay.remove();
+            }
+
+            const animationData = await loadAnimationData(currentSrc);
+            if (!animationData) return;
+
+            if (animationData.layers) {
+                animationData.layers.forEach(layer => {
+                    replaceColorsInLayer(layer, teamColors);
+                });
+            }
+
+            const dataUrl = 'data:application/json;base64,' + btoa(JSON.stringify(animationData));
+            player.load(dataUrl);
+        }
+
+        function updateStatus(message) {
+            const status = document.getElementById('status');
+            if (status) {
+                status.textContent = message;
+            }
+        }
+
+        async function testColor(playerId, color) {
+            updateStatus(`Applying ${color} color...`);
+            const player = document.getElementById(playerId);
+            await applyColorToLottiePlayer(player, color);
+        }
+
+        async function testAllColors() {
+            updateStatus('Loading animation data and applying colors...');
+            const colors = ['red', 'blue', 'lime', 'orange', 'purple', 'cyan', 'pink', 'yellow', 'white'];
+            
+            for (const color of colors) {
+                await testColor(`char-${color}`, color);
+            }
+            
+            updateStatus('✅ All colors applied successfully using JSON method!');
+        }
+
+        function resetAllColors() {
+            updateStatus('Resetting all characters to original red...');
+            const colors = ['red', 'blue', 'lime', 'orange', 'purple', 'cyan', 'pink', 'yellow', 'white'];
+            colors.forEach(color => {
+                const player = document.getElementById(`char-${color}`);
+                player.style.filter = '';
+                const overlay = player.parentNode.querySelector('.color-overlay');
+                if (overlay) {
+                    overlay.remove();
+                }
+                // Reload original animation
+                player.load('assets/animations/Among Us - Idle.json');
+            });
+            updateStatus('✅ All characters reset to original colors');
+        }
+
+        // Auto-apply colors on load
+        window.addEventListener('load', () => {
+            setTimeout(testAllColors, 2000);
+        });
+    </script>
+</body>
+</html> 

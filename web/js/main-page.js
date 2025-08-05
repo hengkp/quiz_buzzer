@@ -21,6 +21,7 @@ class MainPageApp {
     // Initialize the main page application
     async init() {
         if (this.initialized) {
+            console.warn('⚠️ Main page already initialized');
             return;
         }
         
@@ -47,13 +48,10 @@ class MainPageApp {
             // Setup global functions for backward compatibility
             this.setupBackwardCompatibility();
             
-            // Setup local storage reset on 'q' key
-            this.setupLocalStorageReset();
-            
             this.initialized = true;
             
         } catch (error) {
-            // Silently handle initialization errors
+            console.error('❌ Main page initialization failed:', error);
         }
     }
     
@@ -106,8 +104,10 @@ class MainPageApp {
             try {
                 await systems[i]();
                 this.completedSteps++;
+                console.log(`✅ ${this.initializationSteps[i]} initialized`);
             } catch (error) {
-                // Silently handle initialization errors
+                console.error(`❌ Failed to initialize ${this.initializationSteps[i]}:`, error);
+                throw error;
             }
         }
     }
@@ -126,12 +126,17 @@ class MainPageApp {
     
     // Load server state and sync with client state
     loadServerState() {
+        console.log('🔄 Loading server state for main page...');
+        
         // Setup server state listener after socket connects
         if (window.socketManager && window.socketManager.socket) {
             window.socketManager.socket.on('connect', () => {
+                console.log('🔌 Main page socket connected, setting up server state listener');
                 this.setupServerStateListener();
                 this.requestServerState();
             });
+        } else {
+            console.warn('⚠️ Socket manager not available for server state loading');
         }
     }
     
@@ -147,7 +152,10 @@ class MainPageApp {
         if (window.socketManager && window.socketManager.socket) {
             window.socketManager.socket.on('server_state_response', (serverState) => {
                 if (serverState) {
+                    console.log('📥 Received server state for main page:', serverState);
                     this.syncClientStateWithServer(serverState);
+                } else {
+                    console.log('⚠️ No server state received for main page, using defaults');
                 }
             });
         }
@@ -165,16 +173,19 @@ class MainPageApp {
                     // Update team name if different
                     if (serverTeam.name && serverTeam.name !== clientTeam.name) {
                         window.gameState.state.teams[teamId].name = serverTeam.name;
+                        console.log(`🔄 Main page synced team ${teamId} name: "${clientTeam.name}" → "${serverTeam.name}"`);
                     }
                     
                     // Update team score if different
                     if (serverTeam.score !== undefined && serverTeam.score !== clientTeam.score) {
                         window.gameState.state.teams[teamId].score = serverTeam.score;
+                        console.log(`🔄 Main page synced team ${teamId} score: ${clientTeam.score} → ${serverTeam.score}`);
                     }
                     
                     // Update team color if different
                     if (serverTeam.color && serverTeam.color !== clientTeam.color) {
                         window.gameState.state.teams[teamId].color = serverTeam.color;
+                        console.log(`🔄 Main page synced team ${teamId} color: ${clientTeam.color} → ${serverTeam.color}`);
                     }
                 }
             });
@@ -184,10 +195,12 @@ class MainPageApp {
         if (serverState.timer) {
             if (serverState.timer.value !== undefined && serverState.timer.value !== window.gameState.state.timerValue) {
                 window.gameState.state.timerValue = serverState.timer.value;
+                console.log(`🔄 Main page synced timer value: ${window.gameState.state.timerValue} → ${serverState.timer.value}`);
             }
             
             if (serverState.timer.running !== undefined && serverState.timer.running !== window.gameState.state.timerRunning) {
                 window.gameState.state.timerRunning = serverState.timer.running;
+                console.log(`🔄 Main page synced timer running: ${window.gameState.state.timerRunning} → ${serverState.timer.running}`);
             }
         }
         
@@ -195,10 +208,12 @@ class MainPageApp {
         if (serverState.question_set) {
             if (serverState.question_set.current !== undefined && serverState.question_set.current !== window.gameState.state.currentSet) {
                 window.gameState.state.currentSet = serverState.question_set.current;
+                console.log(`🔄 Main page synced current set: ${window.gameState.state.currentSet} → ${serverState.question_set.current}`);
             }
             
             if (serverState.question_set.title && window.gameState.state.questionSets[window.gameState.state.currentSet]) {
                 window.gameState.state.questionSets[window.gameState.state.currentSet].title = serverState.question_set.title;
+                console.log(`🔄 Main page synced question set title: "${serverState.question_set.title}"`);
             }
         }
         
@@ -206,6 +221,8 @@ class MainPageApp {
         window.gameState.updateTeamDisplays();
         window.gameState.updateTimerDisplay();
         window.gameState.updateQuestionSetDisplay();
+        
+        console.log('✅ Main page server state sync completed');
     }
     
     // Initialize socket manager
@@ -285,6 +302,8 @@ class MainPageApp {
                 // Initialize team colors
                 window.ProgressWhite.initializeTeamColors();
             } else {
+                console.warn('⚠️ ProgressWhite.initializeTeamColors not available');
+                
                 // Fallback: manually set team character colors
                 const teamColors = ['red', 'blue', 'lime', 'orange', 'pink', 'yellow'];
                 for (let i = 1; i <= 6; i++) {
@@ -295,7 +314,7 @@ class MainPageApp {
                 }
             }
         } catch (error) {
-            // Silently handle initialization errors
+            console.error('❌ Error initializing team character colors:', error);
         }
     }
     
@@ -328,6 +347,7 @@ class MainPageApp {
                 if (window.ProgressWhite && window.ProgressWhite.applyCharacterColor) {
                     const success = await window.ProgressWhite.applyCharacterColor('progressCharacter', 'white');
                 } else {
+                    console.warn('⚠️ ProgressWhite not available, using fallback');
                     // Fallback: direct src assignment
                     progressCharacter.src = 'assets/animations/among_us_idle.json';
                 }
@@ -337,13 +357,15 @@ class MainPageApp {
                 
                 // Wait for it to load
                 await new Promise(resolve => setTimeout(resolve, 200));
+            } else {
+                console.warn('⚠️ Progress character not found');
             }
             
             // Reset game state to ensure no team is selected
             window.gameState.set('currentTeam', 0);
             
         } catch (error) {
-            // Silently handle initialization errors
+            console.error('❌ Error ensuring white character:', error);
         }
     }
     
@@ -357,9 +379,11 @@ class MainPageApp {
             // Start the continuous animation system
             if (window.ProgressWhite?.teamAnimationSystem) {
                 window.ProgressWhite.teamAnimationSystem.startContinuousAnimations();
+            } else {
+                console.warn('⚠️ Team animation system not available');
             }
         } catch (error) {
-            // Silently handle initialization errors
+            console.error('❌ Error starting team animations:', error);
         }
     }
     
@@ -375,6 +399,8 @@ class MainPageApp {
     }
     
     initializeArduinoConnection() {
+        console.log('🔌 Initializing Arduino connection system...');
+        
         // Initialize Arduino connection status
         window.arduinoConnected = false;
         
@@ -383,18 +409,25 @@ class MainPageApp {
             const { connected, message } = event.detail;
             window.arduinoConnected = connected;
             this.updateArduinoUI();
+            console.log(`🔌 Arduino ${connected ? 'connected' : 'disconnected'}: ${message}`);
         });
         
         // Get initial Arduino status
         if (window.socketManager) {
+            console.log('🔌 Requesting initial Arduino status...');
             window.socketManager.getArduinoStatus();
+        } else {
+            console.warn('⚠️ Socket manager not available for Arduino status');
         }
         
         // Set up global Arduino toggle function
         window.toggleArduinoConnection = () => {
+            console.log('🔌 toggleArduinoConnection called, arduinoConnected:', window.arduinoConnected);
             if (window.arduinoConnected) {
+                console.log('🔌 Disconnecting Arduino...');
                 window.socketManager.disconnectArduino();
             } else {
+                console.log('🔌 Connecting Arduino...');
                 window.socketManager.connectArduino();
             }
         };
@@ -402,6 +435,7 @@ class MainPageApp {
         // Set initial UI state
         this.updateArduinoUI();
         
+        console.log('✅ Arduino connection system initialized');
         return Promise.resolve();
     }
     
@@ -410,33 +444,25 @@ class MainPageApp {
         const arduinoIcon = document.getElementById('arduinoIcon');
         
         if (!arduinoToggle || !arduinoIcon) {
+            console.warn('⚠️ Arduino UI elements not found');
             return;
         }
+        
+        console.log('🔌 Updating Arduino UI, connected:', window.arduinoConnected);
         
         if (window.arduinoConnected) {
             arduinoToggle.classList.add('connected');
             arduinoToggle.classList.remove('disconnected');
             arduinoIcon.className = 'ri-cpu-fill';
             arduinoToggle.title = 'Disconnect Arduino';
+            console.log('🔌 Arduino UI set to connected state');
         } else {
             arduinoToggle.classList.add('disconnected');
             arduinoToggle.classList.remove('connected');
             arduinoIcon.className = 'ri-cpu-line';
             arduinoToggle.title = 'Connect Arduino';
+            console.log('🔌 Arduino UI set to disconnected state');
         }
-    }
-    
-    // Setup local storage reset on 'q' key press
-    setupLocalStorageReset() {
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'q' || event.key === 'Q') {
-                // Clear local storage and reset game state
-                if (window.gameState) {
-                    window.gameState.clearStorage();
-                    window.gameState.reset();
-                }
-            }
-        });
     }
 }
 

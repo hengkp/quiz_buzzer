@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Progress Character White Script</title>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin: 0 0 20px 0;
+        }
+        
+        .progress-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .character-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        
+        .character-box {
+            background: #e8f5e8;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        lottie-player {
+            width: 120px;
+            height: 120px;
+            border: 2px solid #ddd;
+            border-radius: 50%;
+            background: transparent;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        button.success {
+            background: #28a745;
+        }
+        
+        button.danger {
+            background: #dc3545;
+        }
+        
+        .log {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Progress Character White Script Test</h1>
+        
+        <div class="progress-section">
+            <h3>Progress Character</h3>
+            <p>This character should automatically turn white when the script loads:</p>
+            
+            <div class="character-container">
+                <div class="character-box">
+                    <h4>Progress Character</h4>
+                    <lottie-player 
+                        id="progressCharacter"
+                        src="assets/animations/Among Us - Idle.json"
+                        background="transparent"
+                        speed="1"
+                        loop
+                        autoplay>
+                    </lottie-player>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button onclick="manualSetWhite()" class="success">🎨 Set to White</button>
+            <button onclick="resetToOriginal()" class="danger">🔄 Reset to Original</button>
+            <button onclick="testDifferentAnimation()">🏃 Test with Run Animation</button>
+            <button onclick="clearLog()">🧹 Clear Log</button>
+        </div>
+        
+        <div id="status"></div>
+        
+        <div class="log" id="logOutput">
+            <div>📋 Console Log Output:</div>
+        </div>
+    </div>
+
+    <!-- Include the progress white script -->
+    <script src="set_progress_white.js"></script>
+    
+    <script>
+        // Capture console output for display
+        const logOutput = document.getElementById('logOutput');
+        const statusDiv = document.getElementById('status');
+        
+        function addLogMessage(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logLine = document.createElement('div');
+            logLine.style.marginBottom = '4px';
+            
+            let icon = '📝';
+            if (type === 'error') icon = '❌';
+            else if (type === 'warn') icon = '⚠️';
+            else if (message.includes('✅')) icon = '✅';
+            else if (message.includes('🎯')) icon = '🎯';
+            else if (message.includes('🎨')) icon = '🎨';
+            
+            logLine.innerHTML = `<span style="color: #718096;">${timestamp}</span> ${icon} ${message}`;
+            logOutput.appendChild(logLine);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+        
+        function showStatus(message, type) {
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Override console methods to capture output
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLogMessage(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLogMessage(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLogMessage(args.join(' '), 'warn');
+        };
+        
+        // Manual test functions
+        async function manualSetWhite() {
+            showStatus('🎯 Manually setting progress character to white...', 'info');
+            addLogMessage('Manual white color application triggered', 'log');
+            
+            try {
+                const success = await ProgressWhite.setProgressCharacterToWhite();
+                if (success) {
+                    showStatus('✅ Successfully set progress character to white!', 'success');
+                } else {
+                    showStatus('❌ Failed to set progress character to white!', 'error');
+                }
+            } catch (error) {
+                console.error('Error in manual white setting:', error);
+                showStatus('💥 Error occurred while setting white color!', 'error');
+            }
+        }
+        
+        function resetToOriginal() {
+            showStatus('🔄 Resetting to original colors...', 'info');
+            addLogMessage('Resetting progress character to original colors', 'log');
+            
+            const progressCharacter = document.getElementById('progressCharacter');
+            if (progressCharacter) {
+                progressCharacter.load('assets/animations/Among Us - Idle.json');
+                showStatus('✅ Reset to original Among Us colors!', 'success');
+            } else {
+                showStatus('❌ Progress character not found!', 'error');
+            }
+        }
+        
+        async function testDifferentAnimation() {
+            showStatus('🏃 Testing with Run animation...', 'info');
+            addLogMessage('Switching to Run animation and applying white', 'log');
+            
+            const progressCharacter = document.getElementById('progressCharacter');
+            if (progressCharacter) {
+                progressCharacter.setAttribute('src', 'assets/animations/Among Us - Run.json');
+                
+                // Wait a bit for animation to load, then apply white
+                setTimeout(async () => {
+                    try {
+                        const success = await ProgressWhite.setProgressCharacterToWhite();
+                        if (success) {
+                            showStatus('✅ Run animation successfully set to white!', 'success');
+                        } else {
+                            showStatus('❌ Failed to set Run animation to white!', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error setting Run animation to white:', error);
+                        showStatus('💥 Error with Run animation!', 'error');
+                    }
+                }, 500);
+            }
+        }
+        
+        function clearLog() {
+            logOutput.innerHTML = '<div>📋 Console Log Output:</div>';
+            addLogMessage('Log cleared', 'log');
+        }
+        
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            addLogMessage('🚀 Test page loaded - progress character should turn white automatically', 'log');
+            showStatus('🎉 Test page loaded! Progress character should be white.', 'success');
+        });
+        
+        // Test the waitForLottieAndSetWhite function as well
+        setTimeout(() => {
+            addLogMessage('🔍 Running additional white check...', 'log');
+            ProgressWhite.waitForLottieAndSetWhite();
+        }, 1000);
+    </script>
+</body>
+</html> 

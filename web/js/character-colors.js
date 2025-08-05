@@ -477,6 +477,7 @@ ProgressWhite.applyColorsToAnimation = async function(animationData, colorString
 // Apply run animation color to character
 ProgressWhite.applyRunAnimationColor = function(characterElement) {
     if (!characterElement) {
+        console.warn('❌ No character element provided for run animation color');
         return false;
     }
     
@@ -549,6 +550,7 @@ ProgressWhite.mainCharacterAnimation = {
                     // Clean up blob URL
                     URL.revokeObjectURL(blobUrl);
                 } catch (error) {
+                    console.warn('⚠️ Fallback to standard loading:', error);
                     progressCharacter.src = runAnimationSrc;
                     await new Promise((resolveLoad) => {
                         progressCharacter.addEventListener('ready', resolveLoad, { once: true });
@@ -600,6 +602,7 @@ ProgressWhite.mainCharacterAnimation = {
                             // Clean up blob URL
                             URL.revokeObjectURL(blobUrl);
                         } catch (error) {
+                            console.warn('⚠️ Fallback to standard loading:', error);
                             progressCharacter.src = idleAnimationSrc;
                             await new Promise((resolveIdle) => {
                                 progressCharacter.addEventListener('ready', resolveIdle, { once: true });
@@ -798,6 +801,7 @@ ProgressWhite.teamAnimationSystem = {
             }, 1000);
             
         } catch (error) {
+            console.warn(`⚠️ Fallback idle loading for team ${teamId}:`, error);
             teamCharacter.src = 'assets/animations/among_us_idle.json';
             teamCharacter.load('assets/animations/among_us_idle.json');
             await ProgressWhite.applyCharacterColor(`teamCharacter${teamId}`, teamColor);
@@ -855,12 +859,14 @@ ProgressWhite.applyTeamColor = async function(characterElement, teamColor) {
     const originalSrc = 'assets/animations/among_us_idle.json';
     
     if (!characterElement) {
+        console.warn('❌ Character element not found');
         return false;
     }
     
     // Get team color configuration
     const colors = ProgressWhite.teamColors[teamColor];
     if (!colors) {
+        console.warn(`❌ Team color ${teamColor} not found`);
         return false;
     }
     
@@ -996,6 +1002,7 @@ ProgressWhite.applyCharacterColor = async function(characterId, color) {
     const characterElement = document.getElementById(characterId);
     
     if (!characterElement) {
+        console.warn(`❌ Character element '${characterId}' not found`);
         return false;
     }
     
@@ -1032,6 +1039,7 @@ ProgressWhite.applyCharacterColor = async function(characterId, color) {
             const result = await ProgressWhite.applyTeamColor(characterElement, color);
             return result;
         } else {
+            console.warn(`❌ ProgressWhite: Unknown color ${color} for character ${characterId}`);
             return false;
         }
     } catch (error) {

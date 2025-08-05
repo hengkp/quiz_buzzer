@@ -21,6 +21,7 @@ class CharacterController {
         
         // Skip initialization on console page
         if (window.location.pathname.includes('console')) {
+            console.log('⏭️ Skipping character controller on console page');
             return false;
         }
         
@@ -42,6 +43,7 @@ class CharacterController {
                 if (window.ProgressWhite) {
                     await this.updateProgressCharacterColor(teamId);
                 } else {
+                    console.warn('⚠️ CharacterController: ProgressWhite not available yet, retrying...');
                     setTimeout(async () => {
                         if (window.ProgressWhite) {
                             await this.updateProgressCharacterColor(teamId);
@@ -52,6 +54,7 @@ class CharacterController {
                 }
             });
         } else {
+            console.warn('⚠️ CharacterController: window.gameState not available during init');
         }
         
         // Set initial position only if game state is ready
@@ -72,15 +75,20 @@ class CharacterController {
     
     // Move character to specific question
     moveToQuestion(setNumber, questionNumber) {
+        console.log('🎯 CharacterController: moveToQuestion called with:', { setNumber, questionNumber });
         
         // Check if character player is available
         if (!this.characterPlayer) {
             console.error('❌ CharacterController: Character player not available');
+            console.log('🎯 CharacterController: Current page:', window.location.pathname);
+            console.log('🎯 CharacterController: Character element:', this.character);
+            console.log('🎯 CharacterController: Character player element:', this.characterPlayer);
             return false;
         }
         
         // Check if we're already animating
         if (this.isAnimating) {
+            console.log('⚠️ CharacterController: Already animating, skipping');
             return false;
         }
         
@@ -99,6 +107,7 @@ class CharacterController {
         
         // Check if we're already at the target question AND set
         if (currentQuestion === questionNumber && currentSet === setNumber) {
+            console.log('⚠️ CharacterController: Already at target position, skipping');
             return false;
         }
         
@@ -117,6 +126,7 @@ class CharacterController {
         }
         
         const direction = isForward ? 'forward' : 'backward';
+        console.log('🎯 CharacterController: Direction calculated:', direction);
         
         // Set animation flags BEFORE updating game state to prevent position updates
         this.isAnimating = true;
@@ -138,7 +148,9 @@ class CharacterController {
         }
         
         // 3. Use the main character animation for movement
+        console.log('🎯 CharacterController: About to call ProgressWhite.mainCharacterAnimation.playRunAnimation');
         if (window.ProgressWhite?.mainCharacterAnimation) {
+            console.log('🎯 CharacterController: ProgressWhite.mainCharacterAnimation found, calling playRunAnimation');
             window.ProgressWhite.mainCharacterAnimation.playRunAnimation(direction, targetPosition)
                 .then(() => {
                     // Animation completed
@@ -364,6 +376,7 @@ class CharacterController {
         }
         
         if (!progressCharacter.load) {
+            console.warn('⚠️ CharacterController: Progress character lottie player not ready, retrying...');
             setTimeout(() => this.updateProgressCharacterColor(teamId), 500);
             return;
         }
@@ -386,6 +399,7 @@ class CharacterController {
                         }
                     }
                 } else {
+                    console.warn('⚠️ CharacterController: progressCharacter element not found');
                 }
             } catch (error) {
                 console.error('❌ CharacterController: Error setting character to white:', error);
@@ -415,6 +429,7 @@ class CharacterController {
                 }
             }
         } else {
+            console.warn(`⚠️ CharacterController: Missing team data or color for team ${teamId}, falling back to white`);
             
             // Fallback to white if team color not available
             try {

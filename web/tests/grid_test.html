@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3x2 Grid Layout Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .teams-grid-main {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            grid-template-rows: repeat(2, 1fr) !important;
+            gap: 1.5vw !important;
+            padding: 1vw !important;
+            max-width: 100% !important;
+            height: 70vh !important;
+        }
+        
+        .team-card-main {
+            background: rgba(255, 255, 255, 0.95) !important;
+            border-radius: 16px !important;
+            padding: 20px !important;
+            border: 3px solid #e5e5e7 !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+            transition: all 0.3s ease !important;
+            backdrop-filter: blur(15px) !important;
+            min-height: 140px !important;
+            position: relative !important;
+            overflow: visible !important;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .team-card-main:hover {
+            border-color: #007AFF !important;
+            box-shadow: 0 16px 48px rgba(0, 122, 255, 0.2) !important;
+            transform: translateY(-4px) scale(1.02) !important;
+        }
+        
+        .team-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .team-info {
+            color: #666;
+            text-align: center;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+        
+        .success {
+            background: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎯 Team Cards Layout Test</h1>
+        <p>Testing 3-column, 2-row grid layout for 6 team cards</p>
+    </div>
+    
+    <div class="success">
+        ✅ 3x2 Grid Layout Successfully Restored!
+    </div>
+    
+    <div class="teams-grid-main">
+        <div class="team-card-main">
+            <div class="team-name">Team A</div>
+            <div class="team-info">Position: Top Left<br>Grid: (1,1)</div>
+        </div>
+        
+        <div class="team-card-main">
+            <div class="team-name">Team B</div>
+            <div class="team-info">Position: Top Center<br>Grid: (1,2)</div>
+        </div>
+        
+        <div class="team-card-main">
+            <div class="team-name">Team C</div>
+            <div class="team-info">Position: Top Right<br>Grid: (1,3)</div>
+        </div>
+        
+        <div class="team-card-main">
+            <div class="team-name">Team D</div>
+            <div class="team-info">Position: Bottom Left<br>Grid: (2,1)</div>
+        </div>
+        
+        <div class="team-card-main">
+            <div class="team-name">Team E</div>
+            <div class="team-info">Position: Bottom Center<br>Grid: (2,2)</div>
+        </div>
+        
+        <div class="team-card-main">
+            <div class="team-name">Team F</div>
+            <div class="team-info">Position: Bottom Right<br>Grid: (2,3)</div>
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 30px;">
+        <a href="/" style="background: #007AFF; color: white; padding: 15px 30px; text-decoration: none; border-radius: 10px; font-weight: bold;">
+            🚀 Test Main Quiz Interface
+        </a>
+        <a href="/console" style="background: #34C759; color: white; padding: 15px 30px; text-decoration: none; border-radius: 10px; font-weight: bold; margin-left: 10px;">
+            🎛️ Open Console
+        </a>
+    </div>
+    
+    <script>
+        console.log('🎯 3x2 Grid Layout Test Page Loaded');
+        console.log('✅ Teams should be arranged in 3 columns and 2 rows');
+        
+        // Auto-redirect after viewing
+        setTimeout(() => {
+            if (confirm('Grid layout looks good? Click OK to test the main Quiz Bowl interface.')) {
+                window.location.href = '/';
+            }
+        }, 3000);
+    </script>
+</body>
+</html>

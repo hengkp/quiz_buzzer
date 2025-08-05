@@ -30,6 +30,7 @@ class BuzzingSystem {
             this.clearAll();
         });
         
+        console.log('✅ Buzzing system ready');
         return true;
     }
     
@@ -135,9 +136,11 @@ class BuzzingSystem {
     // Show buzzing using teamBuzzingModal with enhanced features
     showBuzzing(teamId) {
         if (!teamId || teamId < 1 || teamId > 6) {
+            console.warn('⚠️ Invalid team ID for buzzing:', teamId);
             return;
         }
         
+        console.log(`🔔 Team ${teamId} buzzed - showing modal`);
         
         // Clear any existing timeout to prevent overlap
         if (this.modalTimeout) {
@@ -160,6 +163,7 @@ class BuzzingSystem {
             this.modalTimeout = null;
         }, this.autoHideDelay);
         
+        console.log(`⏰ Modal timeout set for ${this.autoHideDelay}ms`);
     }
     
     // Show team buzzing modal with proper styling
@@ -168,6 +172,7 @@ class BuzzingSystem {
         const card = document.getElementById('teamBuzzingCard');
         
         if (!modal || !card) {
+            console.warn('⚠️ Team buzzing modal elements not found');
             return;
         }
         
@@ -187,6 +192,7 @@ class BuzzingSystem {
         // Show modal with animation
         modal.classList.add('active');
         
+        console.log(`📢 Showing buzzing modal for Team ${teamId} with ${teamColor} card`);
     }
     
     // Play buzzer sound
@@ -197,8 +203,10 @@ class BuzzingSystem {
             audio.volume = 0.5;
             audio.play().catch(() => {
                 // Fallback: try incorrect sound
+                console.warn('⚠️ Could not play buzzer sound');
             });
         } catch (error) {
+            console.warn('⚠️ Audio error:', error);
         }
     }
     
@@ -260,6 +268,7 @@ class BuzzingSystem {
         const modal = document.getElementById('teamBuzzingModal');
         if (modal && modal.classList.contains('active')) {
             modal.classList.remove('active');
+            console.log(`🔕 Buzzing modal cleared for Team ${teamId}`);
         }
         
         // Reset current buzzing team only if it matches
@@ -319,6 +328,7 @@ class BuzzingSystem {
             window.gameState.set('currentChallenge', 0);
         }
         
+        console.log('🔕 All buzzing cleared');
     }
     
     // Get active buzzing teams
@@ -354,7 +364,9 @@ class BuzzingSystem {
         // Send RESET command to Arduino via server
         if (window.socketManager) {
             window.socketManager.resetBuzzers();
+            console.log('✅ RESET command sent to Arduino from buzzing system (via server)');
         } else {
+            console.log('⚠️ No Arduino communication available in buzzing system');
         }
         
         this.clearAll();
@@ -382,3 +394,4 @@ window.clearBuzzing = () => window.buzzingSystem?.clearAll();
 window.simulateBuzzer = (teamId) => window.buzzingSystem?.simulateBuzzer(teamId);
 window.resetBuzzers = () => window.buzzingSystem?.resetBuzzers();
 
+console.log('✅ Enhanced buzzing system loaded with teamBuzzingModal integration'); 

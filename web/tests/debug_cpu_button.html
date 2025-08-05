@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPU Button Debug</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background: #f5f5f7;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .cloud {
+            position: relative;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50px;
+            opacity: 0.7;
+            font-size: 1.5rem;
+            color: #301F5C;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            margin: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .cloud.connected {
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+        }
+        .cloud.disconnected {
+            background: rgba(244, 67, 54, 0.9);
+            color: white;
+            box-shadow: 0 0 20px rgba(244, 67, 54, 0.6);
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 14px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .log-entry.info { background: #e3f2fd; color: #1976d2; }
+        .log-entry.success { background: #e8f5e8; color: #2e7d32; }
+        .log-entry.error { background: #ffebee; color: #c62828; }
+        .log-entry.warning { background: #fff3e0; color: #ef6c00; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 CPU Button Debug</h1>
+        
+        <div>
+            <h3>Test CPU Button:</h3>
+            <button class="cloud disconnected" id="arduinoToggle" onclick="toggleArduinoConnection()">
+                <i class="ri-cpu-line" id="arduinoIcon"></i>
+            </button>
+            <p>Click the CPU button above to test Arduino connection</p>
+        </div>
+        
+        <div>
+            <h3>Manual Test:</h3>
+            <button onclick="testConnect()">Test Connect</button>
+            <button onclick="testDisconnect()">Test Disconnect</button>
+            <button onclick="testGetStatus()">Test Get Status</button>
+        </div>
+        
+        <div class="log" id="log">
+            <div class="log-entry info">Debug page loaded. Waiting for initialization...</div>
+        </div>
+    </div>
+
+    <script>
+        let socket;
+        let arduinoConnected = false;
+
+        function addLog(message, type = 'info') {
+            const logEl = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function updateArduinoUI() {
+            const arduinoToggle = document.getElementById('arduinoToggle');
+            const arduinoIcon = document.getElementById('arduinoIcon');
+            
+            if (!arduinoToggle || !arduinoIcon) {
+                addLog('⚠️ Arduino UI elements not found', 'error');
+                return;
+            }
+            
+            addLog(`🔌 Updating Arduino UI, connected: ${arduinoConnected}`, 'info');
+            
+            if (arduinoConnected) {
+                arduinoToggle.classList.add('connected');
+                arduinoToggle.classList.remove('disconnected');
+                arduinoIcon.className = 'ri-cpu-fill';
+                arduinoToggle.title = 'Disconnect Arduino';
+                addLog('🔌 Arduino UI set to connected state', 'success');
+            } else {
+                arduinoToggle.classList.add('disconnected');
+                arduinoToggle.classList.remove('connected');
+                arduinoIcon.className = 'ri-cpu-line';
+                arduinoToggle.title = 'Connect Arduino';
+                addLog('🔌 Arduino UI set to disconnected state', 'info');
+            }
+        }
+
+        function initSocket() {
+            socket = io();
+            
+            socket.on('connect', () => {
+                addLog('Connected to server', 'success');
+                testGetStatus();
+            });
+            
+            socket.on('disconnect', () => {
+                addLog('Disconnected from server', 'error');
+                arduinoConnected = false;
+                updateArduinoUI();
+            });
+            
+            socket.on('arduino_status', (data) => {
+                arduinoConnected = data.connected;
+                updateArduinoUI();
+                addLog(`Arduino status: ${data.message}`, arduinoConnected ? 'success' : 'info');
+            });
+            
+            socket.on('log', (data) => {
+                addLog(`Server: ${data.message}`, 'info');
+            });
+        }
+
+        // Global function for button click
+        window.toggleArduinoConnection = function() {
+            addLog('🔌 toggleArduinoConnection called', 'info');
+            addLog(`Current state: arduinoConnected = ${arduinoConnected}`, 'info');
+            
+            if (arduinoConnected) {
+                addLog('🔌 Disconnecting Arduino...', 'info');
+                socket.emit('disconnect_arduino');
+            } else {
+                addLog('🔌 Connecting Arduino...', 'info');
+                socket.emit('connect_arduino');
+            }
+        };
+
+        function testConnect() {
+            addLog('Testing connect...', 'info');
+            socket.emit('connect_arduino');
+        }
+
+        function testDisconnect() {
+            addLog('Testing disconnect...', 'info');
+            socket.emit('disconnect_arduino');
+        }
+
+        function testGetStatus() {
+            addLog('Testing get status...', 'info');
+            socket.emit('get_arduino_status');
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            addLog('Page loaded, initializing socket...', 'info');
+            initSocket();
+            updateArduinoUI(); // Set initial state
+        });
+    </script>
+</body>
+</html> 

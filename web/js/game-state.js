@@ -1,6 +1,6 @@
 /**
  * Game State Management System
- * Centralized state management for Quiz Bowl application with local storage persistence
+ * Centralized state management for Quiz Bowl application
  */
 
 class GameState {
@@ -88,97 +88,7 @@ class GameState {
         };
         
         this.listeners = new Map();
-        this.storageKey = 'quiz_buzzer_game_state';
-        
-        // Load state from local storage on initialization
-        this.loadFromStorage();
-        
         this.initializeUI();
-    }
-    
-    // Load game state from local storage
-    loadFromStorage() {
-        try {
-            const storedState = localStorage.getItem(this.storageKey);
-            if (storedState) {
-                const parsedState = JSON.parse(storedState);
-                // Merge stored state with default state, preserving structure
-                this.state = this.mergeState(this.state, parsedState);
-            }
-        } catch (error) {
-            // If there's an error loading from storage, use default state
-            this.saveToStorage();
-        }
-    }
-    
-    // Save game state to local storage
-    saveToStorage() {
-        try {
-            localStorage.setItem(this.storageKey, JSON.stringify(this.state));
-        } catch (error) {
-            // Silently handle storage errors
-        }
-    }
-    
-    // Merge stored state with default state to handle missing properties
-    mergeState(defaultState, storedState) {
-        const merged = { ...defaultState };
-        
-        // Merge top-level properties
-        Object.keys(storedState).forEach(key => {
-            if (key === 'teams' || key === 'actionCards' || key === 'rankings' || key === 'questionSets' || key === 'config') {
-                // For nested objects, merge recursively
-                merged[key] = { ...defaultState[key], ...storedState[key] };
-            } else {
-                // For simple properties, use stored value
-                merged[key] = storedState[key];
-            }
-        });
-        
-        return merged;
-    }
-    
-    // Clear local storage (for reset functionality)
-    clearStorage() {
-        try {
-            localStorage.removeItem(this.storageKey);
-        } catch (error) {
-            // Silently handle storage errors
-        }
-    }
-    saveToStorage() {
-        try {
-            localStorage.setItem(this.storageKey, JSON.stringify(this.state));
-        } catch (error) {
-            // Silently handle storage errors
-        }
-    }
-    
-    // Merge stored state with default state to handle missing properties
-    mergeState(defaultState, storedState) {
-        const merged = { ...defaultState };
-        
-        // Merge top-level properties
-        Object.keys(storedState).forEach(key => {
-            if (key === 'teams' || key === 'actionCards' || key === 'rankings' || key === 'questionSets' || key === 'config') {
-                // For nested objects, merge recursively
-                merged[key] = { ...defaultState[key], ...storedState[key] };
-            } else {
-                // For simple properties, use stored value
-                merged[key] = storedState[key];
-            }
-        });
-        
-        return merged;
-    }
-    
-    // Clear local storage (for reset functionality)
-    clearStorage() {
-        try {
-            localStorage.removeItem(this.storageKey);
-        } catch (error) {
-            // Silently handle storage errors
-        }
     }
     
     // Initialize UI elements
@@ -212,65 +122,55 @@ class GameState {
             // Subscribe to team score changes
             this.subscribe(`teams.${teamId}.score`, () => {
                 this.updateTeamDisplays();
-                this.saveToStorage();
             });
             
             // Subscribe to team name changes
             this.subscribe(`teams.${teamId}.name`, () => {
                 this.updateTeamDisplays();
-                this.saveToStorage();
             });
             
             // Subscribe to team color changes
             this.subscribe(`teams.${teamId}.color`, () => {
                 this.updateTeamDisplays();
+                // Also update team character colors
                 this.initializeTeamCharacters();
-                this.saveToStorage();
             });
             
             // Subscribe to action card changes
             this.subscribe(`actionCards.${teamId}.angel`, () => {
                 this.updateTeamDisplays();
-                this.saveToStorage();
             });
             
             this.subscribe(`actionCards.${teamId}.devil`, () => {
                 this.updateTeamDisplays();
-                this.saveToStorage();
             });
             
             this.subscribe(`actionCards.${teamId}.cross`, () => {
                 this.updateTeamDisplays();
-                this.saveToStorage();
             });
         }
         
         // Subscribe to timer changes
         this.subscribe('timerValue', () => {
             this.updateTimerDisplay();
-            this.saveToStorage();
         });
         
         this.subscribe('timerRunning', () => {
             this.updateTimerDisplay();
-            this.saveToStorage();
         });
         
         // Subscribe to question set changes
         for (let setNumber = 1; setNumber <= 8; setNumber++) {
             this.subscribe(`questionSets.${setNumber}.title`, () => {
                 this.updateQuestionSetDisplay();
-                this.saveToStorage();
             });
             
             this.subscribe(`questionSets.${setNumber}.theme`, () => {
                 this.updateQuestionSetDisplay();
-                this.saveToStorage();
             });
             
             this.subscribe(`questionSets.${setNumber}.icon`, () => {
                 this.updateQuestionSetDisplay();
-                this.saveToStorage();
             });
         }
         
@@ -306,7 +206,6 @@ class GameState {
         const oldValue = this.state[key];
         this.state[key] = value;
         this.notify(key, value, oldValue);
-        this.saveToStorage();
     }
     
     // Update nested state
@@ -323,7 +222,6 @@ class GameState {
         current[lastKey] = value;
         
         this.notify(path, value, oldValue);
-        this.saveToStorage();
     }
     
     // Subscribe to state changes
@@ -618,6 +516,10 @@ class GameState {
                 this.set('timerRunning', false);
                 this.triggerEmergencyMeeting();
             }
+            
+            console.log(`⏱️ Timer display updated: ${displayText} (running: ${this.state.timerRunning})`);
+        } else {
+            console.warn('⚠️ Timer display element not found');
         }
     }
     
@@ -628,11 +530,14 @@ class GameState {
             return;
         }
         
+        console.log('🚨 Emergency meeting triggered!');
+        
         // Set emergency meeting state
         this.state.emergencyMeetingActive = true;
         
         const timerElement = document.getElementById('timerDisplay');
         if (!timerElement) {
+            console.warn('⚠️ Timer display element not found for emergency meeting');
             return;
         }
         
@@ -649,10 +554,10 @@ class GameState {
             const audio = new Audio('assets/audio/emergency-meeting-among-us.mp3');
             audio.volume = 1;
             audio.play().catch((error) => {
-                // Silently handle audio errors
+                console.warn('⚠️ Could not play emergency meeting sound:', error);
             });
         } catch (error) {
-            // Silently handle audio errors
+            console.warn('⚠️ Error creating emergency meeting audio:', error);
         }
     }
     
@@ -757,6 +662,7 @@ class GameState {
         }
         
         // Fallback calculation if question number is out of range
+        console.warn(`Question number ${questionNumber} out of range, using fallback calculation`);
         const totalQuestions = this.state.config.totalSets * this.state.config.questionsPerSet;
         const currentPosition = ((setNumber - 1) * this.state.config.questionsPerSet) + questionNumber;
         const progressPercent = (currentPosition / totalQuestions) * 100;
@@ -773,7 +679,6 @@ class GameState {
         if (this.state.teams[teamId]) {
             this.state.teams[teamId].score += points;
             this.updateTeamDisplays();
-            this.saveToStorage();
         }
     }
     
@@ -782,7 +687,6 @@ class GameState {
         if (this.state.actionCards[teamId]) {
             this.state.actionCards[teamId][cardType] = !this.state.actionCards[teamId][cardType];
             this.updateTeamDisplays();
-            this.saveToStorage();
         }
     }
     
@@ -827,8 +731,6 @@ class GameState {
         this.updateTimerDisplay();
         this.updateQuestionSetDisplay();
         
-        // Save to storage after reset
-        this.saveToStorage();
     }
 
     // Change progress character to team color
@@ -914,7 +816,7 @@ class GameState {
         // Update team displays to ensure consistency
         this.updateTeamDisplays();
         
-        this.saveToStorage();
+        this.save(this.state);
     }
     
     // Reset entire game state
@@ -941,8 +843,6 @@ class GameState {
         // Update all UI elements
         this.initializeUI();
         
-        // Save to storage after reset
-        this.saveToStorage();
     }
 }
 

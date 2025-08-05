@@ -22,6 +22,7 @@ class SocketManager {
         this.socket = io();
         this.setupEventHandlers();
         window.socket = this.socket; // For backward compatibility
+        console.log('🔗 Socket manager initialized');
     }
     
     // Setup core socket event handlers
@@ -29,37 +30,51 @@ class SocketManager {
         this.socket.on('connect', () => {
             this.isConnected = true;
             this.reconnectAttempts = 0;
+            console.log('🔗 Connected to server');
+            console.log('🔗 Current page:', window.location.pathname);
+            console.log('🔗 Socket ID:', this.socket.id);
         });
         
         this.socket.on('disconnect', () => {
             this.isConnected = false;
+            console.log('❌ Disconnected');
         });
         
         this.socket.on('connect_error', () => {
             this.reconnectAttempts++;
             if (this.reconnectAttempts <= this.maxReconnectAttempts) {
+                console.log(`🔄 Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
             }
         });
         
         // Game state synchronization
         this.socket.on('progress_update', (data) => {
+            console.log('🔄 SocketManager: progress_update received:', data);
+            console.log('🔄 SocketManager: Current page:', window.location.pathname);
+            console.log('🔄 SocketManager: Socket ID:', this.socket.id);
             
             if (data.setNumber && data.questionNumber) {
                 const isMainPage = !window.location.pathname.includes('console');
                 
                 if (isMainPage) {
                     // Main page: Handle character animation
+                    console.log('🎯 SocketManager: Main page - handling character animation');
                     const hasCharacterController = !!window.characterController;
                     const shouldAnimate = !!data.animateRun;
                     
+                    console.log('🔄 SocketManager: Character controller available:', hasCharacterController);
+                    console.log('🔄 SocketManager: Animate run:', shouldAnimate);
                     
                     if (hasCharacterController && shouldAnimate) {
+                        console.log('🎯 SocketManager: Using character controller for animation');
                         window.characterController.moveToQuestion(data.setNumber, data.questionNumber);
                     } else {
+                        console.log('⚠️ SocketManager: Fallback to direct game state update');
                         window.gameState?.moveToQuestion(data.setNumber, data.questionNumber);
                     }
                 } else {
                     // Console page: Only update local game state, no animation needed
+                    console.log('🎮 SocketManager: Console page - updating local game state only');
                     window.gameState?.moveToQuestion(data.setNumber, data.questionNumber);
                 }
                 
@@ -87,6 +102,7 @@ class SocketManager {
         
         // Arduino connection status
         this.socket.on('arduino_status', (data) => {
+            console.log('🔌 Arduino status received:', data);
             this.emit('local:arduino_status', data);
             
             // Update global Arduino connection state
@@ -108,6 +124,7 @@ class SocketManager {
             // Update game state currentTeam when buzzer is pressed
             if (data.teamId && window.gameState) {
                 window.gameState.set('currentTeam', data.teamId);
+                console.log(`🔔 Team ${data.teamId} buzzed - progress character color updated`);
             }
             
             // Show buzzing modal using buzzing system
@@ -123,6 +140,7 @@ class SocketManager {
             if (window.gameState) {
                 window.gameState.set('currentTeam', 0);
                 window.gameState.set('currentChallenge', 0);
+                console.log('🔄 Buzzers cleared - progress character reset to white');
             }
             
             // Clear buzzing system
@@ -138,6 +156,7 @@ class SocketManager {
             if (window.gameState) {
                 window.gameState.set('currentTeam', 0);
                 window.gameState.set('currentChallenge', 0);
+                console.log('🔄 Admin reset - progress character reset to white');
             }
             window.gameState?.reset();
             
@@ -167,6 +186,7 @@ class SocketManager {
                         });
                     }
                 });
+                console.log('🔄 Card status reset received');
             }
             this.emit('local:card_status_reset', data);
         });
@@ -175,6 +195,7 @@ class SocketManager {
         this.socket.on('challenge_activated', (data) => {
             if (data.teamId && window.gameState) {
                 window.gameState.set('currentChallenge', data.teamId);
+                console.log(`⚡ Challenge mode activated for Team ${data.teamId}`);
             }
             this.emit('local:challenge_activated', data);
         });
@@ -182,6 +203,7 @@ class SocketManager {
         this.socket.on('challenge_reset', () => {
             if (window.gameState) {
                 window.gameState.set('currentChallenge', 0);
+                console.log('🔄 Challenge mode reset');
             }
             this.emit('local:challenge_reset');
         });
@@ -195,6 +217,7 @@ class SocketManager {
                 // Activate devil card for attacking team
                 window.gameState.update(`actionCards.${data.attackingTeam}.devil`, true);
                 
+                console.log(`😈 Devil attack: Team ${data.attackingTeam} attacked Team ${data.targetTeam}`);
             }
             this.emit('local:devil_attack', data);
         });
@@ -203,6 +226,7 @@ class SocketManager {
         this.socket.on('angel_activated', (data) => {
             if (data.teamId && window.gameState) {
                 window.gameState.update(`actionCards.${data.teamId}.angel`, true);
+                console.log(`😇 Angel card activated for Team ${data.teamId}`);
             }
             this.emit('local:angel_activated', data);
         });
@@ -216,6 +240,7 @@ class SocketManager {
                     window.gameState.update(`actionCards.${teamId}.devil`, false);
                     window.gameState.update(`actionCards.${teamId}.cross`, false);
                 });
+                console.log('🔄 All action cards reset for new question set');
             }
             this.emit('local:action_cards_reset', data);
         });
@@ -251,12 +276,14 @@ class SocketManager {
                         window.gameState.set(key, data[key]);
                     }
                 });
+                console.log('🔄 Game state synchronized from server');
             }
             this.emit('local:game_state_sync', data);
         });
 
         // Game state update listener
         this.socket.on('game_state_update', (data) => {
+            console.log('✅ Game state update received:', data);
             if (window.gameState && data.path && data.value !== undefined) {
                 window.gameState.update(data.path, data.value);
             }
@@ -291,6 +318,7 @@ class SocketManager {
         if (this.isConnected && this.socket) {
             this.socket.emit(eventName, data);
         } else {
+            console.warn('⚠️ Socket not connected, cannot send:', eventName);
         }
     }
     
@@ -298,7 +326,9 @@ class SocketManager {
     simulateBuzzer(teamId) {
         if (this.socket && this.socket.connected) {
             this.socket.emit('simulate_buzzer', { teamId: teamId });
+            console.log(`🔔 Simulated buzzer press for Team ${teamId}`);
         } else {
+            console.warn('⚠️ Socket not connected - cannot simulate buzzer');
         }
     }
     
@@ -306,7 +336,9 @@ class SocketManager {
     resetBuzzers() {
         if (this.socket && this.socket.connected) {
             this.socket.emit('reset_buzzers');
+            console.log('🔄 Reset buzzers sent');
         } else {
+            console.warn('⚠️ Socket not connected - cannot reset buzzers');
         }
     }
     
@@ -314,7 +346,9 @@ class SocketManager {
     adminReset() {
         if (this.socket && this.socket.connected) {
             this.socket.emit('admin_reset');
+            console.log('🔄 Admin reset sent');
         } else {
+            console.warn('⚠️ Socket not connected - cannot admin reset');
         }
     }
     
@@ -322,35 +356,45 @@ class SocketManager {
     startTimer() {
         if (this.socket && this.socket.connected) {
             this.socket.emit('start_timer');
+            console.log('⏱️ Start timer sent');
         } else {
+            console.warn('⚠️ Socket not connected - cannot start timer');
         }
     }
     
     pauseTimer() {
         if (this.socket && this.socket.connected) {
             this.socket.emit('pause_timer');
+            console.log('⏸️ Pause timer sent');
         } else {
+            console.warn('⚠️ Socket not connected - cannot pause timer');
         }
     }
     
     stopTimer() {
         if (this.socket && this.socket.connected) {
             this.socket.emit('stop_timer');
+            console.log('⏹️ Stop timer sent');
         } else {
+            console.warn('⚠️ Socket not connected - cannot stop timer');
         }
     }
     
     resetTimer() {
         if (this.socket && this.socket.connected) {
             this.socket.emit('reset_timer', { value: 15 });
+            console.log('⏹️ Reset timer to 15 seconds sent');
         } else {
+            console.warn('⚠️ Socket not connected - cannot reset timer');
         }
     }
     
     setTimer(value) {
         if (this.socket && this.socket.connected) {
             this.socket.emit('set_timer', { value: value });
+            console.log(`⏱️ Set timer to ${value} seconds sent`);
         } else {
+            console.warn('⚠️ Socket not connected - cannot set timer');
         }
     }
     
@@ -432,24 +476,31 @@ class SocketManager {
     connectArduino(port = null, baudrate = 9600) {
         if (this.socket && this.socket.connected) {
             this.socket.emit('connect_arduino', { port, baudrate });
+            console.log('🔌 Arduino connection request sent');
         } else {
+            console.warn('⚠️ Socket not connected - cannot connect Arduino');
         }
     }
     
     disconnectArduino() {
         if (this.socket && this.socket.connected) {
             this.socket.emit('disconnect_arduino');
+            console.log('🔌 Arduino disconnection request sent');
         } else {
+            console.warn('⚠️ Socket not connected - cannot disconnect Arduino');
         }
     }
     
     getArduinoStatus() {
         if (this.socket && this.socket.connected) {
             this.socket.emit('get_arduino_status');
+            console.log('📊 Arduino status request sent');
         } else {
+            console.warn('⚠️ Socket not connected - cannot get Arduino status');
         }
     }
 }
 
 // Export singleton instance
 window.socketManager = new SocketManager();
+console.log('✅ Enhanced socket manager ready'); 

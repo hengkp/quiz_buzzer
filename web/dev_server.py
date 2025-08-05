@@ -537,7 +537,11 @@ def console():
     with open('console.html', 'r', encoding='utf-8') as f:
         return f.read()
 
-
+@app.route('/test-state-persistence')
+def test_state_persistence():
+    """Serve the state persistence test page"""
+    with open('tests/test_state_persistence.html', 'r', encoding='utf-8') as f:
+        return f.read()
 
 
 

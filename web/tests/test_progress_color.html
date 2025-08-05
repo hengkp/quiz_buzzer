@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progress Character Color Test</title>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .test-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        .character-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            min-height: 120px;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .btn-team {
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .btn-team-1 { background: #ff4757; }
+        .btn-team-2 { background: #3742fa; }
+        .btn-team-3 { background: #2ed573; }
+        .btn-team-4 { background: #ffa502; }
+        .btn-team-5 { background: #ff6b81; }
+        .btn-team-6 { background: #ffdd59; }
+        
+        .btn-reset {
+            background: #747d8c;
+            color: white;
+        }
+        
+        .btn-move {
+            background: #5352ed;
+            color: white;
+        }
+        
+        .status {
+            background: #f1f2f6;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            color: #2f3542;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .instructions {
+            background: #e8f4fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎮 Progress Character Color Test</h1>
+        
+        <div class="instructions">
+            <h3>Test Instructions:</h3>
+            <ul>
+                <li><strong>Team Buttons (1-6):</strong> Simulate team buzzing - progress character changes to team color</li>
+                <li><strong>Reset:</strong> Clear buzzing - progress character returns to white</li>
+                <li><strong>Move Character:</strong> Test character movement with current color</li>
+                <li><strong>Status:</strong> Shows current game state</li>
+            </ul>
+        </div>
+        
+        <div class="character-display">
+            <lottie-player 
+                id="progressCharacter"
+                src="assets/animations/among_us_idle.json"
+                background="transparent"
+                speed="1"
+                loop
+                autoplay
+                style="width: 80px; height: 80px;">
+            </lottie-player>
+        </div>
+        
+        <div class="status" id="status">
+            Current Team: 0 (White) | Position: Set 1, Question 1
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-team btn-team-1" onclick="simulateTeamBuzz(1)">Team 1 (Red)</button>
+            <button class="btn btn-team btn-team-2" onclick="simulateTeamBuzz(2)">Team 2 (Blue)</button>
+            <button class="btn btn-team btn-team-3" onclick="simulateTeamBuzz(3)">Team 3 (Lime)</button>
+            <button class="btn btn-team btn-team-4" onclick="simulateTeamBuzz(4)">Team 4 (Orange)</button>
+            <button class="btn btn-team btn-team-5" onclick="simulateTeamBuzz(5)">Team 5 (Pink)</button>
+            <button class="btn btn-team btn-team-6" onclick="simulateTeamBuzz(6)">Team 6 (Yellow)</button>
+            <button class="btn btn-reset" onclick="resetBuzzers()">Reset (White)</button>
+            <button class="btn btn-move" onclick="moveCharacter()">Move Character</button>
+        </div>
+    </div>
+
+    <!-- Load required scripts -->
+    <script src="js/character-colors.js"></script>
+    <script src="js/game-state.js"></script>
+    <script src="js/character-controller.js"></script>
+    
+    <script>
+        // Initialize game state and character controller
+        let gameState, characterController;
+        
+        // Mock socket manager for testing
+        window.socketManager = {
+            on: function(event, callback) {
+                console.log(`Mock socket: Listening for ${event}`);
+            },
+            emit: function(event, data) {
+                console.log(`Mock socket: Emitting ${event}`, data);
+            }
+        };
+        
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize game state
+            gameState = new GameState();
+            window.gameState = gameState;
+            
+            // Initialize character controller
+            characterController = new CharacterController();
+            window.characterController = characterController;
+            
+            // Wait a bit for initialization
+            setTimeout(() => {
+                characterController.init();
+                updateStatus();
+                console.log('✅ Test environment initialized');
+            }, 500);
+        });
+        
+        // Simulate team buzzing
+        function simulateTeamBuzz(teamId) {
+            if (gameState) {
+                gameState.set('currentTeam', teamId);
+                updateStatus();
+                console.log(`🔔 Team ${teamId} buzzed - progress character should change color`);
+            }
+        }
+        
+        // Reset buzzers
+        function resetBuzzers() {
+            if (gameState) {
+                gameState.set('currentTeam', 0);
+                updateStatus();
+                console.log('🔄 Buzzers reset - progress character should return to white');
+            }
+        }
+        
+        // Move character to test animation
+        function moveCharacter() {
+            if (characterController) {
+                // Move to next question to test animation
+                const currentState = gameState.get();
+                let newSet = currentState.currentSet;
+                let newQuestion = currentState.currentQuestion + 1;
+                
+                if (newQuestion > 4) {
+                    newSet++;
+                    newQuestion = 1;
+                }
+                
+                if (newSet > 10) {
+                    newSet = 1;
+                    newQuestion = 1;
+                }
+                
+                characterController.moveToQuestion(newSet, newQuestion);
+                updateStatus();
+                console.log(`🏃 Character moved to Set ${newSet}, Question ${newQuestion}`);
+            }
+        }
+        
+        // Update status display
+        function updateStatus() {
+            if (gameState) {
+                const state = gameState.get();
+                const teamId = state.currentTeam;
+                const teamName = teamId === 0 ? 'White' : `Team ${teamId}`;
+                const teamColor = teamId === 0 ? 'White' : state.teams[teamId]?.color || 'Unknown';
+                
+                document.getElementById('status').innerHTML = 
+                    `Current Team: ${teamId} (${teamName} - ${teamColor}) | Position: Set ${state.currentSet}, Question ${state.currentQuestion}`;
+            }
+        }
+        
+        // Subscribe to game state changes
+        if (window.gameState) {
+            window.gameState.subscribe('currentTeam', (teamId) => {
+                updateStatus();
+                console.log(`🎨 Progress character color updated to team ${teamId}`);
+            });
+            
+            window.gameState.subscribe('currentSet', () => updateStatus());
+            window.gameState.subscribe('currentQuestion', () => updateStatus());
+        }
+    </script>
+</body>
+</html> 
