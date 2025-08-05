@@ -55,8 +55,8 @@ Need help? Check the README.md file for detailed instructions.
             return false;
         }
         
-        if (!config.databaseURL.includes('firebaseio.com') && !config.databaseURL.includes('firebasedatabase.app')) {
-            console.error('❌ Invalid databaseURL. Should end with firebaseio.com or firebasedatabase.app');
+        if (!config.databaseURL.includes('firebaseio.com')) {
+            console.error('❌ Invalid databaseURL. Should end with firebaseio.com');
             return false;
         }
         

@@ -5,7 +5,7 @@ class FirebaseSocketManager {
     constructor() {
         this.firebaseManager = window.firebaseManager;
         this.listeners = {};
-        this._connected = false;
+        this.connected = false;
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         
@@ -15,9 +15,9 @@ class FirebaseSocketManager {
     init() {
         // Listen for Firebase connection status
         this.firebaseManager.on('connection_status', (data) => {
-            this._connected = data.connected;
+            this.connected = data.connected;
             
-            if (this._connected) {
+            if (this.connected) {
                 this.reconnectAttempts = 0;
                 this.emit('connect');
             } else {
@@ -138,7 +138,7 @@ class FirebaseSocketManager {
 
     // Send events to Firebase (Socket.IO emit style)
     emitToServer(event, data) {
-        if (!this._connected) {
+        if (!this.connected) {
             console.warn('Firebase not connected, cannot send event:', event);
             return;
         }
@@ -285,12 +285,12 @@ class FirebaseSocketManager {
     disconnect() {
         this.firebaseManager.cleanup();
         this.listeners = {};
-        this._connected = false;
+        this.connected = false;
     }
 
     // Get connection status
     get connected() {
-        return this._connected;
+        return this.connected;
     }
 }
 
