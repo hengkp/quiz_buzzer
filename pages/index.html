@@ -1,46 +1,278 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz Buzzer - Among Us Style</title>
-    <meta http-equiv="refresh" content="0; url=among_us.html">
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            color: white;
-        }
-        .loading {
-            text-align: center;
-        }
-        .spinner {
-            border: 4px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top: 4px solid white;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQEAYAAABPYyMiAAAABmJLR0T///////8JWPfcAAAACXBIWXMAAABIAAAASABGyWs+AAAAF0lEQVRIx2NgGAWjYBSMglEwCkbBSAcACBAAAeaR9cIAAAAASUVORK5CYII=">
+    
+    <!-- External Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
+    
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="css/among_us.css">
+    
+    <!-- Firebase Configuration -->
+    <script src="firebase-config.js"></script>
+    <script src="js/firebase-socket-manager.js"></script>
+    <script src="setup.js"></script>
 </head>
 <body>
-    <div class="loading">
-        <h1>🎮 Quiz Buzzer</h1>
-        <div class="spinner"></div>
-        <p>Loading Among Us Quiz Bowl...</p>
-        <p><small>If you're not redirected automatically, <a href="among_us.html" style="color: #ffd700;">click here</a></small></p>
+    
+    <!-- Main Container -->
+    <div class="main-container" id="mainContainer">
+
+        <!-- Background Animation -->
+        <lottie-player 
+            class="background-animation"
+            src="assets/animations/background_space.json"
+            background="transparent"
+            speed="0.5"
+            loop
+            autoplay>
+        </lottie-player>
+
+        <!-- Background Animation 2 -->
+        <lottie-player 
+            class="background-animation-2"
+            src="assets/animations/background_orbit.json"
+            background="transparent"
+            speed="0.5"
+            loop
+            autoplay>
+        </lottie-player>
+
+                
+        <!-- Header -->
+        <div class="header">
+            Final Quiz Bowl Science Day 2025 @RERU
+        </div>
+
+        <!-- Question Set -->
+        <div class="question-set-line">
+            <img class="question-subject" id="subjectIcon">
+            <span class="question-set-title" id="currentQuestionSet">Question Set 1</span>
+            <span class="question-set-chance" id="chanceQuestion">(3/3 chances)</span>
+        </div>
+
+        <!-- Timer -->
+        <div class="timer-value" id="timerDisplay">0:00</div>
+        
+        <!-- Console Toggle Cloud -->
+        <button class="cloud cloud1" id="consoleToggle" onclick="openConsoleWindow()">
+            <i class="ri-settings-3-line"></i>
+        </button>
+
+        <!-- Arduino Connection Cloud -->
+        <button class="cloud cloud3" id="arduinoToggle" onclick="toggleArduinoConnection()">
+            <i class="ri-cpu-line" id="arduinoIcon"></i>
+        </button>
+
+        <!-- Fullscreen Toggle Button -->
+        <button class="cloud cloud2" id="fullscreenToggle" onclick="toggleFullscreen()">
+            <i class="ri-fullscreen-line" id="fullscreenIcon"></i>
+        </button>
+
+        <!-- Character -->
+        <div class="character-container-main">
+            <lottie-player 
+                class="victim-character"
+                id="victimCharacter"
+                src="assets/animations/among_us_idle.json"
+                background="transparent"
+                speed="1"
+                loop
+                autoplay>
+            </lottie-player>
+
+            <lottie-player 
+                class="main-character"
+                id="progressCharacter"
+                src="assets/animations/among_us_idle.json"
+                background="transparent"
+                speed="1"
+                loop
+                autoplay>
+            </lottie-player>
+            
+            <!-- Action Card and Challenge Indicator Panel -->
+            <div class="character-action-panel" id="characterActionPanel">
+                <div class="character-action-icon angel" id="mainCharacterAngel"></div>
+                <div class="character-action-icon devil" id="mainCharacterDevil"></div>
+                <div class="character-action-icon cross" id="mainCharacterCross"></div>
+            </div>
+        </div>
+
+        <!-- Teams Section -->
+        <div class="teams-section">
+            <!-- Team A -->
+            <div class="team-container" id="team1">
+                <div class="team-character" id="teamCharacter1">
+                    <lottie-player 
+                        src="assets/animations/among_us_idle.json"
+                        background="transparent"
+                        speed="1"
+                        loop
+                        autoplay>
+                    </lottie-player>
+                </div>
+                <div class="team-info">
+                    <div class="team-name" id="teamName1">Team A</div>
+                    <div class="team-score" id="teamScore1">0</div>
+                </div>
+                <div class="team-cards">
+                    <div class="card angel" id="card1angel"></div>
+                    <div class="card devil" id="card1devil"></div>
+                    <div class="card cross" id="card1cross"></div>
+                </div>
+            </div>
+
+            <!-- Team B -->
+            <div class="team-container" id="team2">
+                <div class="team-character" id="teamCharacter2">
+                    <lottie-player 
+                        src="assets/animations/among_us_idle.json"
+                        background="transparent"
+                        speed="1"
+                        loop
+                        autoplay>
+                    </lottie-player>
+                </div>
+                <div class="team-info">
+                    <div class="team-name" id="teamName2">Team B</div>
+                    <div class="team-score" id="teamScore2">0</div>
+                </div>
+                <div class="team-cards">
+                    <div class="card angel" id="card2angel"></div>
+                    <div class="card devil" id="card2devil"></div>
+                    <div class="card cross" id="card2cross"></div>
+                </div>
+            </div>
+
+            <!-- Team C -->
+            <div class="team-container" id="team3">
+                <div class="team-character" id="teamCharacter3">
+                    <lottie-player 
+                        src="assets/animations/among_us_idle.json"
+                        background="transparent"
+                        speed="1"
+                        loop
+                        autoplay>
+                    </lottie-player>
+                </div>
+                <div class="team-info">
+                    <div class="team-name" id="teamName3">Team C</div>
+                    <div class="team-score" id="teamScore3">0</div>
+                </div>
+                <div class="team-cards">
+                    <div class="card angel" id="card3angel"></div>
+                    <div class="card devil" id="card3devil"></div>
+                    <div class="card cross" id="card3cross"></div>
+                </div>
+            </div>
+
+            <!-- Team D -->
+            <div class="team-container" id="team4">
+                <div class="team-character" id="teamCharacter4">
+                    <lottie-player 
+                        src="assets/animations/among_us_idle.json"
+                        background="transparent"
+                        speed="1"
+                        loop
+                        autoplay>
+                    </lottie-player>
+                </div>
+                <div class="team-info">
+                    <div class="team-name" id="teamName4">Team D</div>
+                    <div class="team-score" id="teamScore4">0</div>
+                </div>
+                <div class="team-cards">
+                    <div class="card angel" id="card4angel"></div>
+                    <div class="card devil" id="card4devil"></div>
+                    <div class="card cross" id="card4cross"></div>
+                </div>
+            </div>
+
+            <!-- Team E -->
+            <div class="team-container" id="team5">
+                <div class="team-character" id="teamCharacter5">
+                    <lottie-player 
+                        src="assets/animations/among_us_idle.json"
+                        background="transparent"
+                        speed="1"
+                        loop
+                        autoplay>
+                    </lottie-player>
+                </div>
+                <div class="team-info">
+                    <div class="team-name" id="teamName5">Team E</div>
+                    <div class="team-score" id="teamScore5">0</div>
+                </div>
+                <div class="team-cards">
+                    <div class="card angel" id="card5angel"></div>
+                    <div class="card devil" id="card5devil"></div>
+                    <div class="card cross" id="card5cross"></div>
+                </div>
+            </div>
+
+            <!-- Team F -->
+            <div class="team-container" id="team6">
+                <div class="team-character" id="teamCharacter6">
+                    <lottie-player 
+                        src="assets/animations/among_us_idle.json"
+                        background="transparent"
+                        speed="1"
+                        loop
+                        autoplay>
+                    </lottie-player>
+                </div>
+                <div class="team-info">
+                    <div class="team-name" id="teamName6">Team F</div>
+                    <div class="team-score" id="teamScore6">0</div>
+                </div>
+                <div class="team-cards">
+                    <div class="card angel" id="card6angel"></div>
+                    <div class="card devil" id="card6devil"></div>
+                    <div class="card cross" id="card6cross"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Challenge 2x Indicator -->
+        <div class="challenge-indicator" id="challengeIndicator">
+            <div class="challenge-text">2× CHALLENGE</div>
+        </div>
+
+        <!-- Logs Section -->
+        <div class="logs-section" id="logsSection">
+            <div class="logs-header">Game Logs</div>
+            <div class="logs-content" id="logsContent">
+                <!-- Logs will be populated here -->
+            </div>
+        </div>
     </div>
+
+    <!-- JavaScript Files -->
+    <script src="js/game-state.js"></script>
+    <script src="js/character-colors.js"></script>
+    <script src="js/character-controller.js"></script>
+    <script src="js/buzzing-system.js"></script>
+    <script src="js/hotkeys.js"></script>
+    <script src="js/fullscreen.js"></script>
+    <script src="js/main-page.js"></script>
+
+    <script>
+        // Initialize the main page when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.MainPageApp) {
+                const app = new window.MainPageApp();
+                app.init();
+            }
+        });
+    </script>
 </body>
 </html> 

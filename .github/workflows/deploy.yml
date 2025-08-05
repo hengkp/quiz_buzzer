@@ -42,6 +42,23 @@ jobs:
         echo "Files in root directory:"
         ls -la
         
+        # Check if index.html exists
+        echo "Checking for index.html:"
+        if [ -f "index.html" ]; then
+          echo "✅ index.html found"
+          head -5 index.html
+        else
+          echo "❌ index.html not found"
+        fi
+        
+        # Check if among_us.html exists
+        echo "Checking for among_us.html:"
+        if [ -f "among_us.html" ]; then
+          echo "✅ among_us.html found"
+        else
+          echo "❌ among_us.html not found"
+        fi
+        
     - name: Setup Pages
       uses: actions/configure-pages@v4
       
