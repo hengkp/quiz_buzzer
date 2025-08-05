@@ -501,6 +501,11 @@ class GameState {
     
     // Update timer display
     updateTimerDisplay() {
+        // Skip timer display update on console page
+        if (window.location.pathname.includes('console.html')) {
+            return;
+        }
+        
         const timerElement = document.getElementById('timerDisplay');
         if (timerElement) {
             const minutes = Math.floor(this.state.timerValue / 60);
@@ -525,6 +530,11 @@ class GameState {
     
     // Trigger emergency meeting when timer reaches zero
     triggerEmergencyMeeting() {
+        // Skip emergency meeting on console page
+        if (window.location.pathname.includes('console.html')) {
+            return;
+        }
+        
         // Prevent multiple emergency meetings
         if (this.state.emergencyMeetingActive) {
             return;

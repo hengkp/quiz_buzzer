@@ -526,21 +526,15 @@ def serve_assets(filename):
 def index():
     """Serve the unified Among Us interface"""
     try:
-        with open('among_us.html', 'r') as f:
+        with open('main.html', 'r') as f:
             return f.read()
     except FileNotFoundError:
-        return "<h1>Error: among_us.html not found</h1>", 404
+        return "<h1>Error: main.html not found</h1>", 404
 
 @app.route('/console')
 def console():
     """Serve the console page"""
     with open('console.html', 'r', encoding='utf-8') as f:
-        return f.read()
-
-@app.route('/test-state-persistence')
-def test_state_persistence():
-    """Serve the state persistence test page"""
-    with open('tests/test_state_persistence.html', 'r', encoding='utf-8') as f:
         return f.read()
 
 

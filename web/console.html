@@ -32,39 +32,6 @@
         <!-- Control Settings Tab -->
         <div id="controlContent" class="tab-content active">
             <div class="control-grid">
-                
-                <!-- Arduino Connection Section -->
-                <div class="control-section">
-                    <h3 class="section-title">
-                        <span class="section-icon">🔌</span>
-                            Arduino Connection
-                        </h3>
-                    <div class="arduino-controls">
-                        <div class="connection-status">
-                            <div id="arduinoStatus" class="status-indicator disconnected"></div>
-                            <span id="arduinoText" class="status-text">Disconnected</span>
-                                </div>
-                        <button id="connectBtn" onclick="toggleConnection()" class="btn btn-primary">
-                                    Connect Arduino
-                                </button>
-                            </div>
-                </div>
-
-                <!-- Timer Section -->
-                <div class="control-section">
-                    <h3 class="section-title">
-                        <span class="section-icon">⏱️</span>
-                        Timer Control
-                    </h3>
-                    <div class="timer-controls">
-                        <div id="timerDisplay" class="timer-display" onclick="editTimer()">0:00</div>
-                        <div class="timer-buttons">
-                            <button onclick="startPauseTimer()" class="btn btn-success">Start</button>
-                            <button onclick="stopTimer()" class="btn btn-danger">Stop</button>
-                            <button onclick="resetTimer()" class="btn btn-secondary">Reset</button>
-                            </div>
-                        </div>
-                    </div>
 
 
 
@@ -193,14 +160,9 @@
         <div class="color-grid" id="colorGrid-6"></div>
     </div>
 
-    <!-- Load all JavaScript files -->
+    <!-- Load required JavaScript files -->
     <script src="js/game-state.js"></script>
     <script src="js/socket-manager.js"></script>
-    <script src="js/character-colors.js"></script>
-    <script src="js/character-controller.js"></script>
-    <script src="js/buzzing-system.js"></script>
-    <script src="js/fullscreen.js"></script>
-    <script src="js/main-page.js"></script>
     <script src="js/console-page.js"></script>
 </body>
 </html> 

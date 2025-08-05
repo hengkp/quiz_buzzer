@@ -6,10 +6,6 @@
 // Global variables
 let socket;
 let gameState;
-let isConnected = false;
-let port = null;
-let reader = null;
-let writer = null;
 let selectedAttackTarget = null;
 let actionHistory = [];
 
@@ -40,8 +36,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize all components
     initializeTabs();
-    initializeArduinoConnection();
-    initializeTimer();
     initializeTeamsTable();
     initializeQuestionsTable();
     initializeCharacterControls();
@@ -66,7 +60,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Update initial displays
-    updateTimerDisplay();
     updateTeamsTable();
     updateQuestionsTable();
     updateGameStatusDisplay();
@@ -102,134 +95,9 @@ function initializeTabs() {
     };
 }
 
-// ========== ARDUINO CONNECTION ==========
-function initializeArduinoConnection() {
-    // Use server-side Arduino connection instead of client-side
-    window.toggleConnection = function() {
-        if (window.arduinoConnected) {
-            window.socketManager.disconnectArduino();
-        } else {
-            window.socketManager.connectArduino();
-        }
-    };
-    
-    // Listen for Arduino status changes
-    document.addEventListener('arduinoStatusChanged', (event) => {
-        const { connected, message } = event.detail;
-        window.arduinoConnected = connected;
-        updateConnectionUI();
-        addLog(message, connected ? 'success' : 'info');
-    });
-    
-    // Get initial Arduino status
-    window.socketManager.getArduinoStatus();
-}
 
-function updateConnectionUI() {
-    const statusIndicator = document.getElementById('arduinoStatus');
-    const statusText = document.getElementById('arduinoText');
-    const connectBtn = document.getElementById('connectBtn');
-    
-    if (window.arduinoConnected) {
-        statusIndicator.classList.remove('disconnected');
-        statusIndicator.classList.add('connected');
-        statusText.textContent = 'Connected';
-        connectBtn.textContent = 'Disconnect';
-        connectBtn.classList.remove('btn-primary');
-        connectBtn.classList.add('btn-danger');
-    } else {
-        statusIndicator.classList.remove('connected');
-        statusIndicator.classList.add('disconnected');
-        statusText.textContent = 'Disconnected';
-        connectBtn.textContent = 'Connect Arduino';
-        connectBtn.classList.remove('btn-danger');
-        connectBtn.classList.add('btn-primary');
-    }
-}
 
-// Server-side Arduino reset function
-async function sendResetToArduino() {
-    if (window.arduinoConnected) {
-        try {
-            console.log('Sending RESET command to Arduino via server');
-            window.socketManager.resetBuzzers();
-            addLog('✅ Reset command sent to Arduino', 'info');
-        } catch (error) {
-            console.error('Error sending reset:', error);
-            addLog(`❌ Error sending reset: ${error.message}`, 'error');
-        }
-    } else {
-        addLog('❌ Cannot send reset - Arduino not connected', 'warning');
-    }
-}
 
-// Make function globally available for hotkeys
-window.sendResetToArduino = sendResetToArduino;
-
-// ========== TIMER CONTROLS ==========
-function initializeTimer() {
-    window.editTimer = function() {
-        const timerDisplay = document.getElementById('timerDisplay');
-        const currentTime = timerDisplay.textContent;
-        const [minutes, seconds] = currentTime.split(':').map(Number);
-        const totalSeconds = minutes * 60 + seconds;
-        
-        const newTime = prompt('Enter timer duration (seconds):', totalSeconds);
-        if (newTime && !isNaN(newTime) && newTime > 0) {
-            const timeValue = parseInt(newTime);
-            gameState.setTimer(timeValue);
-            updateTimerDisplay();
-            socket.emit('set_timer', { value: timeValue });
-            addLog(`Timer set to ${formatTime(timeValue)}`, 'info');
-        }
-    };
-    
-    window.startPauseTimer = function() {
-        if (gameState.state.timerRunning) {
-            gameState.setTimer(gameState.state.timerValue, false);
-            socket.emit('pause_timer');
-            addLog('Timer paused', 'warning');
-        } else {
-            gameState.setTimer(gameState.state.timerValue, true);
-            socket.emit('start_timer');
-            addLog('Timer started', 'success');
-        }
-        updateTimerDisplay();
-    };
-    
-    window.stopTimer = function() {
-        gameState.setTimer(gameState.state.timerValue, false);
-        socket.emit('stop_timer');
-        addLog('Timer stopped', 'info');
-        updateTimerDisplay();
-    };
-    
-    window.resetTimer = function() {
-        const defaultTime = gameState.state.config.timerDuration;
-        gameState.setTimer(defaultTime, false);
-        socket.emit('reset_timer', { value: defaultTime });
-        addLog('Timer reset', 'info');
-        updateTimerDisplay();
-    };
-}
-
-function updateTimerDisplay() {
-    const timerDisplay = document.getElementById('timerDisplay');
-    const timeValue = gameState.state.timerValue;
-    timerDisplay.textContent = formatTime(timeValue);
-    
-    // Update button text based on timer state
-    const startBtn = document.querySelector('button[onclick="startPauseTimer()"]');
-    if (startBtn) {
-        startBtn.textContent = gameState.state.timerRunning ? 'Pause' : 'Start';
-    }
-}
-
-function formatTime(seconds) {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
 
 // ========== TEAMS MANAGEMENT ==========
 function initializeTeamsTable() {
@@ -254,8 +122,8 @@ function initializeTeamsTable() {
             </td>
             <td class="team-cards-cell">
                 <div class="team-action-card angel ${gameState.state.actionCards[teamId].angel ? 'active' : ''}" onclick="toggleActionCard(${teamId}, 'angel')" id="angelCard-${teamId}"></div>
-                <div class="team-action-card devil ${gameState.state.actionCards[teamId].devil ? 'active' : ''}" onclick="activateDevil(${teamId})" id="devilCard-${teamId}"></div>
-                <div class="team-action-card cross ${gameState.state.actionCards[teamId].cross ? 'active' : ''}" onclick="activateCross(${teamId})" id="crossCard-${teamId}"></div>
+                <div class="team-action-card devil ${gameState.state.actionCards[teamId].devil ? 'active' : ''}" onclick="toggleActionCard(${teamId}, 'devil')" id="devilCard-${teamId}"></div>
+                <div class="team-action-card cross ${gameState.state.actionCards[teamId].cross ? 'active' : ''}" onclick="toggleActionCard(${teamId}, 'cross')" id="crossCard-${teamId}"></div>
             </td>
         `;
         
@@ -554,16 +422,10 @@ function toggleActionCard(teamId, cardType) {
         
         updateActionCardDisplay(teamId);
         
-        // Emit socket events for main page updates
+        // Only emit game state update, let main page handle actions
         socket.emit('game_state_update', {
             path: `actionCards.${teamId}.angel`,
             value: actionCards.angel
-        });
-        
-        socket.emit('card_update', {
-            teamId: teamId,
-            cardType: cardType,
-            active: actionCards.angel
         });
         
         addLog(`Team ${teamId} angel card: ${isActive ? 'disabled' : 'enabled'}`, 'info');
@@ -579,16 +441,10 @@ function toggleActionCard(teamId, cardType) {
         
         updateActionCardDisplay(teamId);
         
-        // Emit socket events for main page updates
+        // Only emit game state update, let main page handle actions
         socket.emit('game_state_update', {
             path: `actionCards.${teamId}.devil`,
             value: actionCards.devil
-        });
-        
-        socket.emit('card_update', {
-            teamId: teamId,
-            cardType: cardType,
-            active: actionCards.devil
         });
         
         addLog(`Team ${teamId} devil card: ${isActive ? 'disabled' : 'enabled'}`, 'info');
@@ -599,16 +455,10 @@ function toggleActionCard(teamId, cardType) {
         
         updateActionCardDisplay(teamId);
         
-        // Emit socket events for main page updates
+        // Only emit game state update, let main page handle actions
         socket.emit('game_state_update', {
             path: `actionCards.${teamId}.cross`,
             value: actionCards.cross
-        });
-        
-        socket.emit('card_update', {
-            teamId: teamId,
-            cardType: cardType,
-            active: actionCards.cross
         });
         
         addLog(`Team ${teamId} cross card: ${isActive ? 'disabled' : 'enabled'}`, 'info');
@@ -625,15 +475,11 @@ function activateDevil(teamId) {
     gameState.state.actionCards[teamId].devil = true;
     updateActionCardDisplay(teamId);
     
-    // Emit for main page compatibility
-    socket.emit('card_update', {
-        teamId: teamId,
-        cardType: 'devil',
-        active: true
+    // Only emit game state update, let main page handle actions
+    socket.emit('game_state_update', {
+        path: `actionCards.${teamId}.devil`,
+        value: true
     });
-    
-    // Show devil attack modal
-    showDevilAttackModal(teamId);
     
     addLog(`Team ${teamId} devil card activated`, 'info');
 }
@@ -644,10 +490,10 @@ function activateCross(teamId) {
     
     updateActionCardDisplay(teamId);
     
-    socket.emit('card_update', {
-        teamId: teamId,
-        cardType: 'cross',
-        active: gameState.state.actionCards[teamId].cross
+    // Only emit game state update, let main page handle actions
+    socket.emit('game_state_update', {
+        path: `actionCards.${teamId}.cross`,
+        value: gameState.state.actionCards[teamId].cross
     });
     
     addLog(`Team ${teamId} cross protection ${isActive ? 'deactivated' : 'activated'}`, 'info');
@@ -1018,11 +864,7 @@ function initializeCharacterControls() {
         // Emit for main page compatibility
         socket.emit('challenge_update', { enabled: !isActive });
         
-        // Also emit for hotkeys manager compatibility
-        socket.emit('challenge_mode_toggled', { 
-            enabled: !isActive,
-            teamId: gameState.state.currentTeam 
-        });
+
     };
     
     window.toggleAngel = function() {
@@ -1241,18 +1083,12 @@ function buzzTeam(teamId) {
     // Emit to main page for immediate feedback
     socket.emit('buzzer_pressed', { teamId: teamId });
     
-    // Also emit test buzzer for Arduino compatibility
-    socket.emit('test_buzzer', { teamId: teamId });
+
     
     addLog(`Team ${teamId} buzzed in!`, 'success');
 }
 
-function clearBuzzers(fromArduino = false) {
-    // Send RESET command to Arduino first (but not if called from Arduino data handler)
-    if (!fromArduino && window.sendResetToArduino) {
-        window.sendResetToArduino();
-        console.log('✅ RESET command sent to Arduino during clear buzzers');
-    }
+function clearBuzzers() {
     
     // Reset all game state parameters
     gameState.state.currentTeam = 0;
@@ -1393,11 +1229,7 @@ function resetGame() {
     if (confirm('Reset entire game? This will clear all scores, action cards, and return to Set 1 Q1.')) {
         console.log('🔄 Console: FULL RESET initiated');
         
-        // Send RESET command to Arduino first
-        if (window.sendResetToArduino) {
-            window.sendResetToArduino();
-            console.log('✅ RESET command sent to Arduino during game reset');
-        }
+        // Arduino reset is handled on the main page
         
         // Use the same comprehensive reset as hotkeys
         if (window.gameState) {
@@ -1427,17 +1259,11 @@ function resetGame() {
         }
         
         // Reset all gray team characters back to default state
-        if (window.hotkeysManager) {
-            window.hotkeysManager.resetTeamGraying();
-            console.log('✅ All team characters reset from gray to default state');
-        }
+        console.log('✅ Team character reset handled by main page');
         
         // Clear all Q1 failure tracking states for all sets
         if (window.gameState) {
             for (let setNumber = 1; setNumber <= 10; setNumber++) {
-                if (window.hotkeysManager) {
-                    window.hotkeysManager.clearQ1FailedTeams(setNumber);
-                }
                 const attemptsKey = `q1Attempts_${setNumber}`;
                 window.gameState.set(attemptsKey, 0);
             }
@@ -1445,10 +1271,7 @@ function resetGame() {
         }
         
         // Hide chance display
-        if (window.hotkeysManager) {
-            window.hotkeysManager.hideChanceDisplay();
-            console.log('✅ Chance display hidden');
-        }
+        console.log('✅ Chance display reset handled by main page');
         
         // Clear buzzing modal
         if (window.buzzingSystem) {
@@ -1471,7 +1294,6 @@ function resetGame() {
         }
         
         // Update all console displays
-        updateTimerDisplay();
         updateTeamsTable();
         updateQuestionsTable();
         
@@ -1560,18 +1382,7 @@ function syncClientStateWithServer(serverState) {
         });
     }
     
-    // Sync timer data
-    if (serverState.timer) {
-        if (serverState.timer.value !== undefined && serverState.timer.value !== gameState.state.timerValue) {
-            gameState.state.timerValue = serverState.timer.value;
-            console.log(`🔄 Synced timer value: ${gameState.state.timerValue} → ${serverState.timer.value}`);
-        }
-        
-        if (serverState.timer.running !== undefined && serverState.timer.running !== gameState.state.timerRunning) {
-            gameState.state.timerRunning = serverState.timer.running;
-            console.log(`🔄 Synced timer running: ${gameState.state.timerRunning} → ${serverState.timer.running}`);
-        }
-    }
+
     
     // Sync question set data
     if (serverState.question_set) {
@@ -1588,7 +1399,6 @@ function syncClientStateWithServer(serverState) {
     
     // Update UI after syncing
     updateTeamsTable();
-    updateTimerDisplay();
     updateQuestionsTable();
     
     console.log('✅ Server state sync completed');
@@ -1606,11 +1416,7 @@ function setupSocketListeners() {
         updateTeamsTable();
     });
 
-    socket.on('timer_update', (data) => {
-        gameState.state.timerValue = data.value;
-        gameState.state.timerRunning = data.running;
-        updateTimerDisplay();
-    });
+
 
     socket.on('card_update', (data) => {
         const teamId = data.teamId;
@@ -1631,17 +1437,7 @@ function setupSocketListeners() {
         }
     });
 
-    socket.on('arduino_connected', (data) => {
-        isConnected = true;
-        updateConnectionUI();
-        addLog(`Arduino connected: ${data.port}`, 'success');
-    });
 
-    socket.on('arduino_disconnected', () => {
-        isConnected = false;
-        updateConnectionUI();
-        addLog('Arduino disconnected', 'error');
-    });
 
     socket.on('buzzer_pressed', (data) => {
         // Update local game state

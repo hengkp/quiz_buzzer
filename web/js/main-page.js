@@ -36,14 +36,18 @@ class MainPageApp {
             // Initialize systems in order
             await this.initializeSystems();
             
-            // Ensure character starts as white
-            await this.ensureCharacterStartsWhite();
+            // Ensure character starts as white (skip on console page)
+            if (!window.location.pathname.includes('console.html')) {
+                await this.ensureCharacterStartsWhite();
+            }
             
-            // Initialize team character colors
-            await this.initializeTeamCharacterColors();
-            
-            // Start continuous team character random animations (5-20 seconds)
-            await this.startTeamAnimations();
+            // Initialize team character colors (skip on console page)
+            if (!window.location.pathname.includes('console.html')) {
+                await this.initializeTeamCharacterColors();
+                
+                // Start continuous team character random animations (5-20 seconds)
+                await this.startTeamAnimations();
+            }
             
             // Setup global functions for backward compatibility
             this.setupBackwardCompatibility();
@@ -245,6 +249,12 @@ class MainPageApp {
     
     // Initialize character controller
     initializeCharacterController() {
+        // Skip character controller initialization on console page
+        if (window.location.pathname.includes('console.html')) {
+            console.log('⏭️ Skipping character controller initialization on console page');
+            return Promise.resolve();
+        }
+        
         if (!window.characterController) {
             throw new Error('Character controller not available');
         }
@@ -278,6 +288,12 @@ class MainPageApp {
     
     // Initialize hotkeys
     initializeHotkeys() {
+        // Skip hotkeys initialization on console page
+        if (window.location.pathname.includes('console.html')) {
+            console.log('⏭️ Skipping hotkeys initialization on console page');
+            return Promise.resolve();
+        }
+        
         if (!window.hotkeysManager) {
             throw new Error('Hotkeys manager not available');
         }
@@ -336,6 +352,11 @@ class MainPageApp {
     
     // Ensure character starts as white
     async ensureCharacterStartsWhite() {
+        // Skip character initialization on console page
+        if (window.location.pathname.includes('console.html')) {
+            console.log('⏭️ Skipping character initialization on console page');
+            return;
+        }
         
         try {
             const progressCharacter = document.getElementById('progressCharacter');
@@ -399,6 +420,12 @@ class MainPageApp {
     }
     
     initializeArduinoConnection() {
+        // Skip Arduino connection on console page
+        if (window.location.pathname.includes('console.html')) {
+            console.log('⏭️ Skipping Arduino connection initialization on console page');
+            return Promise.resolve();
+        }
+        
         console.log('🔌 Initializing Arduino connection system...');
         
         // Initialize Arduino connection status
@@ -440,6 +467,11 @@ class MainPageApp {
     }
     
     updateArduinoUI() {
+        // Skip Arduino UI update on console page
+        if (window.location.pathname.includes('console.html')) {
+            return;
+        }
+        
         const arduinoToggle = document.getElementById('arduinoToggle');
         const arduinoIcon = document.getElementById('arduinoIcon');
         
