@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <title>Quiz Bowl Console - Moderator Interface</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+    <link rel="stylesheet" href="/css/console.css?v=1.0.1">
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    
+    <!-- Firebase Configuration -->
+    <script src="firebase-config.js"></script>
+    <script src="js/firebase-socket-manager.js"></script>
+    <script src="setup.js"></script>
+</head>
+<body class="console-body">
+    <!-- Header -->
+    <header class="console-header">
+        <div class="header-content">
+            <h1 class="header-title">Quiz Bowl Console</h1>
+            <div class="header-actions">
+                <button onclick="resetGame()" class="btn btn-danger">Reset Game</button>
+                <button onclick="window.close()" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-navigation">
+        <button onclick="switchTab('control')" id="controlTab" class="tab-button active">Control Settings</button>
+        <button onclick="switchTab('logs')" id="logsTab" class="tab-button">Logs</button>
+    </nav>
+
+    <!-- Tab Content -->
+    <div class="tab-container">
+        <!-- Control Settings Tab -->
+        <div id="controlContent" class="tab-content active">
+            <div class="control-grid">
+                
+                <!-- Arduino Connection Section -->
+                <div class="control-section">
+                    <h3 class="section-title">
+                        <span class="section-icon">🔌</span>
+                            Arduino Connection
+                        </h3>
+                    <div class="arduino-controls">
+                        <div class="connection-status">
+                            <div id="arduinoStatus" class="status-indicator disconnected"></div>
+                            <span id="arduinoText" class="status-text">Disconnected</span>
+                                </div>
+                        <button id="connectBtn" onclick="toggleConnection()" class="btn btn-primary">
+                                    Connect Arduino
+                                </button>
+                            </div>
+                </div>
+
+                <!-- Timer Section -->
+                <div class="control-section">
+                    <h3 class="section-title">
+                        <span class="section-icon">⏱️</span>
+                        Timer Control
+                    </h3>
+                    <div class="timer-controls">
+                        <div id="timerDisplay" class="timer-display" onclick="editTimer()">0:00</div>
+                        <div class="timer-buttons">
+                            <button onclick="startPauseTimer()" class="btn btn-success">Start</button>
+                            <button onclick="stopTimer()" class="btn btn-danger">Stop</button>
+                            <button onclick="resetTimer()" class="btn btn-secondary">Reset</button>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                <!-- Teams Management Section -->
+                <div class="control-section teams-section">
+                    <h3 class="section-title">
+                        <span class="section-icon">👥</span>
+                        Teams Management
+                        </h3>
+                    <div class="teams-table-container">
+                        <table class="teams-table">
+                                <thead>
+                                <tr>
+                                    <th>Color</th>
+                                    <th>Name</th>
+                                    <th>Score</th>
+                                    <th>Cards</th>
+                                    </tr>
+                                </thead>
+                            <tbody id="teamsTableBody">
+                                <!-- Teams will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                <!-- Question Sets Section -->
+                <div class="control-section questions-section">
+                    <h3 class="section-title">
+                        <span class="section-icon">📚</span>
+                        Question Sets
+                        </h3>
+                    <div class="questions-table-container">
+                        <table class="questions-table">
+                            <thead>
+                                <tr>
+                                    <th>Set</th>
+                                    <th>Title</th>
+                                    <th>Theme</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="questionsTableBody">
+                                <!-- Question sets will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id="logsContent" class="tab-content">
+            <div class="logs-header">
+                <h3 class="section-title">System Logs</h3>
+                <div class="logs-actions">
+                    <button onclick="clearLogs()" class="btn btn-secondary">Clear</button>
+                    <button onclick="exportLogs()" class="btn btn-primary">Export</button>
+                    </div>
+                </div>
+            <div id="logsContentArea" class="logs-content">
+                <!-- Logs will be populated here -->
+            </div>
+                    </div>
+                </div>
+
+    <!-- Theme Dropdown Modal -->
+    <div id="themeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Select Theme</h3>
+                <span class="close" onclick="closeThemeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="themeList" class="theme-list">
+                    <!-- Themes will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Color Dropdown Backdrop -->
+    <div id="colorDropdownBackdrop" class="color-dropdown-backdrop" onclick="closeAllColorDropdowns()"></div>
+
+    <!-- Color Dropdowns -->
+    <div id="colorDropdown-1" class="color-dropdown">
+        <div class="color-dropdown-header">
+            <h3>Select Team Color</h3>
+            <span class="close" onclick="closeAllColorDropdowns()">&times;</span>
+        </div>
+        <div class="color-grid" id="colorGrid-1"></div>
+    </div>
+    <div id="colorDropdown-2" class="color-dropdown">
+        <div class="color-dropdown-header">
+            <h3>Select Team Color</h3>
+            <span class="close" onclick="closeAllColorDropdowns()">&times;</span>
+        </div>
+        <div class="color-grid" id="colorGrid-2"></div>
+    </div>
+    <div id="colorDropdown-3" class="color-dropdown">
+        <div class="color-dropdown-header">
+            <h3>Select Team Color</h3>
+            <span class="close" onclick="closeAllColorDropdowns()">&times;</span>
+        </div>
+        <div class="color-grid" id="colorGrid-3"></div>
+    </div>
+    <div id="colorDropdown-4" class="color-dropdown">
+        <div class="color-dropdown-header">
+            <h3>Select Team Color</h3>
+            <span class="close" onclick="closeAllColorDropdowns()">&times;</span>
+        </div>
+        <div class="color-grid" id="colorGrid-4"></div>
+    </div>
+    <div id="colorDropdown-5" class="color-dropdown">
+        <div class="color-dropdown-header">
+            <h3>Select Team Color</h3>
+            <span class="close" onclick="closeAllColorDropdowns()">&times;</span>
+        </div>
+        <div class="color-grid" id="colorGrid-5"></div>
+    </div>
+    <div id="colorDropdown-6" class="color-dropdown">
+        <div class="color-dropdown-header">
+            <h3>Select Team Color</h3>
+            <span class="close" onclick="closeAllColorDropdowns()">&times;</span>
+        </div>
+        <div class="color-grid" id="colorGrid-6"></div>
+    </div>
+
+    <!-- Load all JavaScript files -->
+    <script src="js/game-state.js"></script>
+    <script src="js/socket-manager.js"></script>
+    <script src="js/character-colors.js"></script>
+    <script src="js/character-controller.js"></script>
+    <script src="js/buzzing-system.js"></script>
+    <script src="js/fullscreen.js"></script>
+    <script src="js/main-page.js"></script>
+    <script src="js/console-page.js"></script>
+</body>
+</html> 

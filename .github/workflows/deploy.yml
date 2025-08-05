@@ -28,22 +28,9 @@ jobs:
       with:
         node-version: '18'
         
-    - name: Copy pages to root for deployment
+    - name: Verify files exist
       run: |
-        # Copy all files from pages/ to root
-        cp -r pages/* .
-        
-        # Copy hidden files if they exist
-        if [ -f "pages/.nojekyll" ]; then
-          cp pages/.nojekyll .
-        fi
-        
-        # List files to verify copy
-        echo "Files in root directory:"
-        ls -la
-        
-        # Check if index.html exists
-        echo "Checking for index.html:"
+        echo "Checking for required files:"
         if [ -f "index.html" ]; then
           echo "✅ index.html found"
           head -5 index.html
@@ -51,13 +38,20 @@ jobs:
           echo "❌ index.html not found"
         fi
         
-        # Check if among_us.html exists
-        echo "Checking for among_us.html:"
         if [ -f "among_us.html" ]; then
           echo "✅ among_us.html found"
         else
           echo "❌ among_us.html not found"
         fi
+        
+        if [ -f ".nojekyll" ]; then
+          echo "✅ .nojekyll found"
+        else
+          echo "❌ .nojekyll not found"
+        fi
+        
+        echo "Files in root directory:"
+        ls -la | head -20
         
     - name: Setup Pages
       uses: actions/configure-pages@v4

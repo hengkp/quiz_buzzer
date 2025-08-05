@@ -1,0 +1,30 @@
+{
+  "name": "quiz-buzzer-arduino-bridge",
+  "version": "1.0.0",
+  "description": "Arduino bridge for Quiz Buzzer GitHub Pages",
+  "main": "arduino-bridge.js",
+  "scripts": {
+    "start": "node arduino-bridge.js",
+    "dev": "nodemon arduino-bridge.js",
+    "install-deps": "npm install"
+  },
+  "dependencies": {
+    "serialport": "^12.0.0",
+    "firebase-admin": "^12.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  },
+  "keywords": [
+    "arduino",
+    "quiz",
+    "buzzer",
+    "firebase",
+    "websocket"
+  ],
+  "author": "Quiz Buzzer Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+} 
