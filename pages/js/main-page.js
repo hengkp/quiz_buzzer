@@ -73,7 +73,9 @@ class MainPageApp {
         return new Promise((resolve) => {
             const checkDependencies = () => {
                 const required = [
-                    'io', // Socket.IO
+                    'firebase', // Firebase
+                    'firebaseManager', // Firebase Manager
+                    'socket', // Firebase Socket Manager
                     'ProgressWhite' // Character colors
                 ];
                 
@@ -127,8 +129,8 @@ class MainPageApp {
     // Load server state and sync with client state
     loadServerState() {
         // Setup server state listener after socket connects
-        if (window.socketManager && window.socketManager.socket) {
-            window.socketManager.socket.on('connect', () => {
+        if (window.socket) {
+            window.socket.on('connect', () => {
                 this.setupServerStateListener();
                 this.requestServerState();
             });
@@ -137,15 +139,15 @@ class MainPageApp {
     
     // Request server state
     requestServerState() {
-        if (window.socketManager && window.socketManager.socket) {
-            window.socketManager.socket.emit('get_server_state', {});
+        if (window.socket) {
+            window.socket.emitToServer('get_server_state', {});
         }
     }
     
     // Add event listener for server state response
     setupServerStateListener() {
-        if (window.socketManager && window.socketManager.socket) {
-            window.socketManager.socket.on('server_state_response', (serverState) => {
+        if (window.socket) {
+            window.socket.on('server_state_response', (serverState) => {
                 if (serverState) {
                     this.syncClientStateWithServer(serverState);
                 }
@@ -210,12 +212,11 @@ class MainPageApp {
     
     // Initialize socket manager
     initializeSocketManager() {
-        if (!window.socketManager) {
-            throw new Error('Socket manager not available');
+        if (!window.socket) {
+            throw new Error('Firebase socket manager not available');
         }
         
-        window.socketManager.init();
-        
+        // Firebase socket manager is already initialized
         // Override updateProgress for backward compatibility
         window.updateProgress = (data) => {
             if (data && data.setNumber && data.questionNumber) {
