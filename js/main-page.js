@@ -224,6 +224,22 @@ class MainPageApp {
             }
         };
         
+        // Create backward compatibility for socketManager
+        window.socketManager = {
+            socket: window.socket,
+            isConnected: () => window.socket.connected,
+            init: () => {}, // Already initialized
+            resetBuzzers: () => window.socket.emitToServer('reset_buzzers', {}),
+            connectArduino: () => window.socket.emitToServer('connect_arduino', {}),
+            disconnectArduino: () => window.socket.emitToServer('disconnect_arduino', {}),
+            getArduinoStatus: () => window.socket.emitToServer('get_arduino_status', {}),
+            send: (event, data) => window.socket.emitToServer(event, data),
+            on: (event, callback) => window.socket.on(event, callback),
+            updateProgress: (setNumber, questionNumber) => {
+                window.updateProgress({ setNumber, questionNumber });
+            }
+        };
+        
         return Promise.resolve();
     }
     
