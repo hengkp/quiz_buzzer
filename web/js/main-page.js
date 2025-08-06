@@ -217,10 +217,9 @@ class MainPageApp {
                 console.log(`🔄 Main page synced current set: ${window.gameState.state.currentSet} → ${serverState.question_set.current}`);
             }
             
-            if (serverState.question_set.title && window.gameState.state.questionSets[window.gameState.state.currentSet]) {
-                window.gameState.state.questionSets[window.gameState.state.currentSet].title = serverState.question_set.title;
-                console.log(`🔄 Main page synced question set title: "${serverState.question_set.title}"`);
-            }
+            // Don't sync question set title from server - preserve imported data from localStorage
+            // The server has default titles that would override imported XLSX data
+            console.log(`🔄 Skipping question set title sync to preserve imported data`);
         }
         
         // Update UI after syncing

@@ -858,6 +858,26 @@ body {
     color: white;
 }
 
+.btn-icon {
+    padding: 12px;
+    min-width: 44px;
+    justify-content: center;
+    background: rgba(0, 122, 255, 0.1);
+    color: #007aff;
+    border: 1px solid rgba(0, 122, 255, 0.2);
+}
+
+.btn-icon:hover {
+    background: rgba(0, 122, 255, 0.15);
+    color: #007aff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.2);
+}
+
+.btn-icon i {
+    font-size: 18px;
+}
+
 /* ========== COLOR DROPDOWN ========== */
 .color-dropdown {
     position: fixed;
@@ -1375,4 +1395,77 @@ body {
 
 .transition {
     transition: all 0.2s ease;
+}
+
+/* ========== UPLOAD MODAL STYLES ========== */
+.upload-instructions {
+    margin-bottom: 24px;
+}
+
+.upload-instructions p {
+    margin-bottom: 12px;
+    color: #1d1d1f;
+}
+
+.sheet-info {
+    background: rgba(0, 122, 255, 0.05);
+    border: 1px solid rgba(0, 122, 255, 0.1);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.sheet-info h4 {
+    margin-bottom: 8px;
+    color: #007aff;
+    font-weight: 600;
+}
+
+.sheet-info p {
+    margin-bottom: 4px;
+    font-size: 14px;
+    color: #666;
+}
+
+.file-upload-area {
+    margin-bottom: 24px;
+}
+
+.upload-drop-zone {
+    border: 2px dashed rgba(0, 122, 255, 0.3);
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: rgba(0, 122, 255, 0.02);
+}
+
+.upload-drop-zone:hover {
+    border-color: #007aff;
+    background: rgba(0, 122, 255, 0.05);
+    transform: translateY(-2px);
+}
+
+.upload-drop-zone i {
+    font-size: 48px;
+    color: #007aff;
+    margin-bottom: 16px;
+    display: block;
+}
+
+.upload-drop-zone p {
+    color: #666;
+    font-size: 16px;
+    margin: 0;
+}
+
+.upload-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.upload-actions .btn {
+    min-width: 120px;
 } 

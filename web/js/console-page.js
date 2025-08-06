@@ -40,6 +40,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add initial log entry
     addLog('Console initialized - Ready for moderation', 'success');
     
+    // Initialize XLSX file handling
+    initializeXLSXHandling();
+    
     console.log('✅ Console page initialized successfully');
 });
 
@@ -772,10 +775,9 @@ function syncClientStateWithServer(serverState) {
             console.log(`🔄 Synced current set: ${gameState.state.currentSet} → ${serverState.question_set.current}`);
         }
         
-        if (serverState.question_set.title && gameState.state.questionSets[gameState.state.currentSet]) {
-            gameState.state.questionSets[gameState.state.currentSet].title = serverState.question_set.title;
-            console.log(`🔄 Synced question set title: "${serverState.question_set.title}"`);
-        }
+        // Don't sync question set title from server - preserve imported data from localStorage
+        // The server has default titles that would override imported XLSX data
+        console.log(`🔄 Skipping question set title sync to preserve imported data`);
     }
     
     // Update UI after syncing
@@ -875,4 +877,213 @@ document.addEventListener('click', function(event) {
     }
 });
 
-console.log('🎮 Console page JavaScript loaded successfully'); 
+console.log('🎮 Console page JavaScript loaded successfully');
+
+// ========== XLSX FILE HANDLING ==========
+function initializeXLSXHandling() {
+    const fileInput = document.getElementById('xlsxFileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    
+    // Handle file selection
+    fileInput.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            uploadBtn.disabled = false;
+            addLog(`File selected: ${file.name}`, 'info');
+        }
+    });
+    
+    // Handle drag and drop
+    const dropZone = document.querySelector('.upload-drop-zone');
+    
+    dropZone.addEventListener('dragover', function(event) {
+        event.preventDefault();
+        dropZone.style.borderColor = '#007aff';
+        dropZone.style.background = 'rgba(0, 122, 255, 0.1)';
+    });
+    
+    dropZone.addEventListener('dragleave', function(event) {
+        event.preventDefault();
+        dropZone.style.borderColor = 'rgba(0, 122, 255, 0.3)';
+        dropZone.style.background = 'rgba(0, 122, 255, 0.02)';
+    });
+    
+    dropZone.addEventListener('drop', function(event) {
+        event.preventDefault();
+        dropZone.style.borderColor = 'rgba(0, 122, 255, 0.3)';
+        dropZone.style.background = 'rgba(0, 122, 255, 0.02)';
+        
+        const files = event.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            uploadBtn.disabled = false;
+            addLog(`File dropped: ${files[0].name}`, 'info');
+        }
+    });
+}
+
+// Global functions for modal control
+window.openUploadModal = function() {
+    document.getElementById('uploadModal').classList.add('active');
+    addLog('Upload modal opened', 'info');
+};
+
+window.closeUploadModal = function() {
+    document.getElementById('uploadModal').classList.remove('active');
+    document.getElementById('xlsxFileInput').value = '';
+    document.getElementById('uploadBtn').disabled = true;
+    addLog('Upload modal closed', 'info');
+};
+
+window.processUploadedFile = function() {
+    const fileInput = document.getElementById('xlsxFileInput');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        addLog('No file selected', 'error');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            
+            // Process teams sheet
+            if (workbook.SheetNames.includes('teams')) {
+                const teamsSheet = workbook.Sheets['teams'];
+                const teamsData = XLSX.utils.sheet_to_json(teamsSheet);
+                processTeamsData(teamsData);
+            }
+            
+            // Process questions sheet
+            if (workbook.SheetNames.includes('questions')) {
+                const questionsSheet = workbook.Sheets['questions'];
+                const questionsData = XLSX.utils.sheet_to_json(questionsSheet);
+                processQuestionsData(questionsData);
+            }
+            
+            addLog(`Successfully processed XLSX file: ${file.name}`, 'success');
+            closeUploadModal();
+            
+        } catch (error) {
+            addLog(`Error processing XLSX file: ${error.message}`, 'error');
+        }
+    };
+    
+    reader.readAsArrayBuffer(file);
+};
+
+function processTeamsData(teamsData) {
+    teamsData.forEach(row => {
+        const teamId = parseInt(row.team_id);
+        if (teamId >= 1 && teamId <= 6) {
+            // Update team name
+            if (row.team_name) {
+                gameState.state.teams[teamId].name = row.team_name;
+            }
+            
+            // Update team color
+            if (row.team_color) {
+                const validColors = ['red', 'blue', 'lime', 'orange', 'purple', 'cyan', 'pink', 'yellow'];
+                if (validColors.includes(row.team_color.toLowerCase())) {
+                    gameState.state.teams[teamId].color = row.team_color.toLowerCase();
+                }
+            }
+            
+            // Update score
+            if (row.score !== undefined) {
+                gameState.state.teams[teamId].score = parseInt(row.score) || 0;
+            }
+            
+            // Update action cards
+            if (row.angel !== undefined) {
+                gameState.state.actionCards[teamId].angel = Boolean(row.angel);
+            }
+            if (row.devil !== undefined) {
+                gameState.state.actionCards[teamId].devil = Boolean(row.devil);
+            }
+            if (row.cross !== undefined) {
+                gameState.state.actionCards[teamId].cross = Boolean(row.cross);
+            }
+        }
+    });
+    
+    updateTeamsTable();
+    addLog('Teams data updated from XLSX', 'success');
+}
+
+function processQuestionsData(questionsData) {
+    questionsData.forEach(row => {
+        const setId = parseInt(row.set_id);
+        if (setId >= 1 && setId <= 8) {
+            // Update question set title
+            if (row.title) {
+                gameState.state.questionSets[setId].title = row.title;
+            }
+            
+            // Update theme
+            if (row.theme) {
+                gameState.state.questionSets[setId].theme = row.theme.toLowerCase();
+            }
+        }
+    });
+    
+    updateQuestionsTable();
+    addLog('Questions data updated from XLSX', 'success');
+}
+
+window.downloadXLSX = function() {
+    try {
+        // Create workbook
+        const workbook = XLSX.utils.book_new();
+        
+        // Create teams data
+        const teamsData = [];
+        for (let teamId = 1; teamId <= 6; teamId++) {
+            const team = gameState.state.teams[teamId];
+            const cards = gameState.state.actionCards[teamId];
+            teamsData.push({
+                team_id: teamId,
+                team_name: team.name,
+                team_color: team.color,
+                score: team.score,
+                angel: cards.angel,
+                devil: cards.devil,
+                cross: cards.cross
+            });
+        }
+        
+        // Create questions data
+        const questionsData = [];
+        for (let setId = 1; setId <= 8; setId++) {
+            const questionSet = gameState.state.questionSets[setId];
+            questionsData.push({
+                set_id: setId,
+                title: questionSet.title,
+                theme: questionSet.theme
+            });
+        }
+        
+        // Create sheets
+        const teamsSheet = XLSX.utils.json_to_sheet(teamsData);
+        const questionsSheet = XLSX.utils.json_to_sheet(questionsData);
+        
+        // Add sheets to workbook
+        XLSX.utils.book_append_sheet(workbook, teamsSheet, 'teams');
+        XLSX.utils.book_append_sheet(workbook, questionsSheet, 'questions');
+        
+        // Generate filename with timestamp
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const filename = `quiz_bowl_data_${timestamp}.xlsx`;
+        
+        // Download file
+        XLSX.writeFile(workbook, filename);
+        
+        addLog(`XLSX file downloaded: ${filename}`, 'success');
+        
+    } catch (error) {
+        addLog(`Error creating XLSX file: ${error.message}`, 'error');
+    }
+}; 
