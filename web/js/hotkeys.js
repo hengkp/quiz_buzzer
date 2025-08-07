@@ -965,22 +965,28 @@ class HotkeysManager {
     
     // Handle angel card toggle
     handleAngelCard() {
+        console.log('🔔 Angel card hotkey pressed');
         const state = window.gameState?.get();
         if (!state || !state.currentTeam || state.currentTeam < 1 || state.currentTeam > 6) {
+            console.log('❌ No current team or invalid team ID');
             console.warn('⚠️ No team currently buzzing - cannot use angel card');
             return;
         }
         
         const teamId = state.currentTeam;
+        console.log(`🎯 Team ${teamId} angel card requested`);
         
         // Check if angel card is available (true in actionCards)
         if (!state.actionCards[teamId].angel) {
+            console.log('❌ Angel card not available for this team');
             console.warn(`⚠️ Angel card for Team ${teamId} is not available`);
             return;
         }
         
         const angelIcon = document.getElementById('mainCharacterAngel');
         const currentlyActive = state.angelTeam === teamId;
+        
+        console.log(`🔍 Angel icon found: ${!!angelIcon}, Currently active: ${currentlyActive}`);
         
         // Toggle angel team (temporary activation)
         const newAngelTeam = currentlyActive ? 0 : teamId;
@@ -992,6 +998,9 @@ class HotkeysManager {
         // Update main character icon
         if (angelIcon) {
             angelIcon.classList.toggle('active', newAngelTeam > 0);
+            console.log(`✅ Angel icon ${newAngelTeam > 0 ? 'activated' : 'deactivated'}`);
+        } else {
+            console.log('❌ Angel icon element not found');
         }
         
         // Apply or remove angel effect (no animation for toggle)
@@ -1022,20 +1031,26 @@ class HotkeysManager {
     
     // Handle devil card toggle (open/close attack modal)
     handleDevilCard() {
+        console.log('🔔 Devil card hotkey pressed');
         const state = window.gameState?.get();
         if (!state || !state.currentTeam || state.currentTeam < 1 || state.currentTeam > 6) {
+            console.log('❌ No current team or invalid team ID');
             console.warn('⚠️ No team currently buzzing - cannot use devil card');
             return;
         }
         
         const teamId = state.currentTeam;
+        console.log(`🎯 Team ${teamId} devil card requested`);
         
         // Check if devil card is available (true in actionCards)
         if (!state.actionCards[teamId].devil) {
+            console.log('❌ Devil card not available for this team');
             console.log(`🚫 Devil card for Team ${teamId} is not available - cannot activate`);
             return;
         }
         
+        const devilIcon = document.getElementById('mainCharacterDevil');
+        console.log(`🔍 Devil icon found: ${!!devilIcon}`);
         console.log(`👿 Attempting to use devil card for Team ${teamId} (devil: ${state.actionCards[teamId].devil})`);
         
         const modal = document.getElementById('devilAttackModal');
@@ -1043,9 +1058,11 @@ class HotkeysManager {
         
         if (isModalOpen) {
             // Close modal if already open
+            console.log('🔒 Closing devil attack modal');
             this.closeDevilAttackModal(teamId);
         } else {
             // Open modal
+            console.log('🔓 Opening devil attack modal');
             this.openDevilAttackModal(teamId);
         }
     }
@@ -1690,27 +1707,37 @@ class HotkeysManager {
     // Handle challenge mode activation/deactivation (toggle)
     // Note: Challenge mode only updates main character action, not team action cards
     handleChallengeMode() {
+        console.log('🔔 Challenge mode hotkey pressed');
         const state = window.gameState?.get();
         if (!state || !state.currentTeam || state.currentTeam < 1 || state.currentTeam > 6) {
+            console.log('❌ No current team or invalid team ID');
             console.warn('⚠️ No team currently buzzing - cannot toggle challenge mode');
             return;
         }
         
         const teamId = state.currentTeam;
+        console.log(`🎯 Team ${teamId} challenge mode requested`);
         
         // Check current challenge state
         const isCurrentlyActive = state.currentChallenge === teamId;
+        console.log(`🔍 Challenge currently active: ${isCurrentlyActive}`);
+        
+        const challengeIcon = document.getElementById('mainCharacterChallenge');
+        console.log(`🔍 Challenge icon found: ${!!challengeIcon}`);
         
         if (isCurrentlyActive) {
             // Deactivate challenge mode
+            console.log('🔒 Deactivating challenge mode');
             if (window.gameState) {
                 window.gameState.set('currentChallenge', 0);
             }
             
             // Deactivate visual challenge icon
-            const challengeIcon = document.getElementById('mainCharacterChallenge');
             if (challengeIcon) {
                 challengeIcon.classList.remove('active');
+                console.log('✅ Challenge icon deactivated');
+            } else {
+                console.log('❌ Challenge icon element not found');
             }
             
             // Sync with server
@@ -1720,14 +1747,17 @@ class HotkeysManager {
             
         } else {
             // Activate challenge mode
+            console.log('🔓 Activating challenge mode');
             if (window.gameState) {
                 window.gameState.set('currentChallenge', teamId);
             }
             
             // Activate visual challenge icon
-            const challengeIcon = document.getElementById('mainCharacterChallenge');
             if (challengeIcon) {
                 challengeIcon.classList.add('active');
+                console.log('✅ Challenge icon activated');
+            } else {
+                console.log('❌ Challenge icon element not found');
             }
             
             // Sync with server
