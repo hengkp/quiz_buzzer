@@ -325,17 +325,22 @@ function handleTeamScoreKeypress(event, teamId) {
 
 function updateActionCardDisplay(teamId) {
     const actionCards = gameState.state.actionCards[teamId];
+    const state = gameState.state;
     
-    // Update angel card
+    // Update angel card - active if angelTeam equals this team ID
     const angelCard = document.getElementById(`angelCard-${teamId}`);
     if (angelCard) {
-        angelCard.className = `team-action-card angel ${actionCards.angel ? 'active' : ''} ${actionCards.angelUsed ? 'used' : ''}`;
+        const isAngelActive = state.angelTeam === teamId;
+        const isAngelAvailable = actionCards.angel;
+        angelCard.className = `team-action-card angel ${isAngelActive ? 'active' : ''} ${!isAngelAvailable ? 'used' : ''}`;
     }
     
-    // Update devil card
+    // Update devil card - active if attackTeam equals this team ID
     const devilCard = document.getElementById(`devilCard-${teamId}`);
     if (devilCard) {
-        devilCard.className = `team-action-card devil ${actionCards.devil ? 'active' : ''} ${actionCards.devilUsed ? 'used' : ''}`;
+        const isDevilActive = state.attackTeam === teamId;
+        const isDevilAvailable = actionCards.devil;
+        devilCard.className = `team-action-card devil ${isDevilActive ? 'active' : ''} ${!isDevilAvailable ? 'used' : ''}`;
     }
     
     // Update cross card
@@ -347,42 +352,59 @@ function updateActionCardDisplay(teamId) {
 
 function toggleActionCard(teamId, cardType) {
     const actionCards = gameState.state.actionCards[teamId];
+    const state = gameState.state;
     
     if (cardType === 'angel') {
-        if (actionCards.angelUsed) {
+        if (!actionCards.angel) {
             addLog(`Team ${teamId} angel card already used`, 'warning');
             return;
         }
         
-        const isActive = actionCards.angel;
-        actionCards.angel = !isActive;
+        const isActive = state.angelTeam === teamId;
+        if (isActive) {
+            // Deactivate angel card
+            gameState.set('angelTeam', 0);
+            socket.emit('game_state_update', {
+                path: 'angelTeam',
+                value: 0
+            });
+        } else {
+            // Activate angel card
+            gameState.set('angelTeam', teamId);
+            socket.emit('game_state_update', {
+                path: 'angelTeam',
+                value: teamId
+            });
+        }
         
         updateActionCardDisplay(teamId);
-        
-        // Only emit game state update, let main page handle actions
-        socket.emit('game_state_update', {
-            path: `actionCards.${teamId}.angel`,
-            value: actionCards.angel
-        });
         
         addLog(`Team ${teamId} angel card: ${isActive ? 'disabled' : 'enabled'}`, 'info');
         
     } else if (cardType === 'devil') {
-        if (actionCards.devilUsed) {
+        if (!actionCards.devil) {
             addLog(`Team ${teamId} devil card already used`, 'warning');
             return;
         }
         
-        const isActive = actionCards.devil;
-        actionCards.devil = !isActive;
+        const isActive = state.attackTeam === teamId;
+        if (isActive) {
+            // Deactivate devil card
+            gameState.set('attackTeam', 0);
+            socket.emit('game_state_update', {
+                path: 'attackTeam',
+                value: 0
+            });
+        } else {
+            // Activate devil card
+            gameState.set('attackTeam', teamId);
+            socket.emit('game_state_update', {
+                path: 'attackTeam',
+                value: teamId
+            });
+        }
         
         updateActionCardDisplay(teamId);
-        
-        // Only emit game state update, let main page handle actions
-        socket.emit('game_state_update', {
-            path: `actionCards.${teamId}.devil`,
-            value: actionCards.devil
-        });
         
         addLog(`Team ${teamId} devil card: ${isActive ? 'disabled' : 'enabled'}`, 'info');
         
@@ -805,11 +827,11 @@ function setupSocketListeners() {
             if (data.cardType === 'angel') {
                 gameState.state.actionCards[teamId].angel = data.active;
                 if (data.used) {
-                    gameState.state.actionCards[teamId].angelUsed = data.used;
+                    gameState.state.angelTeam = 0; // Reset angel team when card is used
                 }
             } else if (data.cardType === 'devil') {
                 if (data.used) {
-                    gameState.state.actionCards[teamId].devilUsed = data.used;
+                    gameState.state.attackTeam = 0; // Reset attack team when card is used
                 }
             } else if (data.cardType === 'cross') {
                 gameState.state.actionCards[teamId].cross = data.active;

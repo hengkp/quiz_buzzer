@@ -331,8 +331,13 @@ class HotkeysManager {
         
         // Handle negative scoring (arrow down)
         if (!isPositive) {
+            // Debug logging for devil attack
+            console.log(`🔍 Devil Attack Debug: isVictimTeam=${isVictimTeam}, attackTeam=${attackTeam}, teamId=${teamId}`);
+            console.log(`🔍 State values: victimTeam=${state.victimTeam}, attackTeam=${state.attackTeam}`);
+            
             // Check if this is a victim team answering incorrectly
             if (isVictimTeam && attackTeam) {
+                console.log(`🎯 Devil attack triggered! Victim: ${teamId}, Attacker: ${attackTeam}`);
                 this.handleDevilAttackVictim(teamId, attackTeam);
                 return;
             }
@@ -365,7 +370,7 @@ class HotkeysManager {
             }
         }
 
-        // DO NOT reset devilUsed for attacking team - it should remain permanently used
+        // DO NOT reset attackTeam for attacking team - it should remain permanently used
         // The devil card should stay used until game reset
     }
     
@@ -378,8 +383,8 @@ class HotkeysManager {
         
         // Mark angel card as permanently used
         if (window.gameState) {
-            window.gameState.update(`actionCards.${teamId}.angelUsed`, true);
             window.gameState.update(`actionCards.${teamId}.angel`, false);
+            window.gameState.set('angelTeam', 0);
         }
         
         // Update main character icon
@@ -399,45 +404,90 @@ class HotkeysManager {
         this.handleAutoNavigationAfterIncorrect();
     }
     
-    // Handle devil attack victim (attacker gets +2, victim gets -1)
+    // Handle devil attack victim (attacker gets +2, victim gets -1 unless protected by angel)
     handleDevilAttackVictim(victimTeamId, attackTeamId) {
+        console.log(`🚀 handleDevilAttackVictim called with victimTeamId=${victimTeamId}, attackTeamId=${attackTeamId}`);
         const state = window.gameState?.get();
-        if (!state) return;
+        if (!state) {
+            console.log(`❌ No game state available`);
+            return;
+        }
+        
+        // Check if victim team has angel protection
+        const hasAngel = state.angelTeam === victimTeamId;
+        
+        // If victim has angel protection, mark it as used immediately
+        if (hasAngel && window.gameState) {
+            window.gameState.update(`actionCards.${victimTeamId}.angel`, false);
+            window.gameState.set('angelTeam', 0);
+            
+            // Update main character icon
+            const angelIcon = document.getElementById('mainCharacterAngel');
+            if (angelIcon) {
+                angelIcon.classList.remove('active');
+            }
+        }
+        
+        // Ensure cross protection is active for victim team
+        this.activateCrossProtection(victimTeamId);
         
         // Gray out both victim and attack team for Q1 chances
         const currentQuestion = state.currentQuestion || 1;
         const currentSet = state.currentSet || 1;
         
         if (currentQuestion === 1) {
+            console.log(`🎯 Q1 detected - graying out teams`);
             // Gray out victim team
             this.grayOutTeam(victimTeamId);
             this.trackQ1Failure(victimTeamId, currentSet);
+            console.log(`🎯 Victim team ${victimTeamId} grayed out`);
             
             // Gray out attack team
             this.grayOutTeam(attackTeamId);
             this.trackQ1Failure(attackTeamId, currentSet);
+            console.log(`🎯 Attack team ${attackTeamId} grayed out`);
+            
+            // Update team displays immediately after graying out
+            if (window.gameState) {
+                window.gameState.updateTeamDisplays();
+                console.log(`✅ Team displays updated after graying out`);
+            }
         }
         
         // Delay score updates until after answer animation (3 seconds)
         setTimeout(() => {
+            console.log(`⏰ Score update timeout triggered`);
             if (attackTeamId) {
-                // Give +2 points to the attacking team
+                // Give +2 points to the attacking team (always happens regardless of angel protection)
                 const attackerNewScore = (state.teams[attackTeamId].score || 0) + 2;
+                console.log(`💰 Updating attacker team ${attackTeamId} score from ${state.teams[attackTeamId].score || 0} to ${attackerNewScore}`);
                 if (window.gameState) {
                     window.gameState.update(`teams.${attackTeamId}.score`, attackerNewScore);
+                    // Update team displays immediately after score change
+                    window.gameState.updateTeamDisplays();
+                    console.log(`✅ Attacker score updated and team displays refreshed`);
                 }
             }
             
-            // Apply -1 penalty to victim team
-            const victimNewScore = Math.max(0, (state.teams[victimTeamId].score || 0) - 1);
-            if (window.gameState) {
-                window.gameState.update(`teams.${victimTeamId}.score`, victimNewScore);
+            // Apply -1 penalty to victim team only if not protected by angel
+            if (!hasAngel) {
+                const victimNewScore = Math.max(0, (state.teams[victimTeamId].score || 0) - 1);
+                if (window.gameState) {
+                    window.gameState.update(`teams.${victimTeamId}.score`, victimNewScore);
+                    // Update team displays immediately after score change
+                    window.gameState.updateTeamDisplays();
+                }
+                
+                // Show coin_minus animation after score update
+                setTimeout(() => {
+                    this.showScoreAnimation(-1);
+                }, 500); // Small delay after score update
+            } else {
+                // If victim has angel protection, show protection animation instead
+                setTimeout(() => {
+                    this.showProtectionAnimation('Protected');
+                }, 500); // Small delay after score update
             }
-            
-            // Show coin_minus animation after score update
-            setTimeout(() => {
-                this.showScoreAnimation(-1);
-            }, 500); // Small delay after score update
             
         }, 2500); // Wait for answer animation to complete
         
@@ -1132,7 +1182,7 @@ class HotkeysManager {
     }
     
     // Close devil attack modal
-    closeDevilAttackModal(teamId) {
+    closeDevilAttackModal(teamId, keepAttackTeam = false) {
         const modal = document.getElementById('devilAttackModal');
         if (modal) {
             modal.classList.remove('active');
@@ -1140,8 +1190,8 @@ class HotkeysManager {
             modal.dataset.targetTeam = null;
         }
         
-        // Reset attack team parameter
-        if (window.gameState) {
+        // Reset attack team parameter only if not keeping it
+        if (window.gameState && !keepAttackTeam) {
             window.gameState.set('attackTeam', 0);
         }
         
@@ -1405,8 +1455,8 @@ class HotkeysManager {
             devilIcon.classList.add('active');
         }
         
-        // Close modal
-        this.closeDevilAttackModal(attackingTeamId);
+        // Close modal but keep attack team active
+        this.closeDevilAttackModal(attackingTeamId, true);
         
         // Execute attack animation
         this.executeAttackAnimation(attackingTeamId, targetTeamId);

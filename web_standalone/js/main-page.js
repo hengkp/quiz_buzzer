@@ -688,6 +688,9 @@ function changeTeamColor(teamId, color) {
     // Update UI
     updateTeamsTable();
     
+    // Update main screen and game state
+    window.gameState.updateTeamDisplays();
+    
     // Close dropdown and backdrop
     window.closeAllColorDropdowns();
     
@@ -724,6 +727,9 @@ function saveTeamName(teamId) {
         window.gameState.state.teams[teamId].name = newName;
         
         nameDisplay.textContent = newName;
+        
+        // Update main screen and game state
+        window.gameState.updateTeamDisplays();
         
         addLog(`Team ${teamId} name: "${oldName}" → "${newName}"`, 'info');
     }
@@ -768,6 +774,9 @@ function saveTeamScore(teamId) {
         // Update rankings when score changes
         window.gameState.calculateRankings();
         
+        // Update main screen and game state
+        window.gameState.updateTeamDisplays();
+        
         addLog(`Team ${teamId} score: ${oldScore} → ${newScore}`, 'info');
     }
     
@@ -783,17 +792,22 @@ function handleTeamScoreKeypress(event, teamId) {
 
 function updateActionCardDisplay(teamId) {
     const actionCards = window.gameState.state.actionCards[teamId];
+    const state = window.gameState.state;
     
-    // Update angel card
+    // Update angel card - active if angelTeam equals this team ID
     const angelCard = document.getElementById(`angelCard-${teamId}`);
     if (angelCard) {
-        angelCard.className = `team-action-card angel ${actionCards.angel ? 'active' : ''} ${actionCards.angelUsed ? 'used' : ''}`;
+        const isAngelActive = state.angelTeam === teamId;
+        const isAngelAvailable = actionCards.angel;
+        angelCard.className = `team-action-card angel ${isAngelActive ? 'active' : ''} ${!isAngelAvailable ? 'used' : ''}`;
     }
     
-    // Update devil card
+    // Update devil card - active if attackTeam equals this team ID
     const devilCard = document.getElementById(`devilCard-${teamId}`);
     if (devilCard) {
-        devilCard.className = `team-action-card devil ${actionCards.devil ? 'active' : ''} ${actionCards.devilUsed ? 'used' : ''}`;
+        const isDevilActive = state.attackTeam === teamId;
+        const isDevilAvailable = actionCards.devil;
+        devilCard.className = `team-action-card devil ${isDevilActive ? 'active' : ''} ${!isDevilAvailable ? 'used' : ''}`;
     }
     
     // Update cross card
@@ -805,28 +819,41 @@ function updateActionCardDisplay(teamId) {
 
 function toggleActionCard(teamId, cardType) {
     const actionCards = window.gameState.state.actionCards[teamId];
+    const state = window.gameState.state;
     
     if (cardType === 'angel') {
-        if (actionCards.angelUsed) {
+        if (!actionCards.angel) {
             addLog(`Team ${teamId} angel card already used`, 'warning');
             return;
         }
         
-        const isActive = actionCards.angel;
-        actionCards.angel = !isActive;
+        const isActive = state.angelTeam === teamId;
+        if (isActive) {
+            // Deactivate angel card
+            window.gameState.set('angelTeam', 0);
+        } else {
+            // Activate angel card
+            window.gameState.set('angelTeam', teamId);
+        }
         
         updateActionCardDisplay(teamId);
         
         addLog(`Team ${teamId} angel card: ${isActive ? 'disabled' : 'enabled'}`, 'info');
         
     } else if (cardType === 'devil') {
-        if (actionCards.devilUsed) {
+        if (!actionCards.devil) {
             addLog(`Team ${teamId} devil card already used`, 'warning');
             return;
         }
         
-        const isActive = actionCards.devil;
-        actionCards.devil = !isActive;
+        const isActive = state.attackTeam === teamId;
+        if (isActive) {
+            // Deactivate devil card
+            window.gameState.set('attackTeam', 0);
+        } else {
+            // Activate devil card
+            window.gameState.set('attackTeam', teamId);
+        }
         
         updateActionCardDisplay(teamId);
         
@@ -937,6 +964,9 @@ function saveQuestionSetTitle(setNumber) {
         
         titleDisplay.textContent = newTitle;
         
+        // Update main screen and game state
+        window.gameState.updateQuestionSetDisplay();
+        
         addLog(`Set ${setNumber} title updated: "${oldTitle}" → "${newTitle}"`, 'info');
     }
     
@@ -1007,6 +1037,9 @@ function selectTheme(icon, name) {
     
     // Update the questions table to reflect the change
     updateQuestionsTable();
+    
+    // Update main screen and game state
+    window.gameState.updateQuestionSetDisplay();
     
     // Close modal
     window.closeThemeModal();
