@@ -28,7 +28,9 @@ class GameState {
                 5: { title: 'Sports & Entertainment', theme: 'brainstorm' },
                 6: { title: 'Mathematics', theme: 'brainstorm' },
                 7: { title: 'Current Events', theme: 'brainstorm' },
-                8: { title: 'Mystery & Logic', theme: 'brainstorm' }
+                8: { title: 'Mystery & Logic', theme: 'brainstorm' },
+                9: { title: 'Science Fiction', theme: 'brainstorm' },
+                10: { title: 'Ecology & Environment', theme: 'brainstorm' }
             },
             
             teams: {

@@ -287,13 +287,8 @@
         animation: emergencyGlow 1s ease-in-out;
     }
 
-    /* ========== PROFESSIONAL CLOUD DROPDOWN ========== */
-    .cloud-group {
-        position: absolute;
-        top: 3%;
-        right: 3%;
-        z-index: 1000;
-    }
+    /* Cloud buttons removed - all functionality accessible via hotkeys */
+
 
     .cloud-group-main {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -1138,9 +1133,11 @@
         top: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(10px);
+        background-color: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(15px);
     }
+    
+
 
     .console-modal.active {
         display: flex;
@@ -1149,7 +1146,7 @@
     }
 
     .console-modal-content {
-        background: rgba(255, 255, 255, 0.95);
+        background: rgba(0, 0, 0, 0.85);
         backdrop-filter: blur(20px);
         border-radius: 16px;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
@@ -1162,9 +1159,13 @@
     /* Larger Questions Modal */
     .questions-modal .console-modal-content {
         max-width: 1200px;
-        max-height: 85vh;
+        max-height: 98vh;
         animation: slideIn 0.3s ease-out;
         font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    .questions-modal .console-modal-body {
+        max-height: 85vh;
     }
 
     .console-modal-header {
@@ -1172,8 +1173,8 @@
         justify-content: space-between;
         align-items: center;
         padding: 20px 24px;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-        background: rgba(255, 255, 255, 0.8);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(0, 0, 0, 0.6);
         backdrop-filter: blur(20px);
         gap: 20px;
     }
@@ -1181,7 +1182,7 @@
     .console-modal-header h3 {
         font-size: 20px;
         font-weight: 600;
-        color: #1d1d1f;
+        color: white;
         display: flex;
         align-items: center;
     }
@@ -1189,12 +1190,13 @@
     .section-icon {
         margin-right: 12px;
         font-size: 20px;
+        color: #007AFF;
     }
 
     .close {
         font-size: 24px;
         font-weight: 300;
-        color: #86868b;
+        color: rgba(255, 255, 255, 0.7);
         cursor: pointer;
         line-height: 1;
         transition: color 0.2s ease;
@@ -1203,14 +1205,15 @@
     }
 
     .close:hover {
-        color: #1d1d1f;
-        background: rgba(0, 0, 0, 0.05);
+        color: white;
+        background: rgba(255, 255, 255, 0.1);
     }
 
     .console-modal-body {
         padding: 24px;
         max-height: 60vh;
         overflow-y: auto;
+        color: white;
     }
 
     /* Teams Table Styles */
@@ -1227,12 +1230,12 @@
     }
 
     .teams-table th {
-        background: rgba(0, 0, 0, 0.02);
+        background: rgba(255, 255, 255, 0.1);
         padding: 18px 16px;
         text-align: center;
         font-weight: 600;
-        color: #1d1d1f;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        color: white;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         position: sticky;
         top: 0;
         z-index: 10;
@@ -1241,7 +1244,7 @@
 
     .teams-table td {
         padding: 18px 16px;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         vertical-align: middle;
         text-align: center;
         font-size: 15px;
@@ -1377,7 +1380,7 @@
     /* Questions Table Styles */
     .questions-table-container {
         overflow: auto;
-        max-height: 50vh;
+        max-height: 75vh;
     }
 
     .questions-table {
@@ -1388,12 +1391,12 @@
     }
 
     .questions-table th {
-        background: rgba(0, 0, 0, 0.02);
+        background: rgba(255, 255, 255, 0.1);
         padding: 18px 16px;
         text-align: center;
         font-weight: 600;
-        color: #1d1d1f;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        color: white;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         position: sticky;
         top: 0;
         z-index: 10;
@@ -1402,7 +1405,7 @@
 
     .questions-table td {
         padding: 18px 16px;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         vertical-align: middle;
         text-align: center;
         font-size: 15px;
@@ -1452,9 +1455,10 @@
 
     .question-btn {
         padding: 8px 14px;
-        border: 1px solid rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 6px;
-        background: white;
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
         cursor: pointer;
         font-size: 14px;
         font-weight: 500;
@@ -2051,12 +2055,13 @@
     /* Clean table header styling for overflow */
     .teams-table th,
     .questions-table th {
-        background: rgba(255, 255, 255, 0.95) !important;
+        background: rgba(255, 255, 255, 0.1) !important;
         backdrop-filter: blur(10px);
         position: sticky;
         top: 0;
         z-index: 10;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: white !important;
     }
 
     /* Question Action Buttons */
@@ -2069,9 +2074,9 @@
     }
 
     .question-btn {
-        background: rgba(255, 255, 255, 0.9);
-        color: #666;
-        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 6px;
         padding: 6px 12px;
         font-size: 12px;
@@ -2147,7 +2152,7 @@
         margin: 0;
         font-size: 16px;
         font-weight: 600;
-        color: #1d1d1f;
+        color: white;
     }
 
     .file-upload-area {
@@ -2178,11 +2183,11 @@
     .upload-drop-zone p {
         margin: 0;
         font-weight: 500;
-        color: #1d1d1f;
+        color: white;
     }
 
     .upload-drop-zone small {
-        color: #86868b;
+        color: rgba(255, 255, 255, 0.7);
         font-size: 12px;
     }
 
@@ -2192,11 +2197,11 @@
 
     .export-info p {
         margin: 0 0 4px 0;
-        color: #1d1d1f;
+        color: white;
     }
 
     .export-info small {
-        color: #86868b;
+        color: rgba(255, 255, 255, 0.7);
         font-size: 12px;
     }
 
@@ -2218,12 +2223,12 @@
     }
 
     .format-requirements {
-        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
         padding-top: 20px;
     }
 
     .format-requirements details {
-        background: rgba(0, 0, 0, 0.02);
+        background: rgba(255, 255, 255, 0.1);
         border-radius: 8px;
         padding: 16px;
     }
@@ -2231,7 +2236,7 @@
     .format-requirements summary {
         cursor: pointer;
         font-weight: 600;
-        color: #1d1d1f;
+        color: white;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -2244,7 +2249,7 @@
     .requirements-content {
         margin-top: 12px;
         padding-top: 12px;
-        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .req-section {
@@ -2252,17 +2257,17 @@
     }
 
     .req-section strong {
-        color: #1d1d1f;
+        color: white;
         font-size: 14px;
     }
 
     .req-section code {
         display: block;
-        background: rgba(0, 0, 0, 0.05);
+        background: rgba(255, 255, 255, 0.1);
         padding: 6px 8px;
         border-radius: 4px;
         font-size: 12px;
-        color: #333;
+        color: white;
         margin-top: 4px;
         font-family: 'SF Mono', Monaco, 'Roboto Mono', monospace;
     }

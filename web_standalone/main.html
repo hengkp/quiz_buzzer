@@ -61,42 +61,7 @@
         <!-- Timer -->
         <div class="timer-value" id="timerDisplay">0:00</div>
         
-        <!-- Grouped Cloud Controls -->
-        <div class="cloud-group" id="cloudGroup">
-            <!-- Main Group Cloud -->
-            <button class="cloud-group-main" id="cloudGroupMain">
-                <i class="ri-more-2-fill"></i>
-            </button>
-            
-            <!-- Individual Cloud Buttons (hidden by default) -->
-            <button class="cloud-option cloud-arduino" id="arduinoToggle" onclick="window.toggleArduinoConnection();" title="Arduino">
-                <i class="ri-cpu-line" id="arduinoIcon"></i>
-            </button>
-
-            <button class="cloud-option cloud-teams" id="teamsToggle" onclick="openTeamsModal();" title="Teams">
-                <i class="ri-group-line"></i>
-            </button>
-
-            <button class="cloud-option cloud-questions" id="questionsToggle" onclick="openQuestionsModal();" title="Questions">
-                <i class="ri-book-line"></i>
-            </button>
-
-            <button class="cloud-option cloud-upload" id="uploadToggle" onclick="openUploadModal();" title="Upload/Download">
-                <i class="ri-upload-cloud-line"></i>
-            </button>
-
-            <button class="cloud-option cloud-logs" id="logsToggle" onclick="openLogsModal();" title="Logs">
-                <i class="ri-file-list-line"></i>
-            </button>
-
-            <button class="cloud-option cloud-fullscreen" id="fullscreenToggle" onclick="toggleFullscreen();" title="Fullscreen">
-                <i class="ri-fullscreen-line" id="fullscreenIcon"></i>
-            </button>
-
-            <button class="cloud-option cloud-reset" id="resetToggle" onclick="window.resetGameFromMain();" title="Reset Game (Q)">
-                <i class="ri-refresh-line"></i>
-            </button>
-        </div>
+        <!-- Cloud buttons removed - all functionality accessible via hotkeys -->
 
         <!-- Character -->
         <div class="character-container-main">
@@ -421,7 +386,7 @@
         <div id="teamsModal" class="console-modal">
             <div class="console-modal-content">
                 <div class="console-modal-header">
-                    <h3><span class="section-icon">👥</span>Teams Management</h3>
+                    <h3><i class="ri-group-line section-icon"></i>Teams Management</h3>
                     <span class="close" onclick="closeTeamsModal()">&times;</span>
                 </div>
                 <div class="console-modal-body">
@@ -448,7 +413,7 @@
         <div id="questionsModal" class="console-modal questions-modal">
             <div class="console-modal-content">
                 <div class="console-modal-header">
-                    <h3><span class="section-icon">📚</span>Question Sets</h3>
+                    <h3><i class="ri-book-line section-icon"></i>Question Sets</h3>
                     <span class="close" onclick="closeQuestionsModal()">&times;</span>
                 </div>
                 <div class="console-modal-body">
@@ -475,7 +440,7 @@
         <div id="logsModal" class="console-modal">
             <div class="console-modal-content">
                 <div class="console-modal-header">
-                    <h3><span class="section-icon">📋</span>System Logs</h3>
+                    <h3><i class="ri-file-list-line section-icon"></i>System Logs</h3>
                     <div class="logs-actions">
                         <button onclick="clearLogs()" class="btn btn-secondary">
                             <i class="ri-delete-bin-line"></i>Clear
@@ -507,7 +472,7 @@
         <div id="uploadModal" class="console-modal upload-modal">
             <div class="console-modal-content">
                 <div class="console-modal-header">
-                    <h3><span class="section-icon">📁</span>Data Import/Export</h3>
+                    <h3><i class="ri-upload-cloud-line section-icon"></i>Data Import/Export</h3>
                     <span class="close" onclick="closeUploadModal()">&times;</span>
                 </div>
                 <div class="console-modal-body upload-modal-body">
@@ -521,8 +486,8 @@
                                 <input type="file" id="xlsxFileInput" accept=".xlsx,.xls" style="display: none;">
                                 <div class="upload-drop-zone" onclick="document.getElementById('xlsxFileInput').click()">
                                     <i class="ri-file-excel-line"></i>
-                                    <p>Select XLSX file</p>
-                                    <small>or drag and drop here</small>
+                                    <p id="uploadFileName">Select XLSX file</p>
+                                    <small id="uploadFileInfo">or drag and drop here</small>
                                 </div>
                             </div>
                             <button onclick="processUploadedFile()" class="btn btn-primary upload-btn" id="uploadBtn" disabled>
@@ -568,7 +533,7 @@
         <div id="themeModal" class="console-modal">
             <div class="console-modal-content">
                 <div class="console-modal-header">
-                    <h3>Select Theme</h3>
+                    <h3><i class="ri-palette-line section-icon"></i>Select Theme</h3>
                     <span class="close" onclick="closeThemeModal()">&times;</span>
                 </div>
                 <div class="console-modal-body">

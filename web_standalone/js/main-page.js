@@ -849,8 +849,8 @@ function initializeQuestionsTable() {
     if (!tableBody) return;
     
     tableBody.innerHTML = '';
-    
-    for (let setNumber = 1; setNumber <= 8; setNumber++) {
+    const totalSets = window.gameState.state.config.totalSets;
+    for (let setNumber = 1; setNumber <= totalSets; setNumber++) {
         const setInfo = window.gameState.state.questionSets[setNumber];
         if (!setInfo) continue;
         
@@ -1099,21 +1099,35 @@ function addLog(message, type = 'info') {
 function initializeXLSXHandling() {
     const fileInput = document.getElementById('xlsxFileInput');
     const uploadBtn = document.getElementById('uploadBtn');
+    const uploadFileName = document.getElementById('uploadFileName');
+    const uploadFileInfo = document.getElementById('uploadFileInfo');
     
-    if (!fileInput || !uploadBtn) return;
+    if (!fileInput || !uploadBtn) {
+        addLog('Upload elements not found', 'error');
+        return;
+    }
     
     // Handle file selection
     fileInput.addEventListener('change', function(event) {
         const file = event.target.files[0];
         if (file) {
             uploadBtn.disabled = false;
-            addLog(`File selected: ${file.name}`, 'info');
+            uploadFileName.textContent = file.name;
+            uploadFileInfo.textContent = `Size: ${(file.size / 1024).toFixed(1)} KB`;
+            addLog(`File selected: ${file.name} (${file.size} bytes)`, 'info');
+        } else {
+            uploadBtn.disabled = true;
+            uploadFileName.textContent = 'Select XLSX file';
+            uploadFileInfo.textContent = 'or drag and drop here';
         }
     });
     
     // Handle drag and drop
     const dropZone = document.querySelector('.upload-drop-zone');
-    if (!dropZone) return;
+    if (!dropZone) {
+        addLog('Drop zone not found', 'error');
+        return;
+    }
     
     dropZone.addEventListener('dragover', function(event) {
         event.preventDefault();
@@ -1135,10 +1149,39 @@ function initializeXLSXHandling() {
         const files = event.dataTransfer.files;
         if (files.length > 0) {
             fileInput.files = files;
+            const file = files[0];
             uploadBtn.disabled = false;
-            addLog(`File dropped: ${files[0].name}`, 'info');
+            uploadFileName.textContent = file.name;
+            uploadFileInfo.textContent = `Size: ${(file.size / 1024).toFixed(1)} KB`;
+            addLog(`File dropped: ${file.name} (${file.size} bytes)`, 'info');
         }
     });
+    
+    addLog('XLSX handling initialized', 'info');
+}
+
+// Reset file input and display
+function resetFileInput() {
+    const fileInput = document.getElementById('xlsxFileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadFileName = document.getElementById('uploadFileName');
+    const uploadFileInfo = document.getElementById('uploadFileInfo');
+    
+    if (fileInput) {
+        fileInput.value = ''; // Clear the file input
+    }
+    
+    if (uploadBtn) {
+        uploadBtn.disabled = true; // Disable upload button
+    }
+    
+    if (uploadFileName) {
+        uploadFileName.textContent = 'Select XLSX file'; // Reset filename display
+    }
+    
+    if (uploadFileInfo) {
+        uploadFileInfo.textContent = 'or drag and drop here'; // Reset file info
+    }
 }
 
 window.processUploadedFile = function() {
@@ -1150,93 +1193,159 @@ window.processUploadedFile = function() {
         return;
     }
     
+    addLog(`Processing file: ${file.name} (${file.size} bytes)`, 'info');
+    
+    // Check if XLSX library is available
+    if (typeof XLSX === 'undefined') {
+        addLog('XLSX library not loaded. Please refresh the page.', 'error');
+        return;
+    }
+    
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
+            addLog('File read successfully, processing XLSX data...', 'info');
+            
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
+            
+            addLog(`Workbook loaded. Sheets found: ${workbook.SheetNames.join(', ')}`, 'info');
             
             // Process teams sheet
             if (workbook.SheetNames.includes('teams')) {
                 const teamsSheet = workbook.Sheets['teams'];
                 const teamsData = XLSX.utils.sheet_to_json(teamsSheet);
+                addLog(`Teams data loaded: ${teamsData.length} rows`, 'info');
                 processTeamsData(teamsData);
+            } else {
+                addLog('No "teams" sheet found in XLSX file', 'warning');
             }
             
             // Process questions sheet
             if (workbook.SheetNames.includes('questions')) {
                 const questionsSheet = workbook.Sheets['questions'];
                 const questionsData = XLSX.utils.sheet_to_json(questionsSheet);
+                addLog(`Questions data loaded: ${questionsData.length} rows`, 'info');
                 processQuestionsData(questionsData);
+            } else {
+                addLog('No "questions" sheet found in XLSX file', 'warning');
             }
             
-            addLog(`Successfully processed XLSX file: ${file.name}`, 'success');
-            window.closeUploadModal();
+                                        addLog(`Successfully processed XLSX file: ${file.name}`, 'success');
+                            
+                            // Reset file input and display
+                            resetFileInput();
+                            
+                            window.closeUploadModal();
             
         } catch (error) {
             addLog(`Error processing XLSX file: ${error.message}`, 'error');
+            console.error('XLSX processing error:', error);
         }
+    };
+    
+    reader.onerror = function() {
+        addLog('Error reading file', 'error');
     };
     
     reader.readAsArrayBuffer(file);
 };
 
-function processTeamsData(teamsData) {
-    teamsData.forEach(row => {
-        const teamId = parseInt(row.team_id);
-        if (teamId >= 1 && teamId <= 6) {
-            // Update team name
-            if (row.team_name) {
-                window.gameState.state.teams[teamId].name = row.team_name;
-            }
-            
-            // Update team color
-            if (row.team_color) {
-                const validColors = ['red', 'blue', 'lime', 'orange', 'purple', 'cyan', 'pink', 'yellow'];
-                if (validColors.includes(row.team_color.toLowerCase())) {
-                    window.gameState.state.teams[teamId].color = row.team_color.toLowerCase();
+                function processTeamsData(teamsData) {
+                    addLog(`Processing ${teamsData.length} team rows...`, 'info');
+
+                    teamsData.forEach((row, index) => {
+                        const teamId = parseInt(row.team_id);
+                        addLog(`Row ${index + 1}: team_id=${teamId}, name="${row.team_name}", color="${row.team_color}", score=${row.score}`, 'info');
+
+                        if (teamId >= 1 && teamId <= 6) {
+                            // Update team name
+                            if (row.team_name) {
+                                window.gameState.state.teams[teamId].name = row.team_name;
+                                addLog(`Updated team ${teamId} name to: ${row.team_name}`, 'info');
+                            }
+
+                            // Update team color
+                            if (row.team_color) {
+                                const validColors = ['red', 'blue', 'lime', 'orange', 'purple', 'cyan', 'pink', 'yellow'];
+                                if (validColors.includes(row.team_color.toLowerCase())) {
+                                    window.gameState.state.teams[teamId].color = row.team_color.toLowerCase();
+                                    addLog(`Updated team ${teamId} color to: ${row.team_color}`, 'info');
+                                } else {
+                                    addLog(`Invalid color for team ${teamId}: ${row.team_color}`, 'warning');
+                                }
+                            }
+
+                            // Update score
+                            if (row.score !== undefined) {
+                                window.gameState.state.teams[teamId].score = parseInt(row.score) || 0;
+                                addLog(`Updated team ${teamId} score to: ${window.gameState.state.teams[teamId].score}`, 'info');
+                            }
+
+                            // Update action cards
+                            if (row.angel !== undefined) {
+                                window.gameState.state.actionCards[teamId].angel = Boolean(row.angel);
+                                addLog(`Updated team ${teamId} angel card to: ${Boolean(row.angel)}`, 'info');
+                            }
+                            if (row.devil !== undefined) {
+                                window.gameState.state.actionCards[teamId].devil = Boolean(row.devil);
+                                addLog(`Updated team ${teamId} devil card to: ${Boolean(row.devil)}`, 'info');
+                            }
+                            if (row.cross !== undefined) {
+                                window.gameState.state.actionCards[teamId].cross = Boolean(row.cross);
+                                addLog(`Updated team ${teamId} cross card to: ${Boolean(row.cross)}`, 'info');
+                            }
+                        } else {
+                            addLog(`Invalid team_id: ${teamId} (must be 1-6)`, 'warning');
+                        }
+                    });
+
+                    // Update UI components
+                    updateTeamsTable();
+                    
+                    // Update all team displays on main page
+                    if (window.gameState && window.gameState.updateTeamDisplays) {
+                        window.gameState.updateTeamDisplays();
+                    }
+                    
+                    // Update character colors if character controller exists
+                    if (window.characterController && window.characterController.updateCharacterColors) {
+                        window.characterController.updateCharacterColors();
+                    }
+                    
+                    addLog('Teams data updated from XLSX', 'success');
                 }
-            }
-            
-            // Update score
-            if (row.score !== undefined) {
-                window.gameState.state.teams[teamId].score = parseInt(row.score) || 0;
-            }
-            
-            // Update action cards
-            if (row.angel !== undefined) {
-                window.gameState.state.actionCards[teamId].angel = Boolean(row.angel);
-            }
-            if (row.devil !== undefined) {
-                window.gameState.state.actionCards[teamId].devil = Boolean(row.devil);
-            }
-            if (row.cross !== undefined) {
-                window.gameState.state.actionCards[teamId].cross = Boolean(row.cross);
-            }
-        }
-    });
-    
-    updateTeamsTable();
-    addLog('Teams data updated from XLSX', 'success');
-}
 
 function processQuestionsData(questionsData) {
-    questionsData.forEach(row => {
+    addLog(`Processing ${questionsData.length} question rows...`, 'info');
+    questionsData.forEach((row, index) => {
         const setId = parseInt(row.set_id);
+        addLog(`Row ${index + 1}: set_id=${setId}, title="${row.title}", theme="${row.theme}"`, 'info');
         if (setId >= 1 && setId <= 8) {
             // Update question set title
             if (row.title) {
                 window.gameState.state.questionSets[setId].title = row.title;
+                addLog(`Updated question set ${setId} title to: ${row.title}`, 'info');
             }
             
             // Update theme
             if (row.theme) {
                 window.gameState.state.questionSets[setId].theme = row.theme.toLowerCase();
+                addLog(`Updated question set ${setId} theme to: ${row.theme}`, 'info');
             }
+        } else {
+            addLog(`Invalid set_id: ${setId} (must be 1-8)`, 'warning');
         }
     });
     
-    updateQuestionsTable();
+                        // Update UI components
+                    updateQuestionsTable();
+                    
+                    // Update question set display on main page
+                    if (window.gameState && window.gameState.updateQuestionSetDisplay) {
+                        window.gameState.updateQuestionSetDisplay();
+                    }
+    
     addLog('Questions data updated from XLSX', 'success');
 }
 
