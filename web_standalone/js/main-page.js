@@ -451,12 +451,12 @@ class MainPageApp {
             const originalIcon = resetToggle.innerHTML;
             resetToggle.innerHTML = '<i class="ri-check-line"></i>';
             resetToggle.style.background = 'rgba(76, 175, 80, 0.9)';
-            resetToggle.style.color = 'white';
+            resetToggle.style.color = '#000';
             
             setTimeout(() => {
                 resetToggle.innerHTML = originalIcon;
                 resetToggle.style.background = '';
-                resetToggle.style.color = '';
+                resetToggle.style.color = '#000';
             }, 2000);
         }
     }
@@ -2068,12 +2068,12 @@ class VolumeController {
     }
     
     increaseVolume() {
-        this.volume = Math.min(1, this.volume + 0.1);
+        this.volume = Math.min(1, this.volume + 0.01);
         this.updateVolume();
     }
     
     decreaseVolume() {
-        this.volume = Math.max(0, this.volume - 0.1);
+        this.volume = Math.max(0, this.volume - 0.01);
         this.updateVolume();
     }
     

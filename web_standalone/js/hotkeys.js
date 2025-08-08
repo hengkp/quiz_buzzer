@@ -288,8 +288,7 @@ class HotkeysManager {
         if (isPositive) {
             // Check if this is a victim team answering correctly
             if (isVictimTeam && attackTeam) {
-                
-                // Reset attack tracking parameters immediately
+                // Reset attack tracking parameters immediately (keep currentTeam)
                 if (window.gameState) {
                     window.gameState.set('attackTeam', 0);
                     window.gameState.set('victimTeam', 0);
@@ -298,7 +297,8 @@ class HotkeysManager {
             
             let scoreChange = 0;
             
-            if (isChallenge) {
+            const effectiveChallenge = isChallenge || (hasAngel && currentQuestion > 1);
+            if (effectiveChallenge) {
                 scoreChange = 2; // Challenge mode: +2 for correct
             } else if (currentQuestion === 1) {
                 scoreChange = 1; // Q1: +1 for correct
@@ -323,6 +323,10 @@ class HotkeysManager {
             
             // Handle smart navigation based on question and chances
             setTimeout(() => {
+                // If this was a victim correct answer, remove cross indicator on main character
+                if (isVictimTeam) {
+                    this.removeCrossProtection(teamId);
+                }
                 this.handleSmartNavigationAfterCorrect(currentQuestion, state);
             }, 3000); // Wait for coin animation to complete
             
@@ -499,17 +503,10 @@ class HotkeysManager {
         
         // Trigger auto-navigation after coin animation (additional 2.5 seconds)
         setTimeout(() => {
-            // Ensure cross protection remains visible after victim answers
+            // Remove cross icon on main character after victim has answered
+            this.removeCrossProtection(victimTeamId);
             if (window.gameState) {
                 window.gameState.updateTeamDisplays();
-                
-                // Debug: Check cross protection status for all teams
-                const state = window.gameState.get();
-                for (let teamId = 1; teamId <= 6; teamId++) {
-                    const crossStatus = state.actionCards[teamId].cross;
-                    if (crossStatus) {
-                    }
-                }
             }
             this.handleAutoNavigationAfterIncorrect();
         }, 2500); // 0.5s (score delay) + 2s (coin animation)
@@ -1114,7 +1111,9 @@ class HotkeysManager {
         }
         
         const angelIcon = document.getElementById('mainCharacterAngel');
+        const challengeIcon = document.getElementById('mainCharacterChallenge');
         const currentlyActive = state.angelTeam === teamId;
+        const currentQuestion = state.currentQuestion || 1;
         
         console.log(`🔍 Angel icon found: ${!!angelIcon}, Currently active: ${currentlyActive}`);
         
@@ -1133,11 +1132,15 @@ class HotkeysManager {
             console.log('❌ Angel icon element not found');
         }
         
-        // Apply or remove angel effect (no animation for toggle)
-        if (newAngelTeam > 0) {
-            // Angel protection applied (not needed in standalone)
-        } else {
-            // Angel protection removed (not needed in standalone)
+        // Couple angel with challenge for Q2–Q4; decouple when turning off
+        if (newAngelTeam > 0 && currentQuestion > 1) {
+            if (window.gameState) window.gameState.set('currentChallenge', teamId);
+            if (challengeIcon) challengeIcon.classList.add('active');
+        } else if (newAngelTeam === 0) {
+            if (window.gameState && state.currentChallenge === teamId) {
+                window.gameState.set('currentChallenge', 0);
+            }
+            if (challengeIcon) challengeIcon.classList.remove('active');
         }
         
         // Sync with server (not needed in standalone)
@@ -2595,7 +2598,7 @@ class HotkeysManager {
                                 ">${description}</span>
                                 <kbd style="
                                     background: #667eea;
-                                    color: white;
+                                    color: #000;
                                     border: none;
                                     border-radius: 6px;
                                     padding: 4px 8px;

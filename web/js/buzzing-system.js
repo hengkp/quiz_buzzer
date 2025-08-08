@@ -12,7 +12,7 @@ class BuzzingSystem {
     constructor() {
         this.activeOverlays = new Map();
         this.teamColors = ['red', 'blue', 'lime', 'orange', 'pink', 'yellow'];
-        this.autoHideDelay = 2000; // Changed from 3000ms to 2000ms
+        this.autoHideDelay = 3500; // Extend buzzing display time for better visibility
         this.currentBuzzingTeam = 0;
         this.modalTimeout = null; // Track modal timeout
     }

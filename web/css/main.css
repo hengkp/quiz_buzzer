@@ -212,7 +212,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: clamp(1.5rem, 4vw, 3rem);
+        font-size: clamp(2rem, 5vw, 3.5rem); /* Bigger title */
         font-weight: 600;
         color: #f8f9fa;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
@@ -456,6 +456,7 @@
         color: white;
         transition: all 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
         transform-origin: center center;
+        position: relative;
     }
 
     /* Position planets to match character positions */
@@ -486,6 +487,24 @@
 
     .planet-block.completed {
         filter: grayscale(100%) brightness(0.7);
+    }
+
+    /* Labels under planets (Q1–Q4) */
+    #earth::after { content: 'Q1'; }
+    #moon::after { content: 'Q2'; }
+    #venus::after { content: 'Q3'; }
+    #jupiter::after { content: 'Q4'; }
+    .planet-block::after {
+        position: absolute;
+        left: 50%;
+        bottom: -24px;
+        transform: translateX(-50%);
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #f8f9fa;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+        opacity: 0.9;
+        pointer-events: none;
     }
 
     /* ========== CHARACTER SYSTEM ========== */

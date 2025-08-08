@@ -630,12 +630,12 @@ class MainPageApp {
             const originalIcon = resetToggle.innerHTML;
             resetToggle.innerHTML = '<i class="ri-check-line"></i>';
             resetToggle.style.background = 'rgba(76, 175, 80, 0.9)';
-            resetToggle.style.color = 'white';
+            resetToggle.style.color = '#000';
             
             setTimeout(() => {
                 resetToggle.innerHTML = originalIcon;
                 resetToggle.style.background = '';
-                resetToggle.style.color = '';
+                resetToggle.style.color = '#000';
             }, 2000);
         }
     }

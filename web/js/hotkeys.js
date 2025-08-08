@@ -985,6 +985,7 @@ class HotkeysManager {
         
         const angelIcon = document.getElementById('mainCharacterAngel');
         const currentlyActive = state.angelTeam === teamId;
+        const currentQuestion = state.currentQuestion || 1;
         
         console.log(`🔍 Angel icon found: ${!!angelIcon}, Currently active: ${currentlyActive}`);
         
@@ -1012,6 +1013,12 @@ class HotkeysManager {
                     effect: 'protection against score decrease'
                 });
             }
+            // If angel is activated on Q2–Q4, also toggle challenge on
+            if (currentQuestion > 1) {
+                if (window.gameState) window.gameState.set('currentChallenge', teamId);
+                const challengeIcon = document.getElementById('mainCharacterChallenge');
+                if (challengeIcon) challengeIcon.classList.add('active');
+            }
         } else {
             // Just send socket update, no animation
             if (window.socketManager) {
@@ -1020,6 +1027,12 @@ class HotkeysManager {
                     effect: 'no longer protected from score decrease'
                 });
             }
+            // Clear challenge if it was coupled with angel
+            if (window.gameState && state.currentChallenge === teamId) {
+                window.gameState.set('currentChallenge', 0);
+            }
+            const challengeIcon = document.getElementById('mainCharacterChallenge');
+            if (challengeIcon) challengeIcon.classList.remove('active');
         }
         
         // Sync with server
@@ -2581,7 +2594,7 @@ class HotkeysManager {
                                 ">${description}</span>
                                 <kbd style="
                                     background: #667eea;
-                                    color: white;
+                                    color: #000;
                                     border: none;
                                     border-radius: 6px;
                                     padding: 4px 8px;
