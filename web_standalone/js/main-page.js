@@ -822,23 +822,13 @@ function toggleActionCard(teamId, cardType) {
     const state = window.gameState.state;
     
     if (cardType === 'angel') {
+        // Angel activation must be done via 'z' hotkey on the buzzing team.
         if (!actionCards.angel) {
             addLog(`Team ${teamId} angel card already used`, 'warning');
             return;
         }
-        
-        const isActive = state.angelTeam === teamId;
-        if (isActive) {
-            // Deactivate angel card
-            window.gameState.set('angelTeam', 0);
-        } else {
-            // Activate angel card
-            window.gameState.set('angelTeam', teamId);
-        }
-        
+        addLog(`Use 'Z' to toggle angel for the current buzzing team.`, 'info');
         updateActionCardDisplay(teamId);
-        
-        addLog(`Team ${teamId} angel card: ${isActive ? 'disabled' : 'enabled'}`, 'info');
         
     } else if (cardType === 'devil') {
         if (!actionCards.devil) {

@@ -1647,7 +1647,9 @@ class HotkeysManager {
             //Display the cross protection icon
             const crossIcon = document.getElementById('mainCharacterCross');
             if (crossIcon) {
-                crossIcon.classList.add('active');
+            // Ensure the icon is visible and active (in case a prior reset hid it)
+            crossIcon.style.display = 'block';
+            crossIcon.classList.add('active');
             }
             
         } catch (error) {
@@ -1677,11 +1679,6 @@ class HotkeysManager {
     
     // Remove cross protection for victim team
     removeCrossProtection(victimTeamId) {
-        
-        // Update game state
-        if (window.gameState) {
-            window.gameState.update(`actionCards.${victimTeamId}.cross`, false);
-        }
         
         // Remove cross action from main character
         const crossIcon = document.getElementById('mainCharacterCross');
