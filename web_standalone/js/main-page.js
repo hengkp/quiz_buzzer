@@ -566,9 +566,9 @@ function initializeTeamsTable() {
                 <input type="number" class="team-score-input hidden" id="teamScoreInput-${teamId}" value="${team.score}" onblur="saveTeamScore(${teamId})" onkeypress="handleTeamScoreKeypress(event, ${teamId})">
             </td>
             <td class="team-cards-cell">
-                <div class="team-action-card angel ${window.gameState.state.actionCards[teamId].angel ? 'active' : ''}" onclick="toggleActionCard(${teamId}, 'angel')" id="angelCard-${teamId}"></div>
-                <div class="team-action-card devil ${window.gameState.state.actionCards[teamId].devil ? 'active' : ''}" onclick="toggleActionCard(${teamId}, 'devil')" id="devilCard-${teamId}"></div>
-                <div class="team-action-card cross ${window.gameState.state.actionCards[teamId].cross ? 'active' : ''}" onclick="toggleActionCard(${teamId}, 'cross')" id="crossCard-${teamId}"></div>
+                <div class="team-action-card angel active" onclick="toggleActionCard(${teamId}, 'angel')" id="angelCard-${teamId}"></div>
+                <div class="team-action-card devil active" onclick="toggleActionCard(${teamId}, 'devil')" id="devilCard-${teamId}"></div>
+                <div class="team-action-card cross" onclick="toggleActionCard(${teamId}, 'cross')" id="crossCard-${teamId}"></div>
             </td>
         `;
         
@@ -792,25 +792,20 @@ function handleTeamScoreKeypress(event, teamId) {
 
 function updateActionCardDisplay(teamId) {
     const actionCards = window.gameState.state.actionCards[teamId];
-    const state = window.gameState.state;
     
-    // Update angel card - active if angelTeam equals this team ID
+    // Update angel card - active based on actionCards.angel state
     const angelCard = document.getElementById(`angelCard-${teamId}`);
     if (angelCard) {
-        const isAngelActive = state.angelTeam === teamId;
-        const isAngelAvailable = actionCards.angel;
-        angelCard.className = `team-action-card angel ${isAngelActive ? 'active' : ''} ${!isAngelAvailable ? 'used' : ''}`;
+        angelCard.className = `team-action-card angel ${actionCards.angel ? 'active' : ''}`;
     }
     
-    // Update devil card - active if attackTeam equals this team ID
+    // Update devil card - active based on actionCards.devil state
     const devilCard = document.getElementById(`devilCard-${teamId}`);
     if (devilCard) {
-        const isDevilActive = state.attackTeam === teamId;
-        const isDevilAvailable = actionCards.devil;
-        devilCard.className = `team-action-card devil ${isDevilActive ? 'active' : ''} ${!isDevilAvailable ? 'used' : ''}`;
+        devilCard.className = `team-action-card devil ${actionCards.devil ? 'active' : ''}`;
     }
     
-    // Update cross card
+    // Update cross card - active based on actionCards.cross state
     const crossCard = document.getElementById(`crossCard-${teamId}`);
     if (crossCard) {
         crossCard.className = `team-action-card cross ${actionCards.cross ? 'active' : ''}`;
@@ -818,44 +813,22 @@ function updateActionCardDisplay(teamId) {
 }
 
 function toggleActionCard(teamId, cardType) {
+    // Simply toggle the action card state in both localStorage and game state
     const actionCards = window.gameState.state.actionCards[teamId];
-    const state = window.gameState.state;
     
-    if (cardType === 'angel') {
-        // Angel activation must be done via 'z' hotkey on the buzzing team.
-        if (!actionCards.angel) {
-            addLog(`Team ${teamId} angel card already used`, 'warning');
-            return;
-        }
-        addLog(`Use 'Z' to toggle angel for the current buzzing team.`, 'info');
+    if (actionCards && actionCards.hasOwnProperty(cardType)) {
+        // Toggle the card state
+        const newState = !actionCards[cardType];
+        
+        // Update the game state (this will also update localStorage automatically)
+        window.gameState.update(`actionCards.${teamId}.${cardType}`, newState);
+        
+        // Update both the management table display and main screen display
         updateActionCardDisplay(teamId);
+        window.gameState.updateTeamDisplays();
         
-    } else if (cardType === 'devil') {
-        if (!actionCards.devil) {
-            addLog(`Team ${teamId} devil card already used`, 'warning');
-            return;
-        }
-        
-        const isActive = state.attackTeam === teamId;
-        if (isActive) {
-            // Deactivate devil card
-            window.gameState.set('attackTeam', 0);
-        } else {
-            // Activate devil card
-            window.gameState.set('attackTeam', teamId);
-        }
-        
-        updateActionCardDisplay(teamId);
-        
-        addLog(`Team ${teamId} devil card: ${isActive ? 'disabled' : 'enabled'}`, 'info');
-        
-    } else if (cardType === 'cross') {
-        const isActive = actionCards.cross;
-        actionCards.cross = !isActive;
-        
-        updateActionCardDisplay(teamId);
-        
-        addLog(`Team ${teamId} cross card: ${isActive ? 'disabled' : 'enabled'}`, 'info');
+        // Log the change
+        addLog(`Team ${teamId} ${cardType} card: ${newState ? 'enabled' : 'disabled'}`, 'info');
     }
 }
 

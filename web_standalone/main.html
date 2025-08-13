@@ -1,43 +1,36 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz Buzzer - Among Us Style</title>
-    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQEAYAAABPYyMiAAAABmJLR0T///////8JWPfcAAAACXBIWXMAAABIAAAASABGyWs+AAAAF0lEQVRIx2NgGAWjYBSMglEwCkbBSAcACBAAAeaR9cIAAAAASUVORK5CYII=">
-    
+    <link rel="icon" type="image/x-icon"
+        href="data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQEAYAAABPYyMiAAAABmJLR0T///////8JWPfcAAAACXBIWXMAAABIAAAASABGyWs+AAAAF0lEQVRIx2NgGAWjYBSMglEwCkbBSAcACBAAAeaR9cIAAAAASUVORK5CYII=">
+
     <!-- External Dependencies -->
     <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
-    
+
     <!-- Main Stylesheet -->
     <link rel="stylesheet" href="css/main.css">
 </head>
+
 <body>
-    
+
     <!-- Main Container -->
     <div class="main-container" id="mainContainer">
 
         <!-- Background Animation -->
-        <lottie-player 
-            class="background-animation"
-            src="assets/animations/background_space.json"
-            background="transparent"
-            speed="0.5"
-            loop
-            autoplay>
+        <lottie-player class="background-animation" src="assets/animations/background_space.json"
+            background="transparent" speed="0.5" loop autoplay>
         </lottie-player>
 
         <!-- Background Animation 2 -->
-        <lottie-player 
-            class="background-animation-2"
-            src="assets/animations/background_orbit.json"
-            background="transparent"
-            speed="0.5"
-            loop
-            autoplay>
+        <lottie-player class="background-animation-2" src="assets/animations/background_orbit.json"
+            background="transparent" speed="0.5" loop autoplay>
         </lottie-player>
 
         <!-- Background Music -->
@@ -45,7 +38,7 @@
             <source src="assets/audio/among-us-background.mp3" type="audio/mpeg">
         </audio>
 
-                
+
         <!-- Header -->
         <div class="header">
             Final Quiz Bowl Science Day 2025 @RERU
@@ -60,31 +53,19 @@
 
         <!-- Timer -->
         <div class="timer-value" id="timerDisplay">0:00</div>
-        
+
         <!-- Cloud buttons removed - all functionality accessible via hotkeys -->
 
         <!-- Character -->
         <div class="character-container-main">
-            <lottie-player 
-                class="victim-character"
-                id="victimCharacter"
-                src="assets/animations/among_us_idle.json"
-                background="transparent"
-                speed="1"
-                loop
-                autoplay>
+            <lottie-player class="victim-character" id="victimCharacter" src="assets/animations/among_us_idle.json"
+                background="transparent" speed="1" loop autoplay>
             </lottie-player>
 
-            <lottie-player 
-                class="main-character"
-                id="progressCharacter"
-                src="assets/animations/among_us_idle.json"
-                background="transparent"
-                speed="1"
-                loop
-                autoplay>
+            <lottie-player class="main-character" id="progressCharacter" src="assets/animations/among_us_idle.json"
+                background="transparent" speed="1" loop autoplay>
             </lottie-player>
-            
+
             <!-- Action Card and Challenge Indicator Panel -->
             <div class="character-action-panel" id="characterActionPanel">
                 <div class="character-action-icon angel" id="mainCharacterAngel"></div>
@@ -92,72 +73,37 @@
                 <div class="character-action-icon cross" id="mainCharacterCross"></div>
                 <div class="character-action-icon challenge" id="mainCharacterChallenge"></div>
             </div>
-            
+
             <!-- Score indicator -->
             <div class="score-indicator" id="scoreIndicator">
-                <lottie-player 
-                    id="scoreAnimation"
-                    background="transparent" 
-                    speed="1" 
-                    loop
-                    autoplay="false"
+                <lottie-player id="scoreAnimation" background="transparent" speed="1" loop autoplay="false"
                     class="score-animation">
                 </lottie-player>
             </div>
-        
+
         </div>
-            
+
         <!-- Planet Progress -->
         <div class="planet-blocks" id="planetBlocks">
-            <lottie-player 
-                class="planet-block earth current"
-                id="earth"
-                src="assets/animations/space_earth.json"
-                background="transparent"
-                speed="1"
-                loop
-                autoplay>
+            <lottie-player class="planet-block earth current" id="earth" src="assets/animations/space_earth.json"
+                background="transparent" speed="1" loop autoplay>
             </lottie-player>
-            <lottie-player 
-                class="planet-block moon "
-                id="moon"
-                src="assets/animations/space_moon.json"
-                background="transparent"
-                speed="1"
-                loop
-                autoplay>
+            <lottie-player class="planet-block moon " id="moon" src="assets/animations/space_moon.json"
+                background="transparent" speed="1" loop autoplay>
             </lottie-player>
-            <lottie-player 
-                class="planet-block venus "
-                id="venus"
-                src="assets/animations/space_venus.json"
-                background="transparent"
-                speed="1"
-                loop
-                autoplay>
+            <lottie-player class="planet-block venus " id="venus" src="assets/animations/space_venus.json"
+                background="transparent" speed="1" loop autoplay>
             </lottie-player>
-            <lottie-player 
-                class="planet-block jupiter "
-                id="jupiter"
-                src="assets/animations/space_jupiter.json"
-                background="transparent"
-                speed="1"
-                loop
-                autoplay>
+            <lottie-player class="planet-block jupiter " id="jupiter" src="assets/animations/space_jupiter.json"
+                background="transparent" speed="1" loop autoplay>
             </lottie-player>
         </div>
-            
+
         <!-- Question Blocks Progress -->
         <div class="question-block" id="questionBlock">
-            
-            <lottie-player 
-                class="question-block-star"
-                id="questionBlockStar"
-                src="assets/animations/space_astronaut.json"
-                background="transparent"
-                speed="1"
-                loop
-                autoplay>
+
+            <lottie-player class="question-block-star" id="questionBlockStar"
+                src="assets/animations/space_astronaut.json" background="transparent" speed="1" loop autoplay>
             </lottie-player>
             <div class="question-block-number" id="questionBlockNumber">1</div>
         </div>
@@ -168,14 +114,8 @@
                 <div class="team-name" id="teamName1">Team A</div>
                 <div class="team-content">
                     <img class="team-rank active" id="teamRanking1" src="assets/rankings/ranking-badge.png">
-                    <lottie-player 
-                        class="team-character"
-                        id="teamCharacter1"
-                        src="assets/animations/among_us_idle.json"
-                        background="transparent"
-                        speed="1"
-                        loop
-                        autoplay>
+                    <lottie-player class="team-character" id="teamCharacter1" src="assets/animations/among_us_idle.json"
+                        background="transparent" speed="1" loop autoplay>
                     </lottie-player>
                     <div class="team-score" id="teamScore1">0</div>
                 </div>
@@ -185,20 +125,14 @@
                     <div class="team-action-card cross" id="teamCross1"></div>
                 </div>
             </div>
-            
+
             <!-- Team B -->
             <div class="team-card" style="top: 10%; left: 0%; z-index: 22;" data-team-id="2">
                 <div class="team-name" id="teamName2">Team B</div>
                 <div class="team-content">
                     <img class="team-rank active" id="teamRanking2" src="assets/rankings/ranking-badge.png">
-                    <lottie-player 
-                        class="team-character"
-                        id="teamCharacter2"
-                        src="assets/animations/among_us_idle.json"
-                        background="transparent"
-                        speed="1"
-                        loop
-                        autoplay>
+                    <lottie-player class="team-character" id="teamCharacter2" src="assets/animations/among_us_idle.json"
+                        background="transparent" speed="1" loop autoplay>
                     </lottie-player>
                     <div class="team-score" id="teamScore2">0</div>
                 </div>
@@ -208,21 +142,15 @@
                     <div class="team-action-card cross" id="teamCross2"></div>
                 </div>
             </div>
-            
-            
+
+
             <!-- Team C -->
             <div class="team-card" style="top: 12%; left: 16%; z-index: 23;" data-team-id="3">
                 <div class="team-name" id="teamName3">Team C</div>
                 <div class="team-content">
                     <img class="team-rank active" id="teamRanking3" src="assets/rankings/ranking-badge.png">
-                    <lottie-player 
-                        class="team-character"
-                        id="teamCharacter3"
-                        src="assets/animations/among_us_idle.json"
-                        background="transparent"
-                        speed="1"
-                        loop
-                        autoplay>
+                    <lottie-player class="team-character" id="teamCharacter3" src="assets/animations/among_us_idle.json"
+                        background="transparent" speed="1" loop autoplay>
                     </lottie-player>
                     <div class="team-score" id="teamScore3">0</div>
                 </div>
@@ -232,45 +160,33 @@
                     <div class="team-action-card cross" id="teamCross3"></div>
                 </div>
             </div>
-            
-            
+
+
             <!-- Team D -->
             <div class="team-card" style="top: -17%; left: 40%; z-index: 24;" data-team-id="4">
                 <div class="team-name" id="teamName4">Team D</div>
                 <div class="team-content">
                     <img class="team-rank active" id="teamRanking4" src="assets/rankings/ranking-badge.png">
-                    <lottie-player 
-                        class="team-character"
-                        id="teamCharacter4"
-                        src="assets/animations/among_us_idle.json"
-                        background="transparent"
-                        speed="1"
-                        loop
-                        autoplay>
+                    <lottie-player class="team-character" id="teamCharacter4" src="assets/animations/among_us_idle.json"
+                        background="transparent" speed="1" loop autoplay>
                     </lottie-player>
                     <div class="team-score" id="teamScore4">0</div>
                 </div>
                 <div class="team-actions">
                     <div class="team-action-card angel active" id="teamAngel4"></div>
                     <div class="team-action-card devil active" id="teamDevil4"></div>
-                    <div class="team-action-card cross" id="teamCross4"></div>    
+                    <div class="team-action-card cross" id="teamCross4"></div>
                 </div>
             </div>
-            
-            
+
+
             <!-- Team E -->
             <div class="team-card" style="top: -50%; left: 64%; z-index: 25;" data-team-id="5">
                 <div class="team-name" id="teamName5">Team E</div>
                 <div class="team-content">
                     <img class="team-rank active" id="teamRanking5" src="assets/rankings/ranking-badge.png">
-                    <lottie-player 
-                        class="team-character"
-                        id="teamCharacter5"
-                        src="assets/animations/among_us_idle.json"
-                        background="transparent"
-                        speed="1"
-                        loop
-                        autoplay>
+                    <lottie-player class="team-character" id="teamCharacter5" src="assets/animations/among_us_idle.json"
+                        background="transparent" speed="1" loop autoplay>
                     </lottie-player>
                     <div class="team-score" id="teamScore5">0</div>
                 </div>
@@ -280,21 +196,15 @@
                     <div class="team-action-card cross" id="teamCross5"></div>
                 </div>
             </div>
-            
-            
+
+
             <!-- Team F -->
             <div class="team-card" style="top: -106%; left: 83%; z-index: 26;" data-team-id="6">
                 <div class="team-name" id="teamName6">Team F</div>
                 <div class="team-content">
                     <img class="team-rank active" id="teamRanking6" src="assets/rankings/ranking-badge.png">
-                    <lottie-player 
-                        class="team-character"
-                        id="teamCharacter6"
-                        src="assets/animations/among_us_idle.json"
-                        background="transparent"
-                        speed="1"
-                        loop
-                        autoplay>
+                    <lottie-player class="team-character" id="teamCharacter6" src="assets/animations/among_us_idle.json"
+                        background="transparent" speed="1" loop autoplay>
                     </lottie-player>
                     <div class="team-score" id="teamScore6">0</div>
                 </div>
@@ -310,7 +220,7 @@
         <div id="teamBuzzingModal" class="buzzing-modal">
             <img id="teamBuzzingCard" class="buzzing-modal-card" src="assets/buzzing/buzzing-white.png">
         </div>
-        
+
         <!-- Devil Card Attack Selection Modal -->
         <div id="devilAttackModal" class="attack-modal">
             <div class="attack-modal-content">
@@ -318,45 +228,45 @@
                     <h3>😈 Devil Card Attack</h3>
                     <p>Select a team to attack:</p>
                 </div>
-                
+
                 <div class="attack-team-grid">
                     <!-- Team A -->
                     <div class="attack-team-option" data-team-id="1" onclick="selectAttackTarget(1)">
                         <img class="attack-team-character" src="assets/characters/character-red.png" alt="Team A">
                         <div class="attack-team-name">Team A</div>
                     </div>
-                    
+
                     <!-- Team B -->
                     <div class="attack-team-option" data-team-id="2" onclick="selectAttackTarget(2)">
                         <img class="attack-team-character" src="assets/characters/character-blue.png" alt="Team B">
                         <div class="attack-team-name">Team B</div>
                     </div>
-                    
+
                     <!-- Team C -->
                     <div class="attack-team-option" data-team-id="3" onclick="selectAttackTarget(3)">
                         <img class="attack-team-character" src="assets/characters/character-lime.png" alt="Team C">
                         <div class="attack-team-name">Team C</div>
                     </div>
-                    
+
                     <!-- Team D -->
                     <div class="attack-team-option" data-team-id="4" onclick="selectAttackTarget(4)">
                         <img class="attack-team-character" src="assets/characters/character-orange.png" alt="Team D">
                         <div class="attack-team-name">Team D</div>
                     </div>
-                    
+
                     <!-- Team E -->
                     <div class="attack-team-option" data-team-id="5" onclick="selectAttackTarget(5)">
                         <img class="attack-team-character" src="assets/characters/character-pink.png" alt="Team E">
                         <div class="attack-team-name">Team E</div>
                     </div>
-                    
+
                     <!-- Team F -->
                     <div class="attack-team-option" data-team-id="6" onclick="selectAttackTarget(6)">
                         <img class="attack-team-character" src="assets/characters/character-yellow.png" alt="Team F">
                         <div class="attack-team-name">Team F</div>
                     </div>
                 </div>
-                
+
                 <div class="attack-modal-actions">
                     <button class="attack-confirm-btn" onclick="confirmDevilAttack()" disabled>
                         Confirm Attack
@@ -367,17 +277,12 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Answer Animation Modal -->
         <div id="answerModal" class="answer-modal">
             <div class="answer-modal-content">
-                <lottie-player 
-                    id="answerAnimation"
-                    src="assets/animations/answer_correct.json"
-                    background="transparent"
-                    speed="1"
-                    loop="false"
-                    autoplay>
+                <lottie-player id="answerAnimation" src="assets/animations/answer_correct.json" background="transparent"
+                    speed="1" loop="false" autoplay>
                 </lottie-player>
             </div>
         </div>
@@ -484,17 +389,19 @@
                             </div>
                             <div class="file-upload-area">
                                 <input type="file" id="xlsxFileInput" accept=".xlsx,.xls" style="display: none;">
-                                <div class="upload-drop-zone" onclick="document.getElementById('xlsxFileInput').click()">
+                                <div class="upload-drop-zone"
+                                    onclick="document.getElementById('xlsxFileInput').click()">
                                     <i class="ri-file-excel-line"></i>
                                     <p id="uploadFileName">Select XLSX file</p>
                                     <small id="uploadFileInfo">or drag and drop here</small>
                                 </div>
                             </div>
-                            <button onclick="processUploadedFile()" class="btn btn-primary upload-btn" id="uploadBtn" disabled>
+                            <button onclick="processUploadedFile()" class="btn btn-primary upload-btn" id="uploadBtn"
+                                disabled>
                                 <i class="ri-upload-cloud-line"></i>Import Data
                             </button>
                         </div>
-                        
+
                         <div class="upload-card">
                             <div class="upload-card-header">
                                 <i class="ri-download-line"></i>
@@ -509,7 +416,7 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="format-requirements">
                         <details>
                             <summary><i class="ri-information-line"></i>File Format Requirements</summary>
@@ -591,48 +498,48 @@
             <div class="color-grid" id="colorGrid-6"></div>
         </div>
 
-                        <!-- Volume Control Modal -->
-<div id="volumeModal" class="volume-modal">
-    <div class="volume-modal-content">
-        <div class="volume-icon">
-            <i class="ri-volume-up-line" id="volumeIcon"></i>
+        <!-- Volume Control Modal -->
+        <div id="volumeModal" class="volume-modal">
+            <div class="volume-modal-content">
+                <div class="volume-icon">
+                    <i class="ri-volume-up-line" id="volumeIcon"></i>
+                </div>
+                <div class="volume-bar">
+                    <div class="volume-fill" id="volumeFill"></div>
+                </div>
+                <div class="volume-text" id="volumeText">50%</div>
+            </div>
         </div>
-        <div class="volume-bar">
-            <div class="volume-fill" id="volumeFill"></div>
-        </div>
-        <div class="volume-text" id="volumeText">50%</div>
-    </div>
-</div>
 
-<!-- Arduino Connection Status Modal -->
-<div id="arduinoModal" class="arduino-modal">
-    <div class="arduino-modal-content">
-        <div class="arduino-icon">
-            <i class="ri-cpu-line" id="arduinoStatusIcon"></i>
-        </div>
-        <div class="arduino-status">
-            <div class="arduino-status-text" id="arduinoStatusText">Disconnected</div>
-            <div class="arduino-port-text" id="arduinoPortText">No device</div>
+        <!-- Arduino Connection Status Modal -->
+        <div id="arduinoModal" class="arduino-modal">
+            <div class="arduino-modal-content">
+                <div class="arduino-icon">
+                    <i class="ri-cpu-line" id="arduinoStatusIcon"></i>
+                </div>
+                <div class="arduino-status">
+                    <div class="arduino-status-text" id="arduinoStatusText">Disconnected</div>
+                    <div class="arduino-port-text" id="arduinoPortText">No device</div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
-    </div>
-    
+
     <script src="js/game-state.js"></script>
-    
+
     <script src="js/character-colors.js"></script>
     <script src="js/character-controller.js"></script>
-    
+
     <script src="js/buzzing-system.js"></script>
-    
+
     <script src="js/hotkeys.js"></script>
     <script src="js/fullscreen.js"></script>
-    
+
     <script src="js/main-page.js"></script>
-    
+
     <script>
         // Initialize main character as white immediately when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Wait for ProgressWhite to be available, then apply white color
             const initWhiteCharacter = () => {
                 if (window.ProgressWhite && window.ProgressWhite.applyCharacterColor) {
@@ -647,10 +554,11 @@
                     setTimeout(initWhiteCharacter, 100);
                 }
             };
-            
+
             // Start initialization
             initWhiteCharacter();
         });
     </script>
 </body>
-</html> 
+
+</html>
