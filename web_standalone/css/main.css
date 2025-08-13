@@ -697,6 +697,7 @@
         left: 90%;
         display: flex;
         flex-direction: row;
+        align-items: flex-start;
         gap: clamp(4px, 1vw, 8px);
         z-index: 35;
         pointer-events: none;
@@ -749,6 +750,7 @@
             filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.8));
         }
     }
+
 
     /* ========== SCORE ANIMATION ========== */
 
@@ -2552,105 +2554,5 @@
 
         to {
             opacity: 1;
-        }
-    }
-
-    /* =====
-===== CHARACTER ACTION PANEL ========== */
-    .character-container-main {
-        position: relative;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-        height: 100%;
-    }
-
-    .character-action-panel {
-        position: absolute;
-        top: -60px;
-        /* Position above the character */
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 8px;
-        justify-content: center;
-        align-items: center;
-        z-index: 100;
-        padding: 8px;
-        background: rgba(255, 255, 255, 0.9);
-        border-radius: 12px;
-        backdrop-filter: blur(10px);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-    }
-
-    .character-action-icon {
-        width: 40px;
-        height: 40px;
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
-        transition: all 0.3s ease;
-        opacity: 0;
-        transform: scale(0.8);
-        filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
-    }
-
-    .character-action-icon.active {
-        opacity: 1;
-        transform: scale(1);
-    }
-
-    .character-action-icon.angel {
-        background-image: url('../assets/cards/card-angel.png');
-    }
-
-    .character-action-icon.devil {
-        background-image: url('../assets/cards/card-devil.png');
-    }
-
-    .character-action-icon.cross {
-        background-image: url('../assets/cards/card-cross.png');
-    }
-
-    .character-action-icon.challenge {
-        background-image: url('../assets/cards/card-challenge.png');
-    }
-
-    /* Animation for when icons appear */
-    .character-action-icon.active {
-        animation: iconAppear 0.3s ease-out;
-    }
-
-    @keyframes iconAppear {
-        0% {
-            opacity: 0;
-            transform: scale(0.5) translateY(10px);
-        }
-
-        100% {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-        }
-    }
-
-    /* Show the panel only when it has active icons - handled by JavaScript */
-    .character-action-panel.empty {
-        opacity: 0;
-        pointer-events: none;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .character-action-panel {
-            top: -50px;
-            gap: 6px;
-            padding: 6px;
-        }
-
-        .character-action-icon {
-            width: 32px;
-            height: 32px;
         }
     }

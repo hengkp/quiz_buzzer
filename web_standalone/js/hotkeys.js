@@ -90,7 +90,7 @@ class HotkeysManager {
         this.bind('z', (event) => {
             event.preventDefault();
             this.handleAngelCard();
-        }, 'Activate/Deactivate angel card');
+        }, 'Toggle Angel Card (any question)');
         
         this.bind('x', (event) => {
             event.preventDefault();
@@ -99,8 +99,8 @@ class HotkeysManager {
         
         this.bind('c', (event) => {
             event.preventDefault();
-            this.handleCancelDevilAttack();
-        }, 'Activate/Deactivate Challenge Mode');
+            this.handleChallengeMode();
+        }, 'Toggle Challenge Mode');
         
         this.bind('Enter', (event) => {
             event.preventDefault();
@@ -1181,7 +1181,8 @@ class HotkeysManager {
         }
     }
 
-    // Auto-activate challenge mode after navigation if angel is active
+    // Optional: Auto-activate challenge mode after navigation if both angel is active and we're on Q2-Q4
+    // This is now optional and doesn't interfere with manual toggles
     autoActivateChallengeIfAngelActive() {
         const state = window.gameState?.get();
         if (!state || !state.currentTeam || state.currentTeam < 1 || state.currentTeam > 6) {
@@ -1192,8 +1193,8 @@ class HotkeysManager {
         const currentQuestion = state.currentQuestion || 1;
         const challengeIcon = document.getElementById('mainCharacterChallenge');
         
-        // Auto-activate challenge mode for Q2-Q4 ONLY if angel is already active
-        if (currentQuestion > 1 && state.angelTeam === teamId) {
+        // Only auto-activate if angel is active AND challenge is not already manually set
+        if (currentQuestion > 1 && state.angelTeam === teamId && state.currentChallenge === 0) {
             if (window.gameState) {
                 window.gameState.set('currentChallenge', teamId);
             }
@@ -1221,7 +1222,7 @@ class HotkeysManager {
         }
     }
     
-    // Handle angel card toggle
+    // Handle angel card toggle - Simple independent toggle
     handleAngelCard() {
         console.log('🔔 Angel card hotkey pressed');
         const state = window.gameState?.get();
@@ -1240,20 +1241,18 @@ class HotkeysManager {
         }
         
         const angelIcon = document.getElementById('mainCharacterAngel');
-        const challengeIcon = document.getElementById('mainCharacterChallenge');
         const currentlyActive = state.angelTeam === teamId;
-        const currentQuestion = state.currentQuestion || 1;
         
         console.log(`🔍 Angel icon found: ${!!angelIcon}, Currently active: ${currentlyActive}`);
         
-        // Toggle angel team (temporary activation)
+        // Simple toggle - no complex logic
         const newAngelTeam = currentlyActive ? 0 : teamId;
         
         if (window.gameState) {
             window.gameState.set('angelTeam', newAngelTeam);
         }
         
-        // Toggle angel icon visibility based on activation state
+        // Toggle angel icon visibility
         if (angelIcon) {
             if (newAngelTeam > 0) {
                 angelIcon.classList.add('active');
@@ -1264,18 +1263,43 @@ class HotkeysManager {
             }
         }
         
-        // Couple angel with challenge for Q2–Q4; decouple when turning off
-        if (newAngelTeam > 0 && currentQuestion > 1) {
-            if (window.gameState) window.gameState.set('currentChallenge', teamId);
-            if (challengeIcon) {
+        // Update panel visibility after changes
+        this.updateActionPanelVisibility();
+        
+        // Sync with server (not needed in standalone)
+        
+    }
+    
+    // Handle challenge mode toggle - Simple independent toggle
+    handleChallengeMode() {
+        console.log('🔔 Challenge mode hotkey pressed');
+        const state = window.gameState?.get();
+        if (!state || !state.currentTeam || state.currentTeam < 1 || state.currentTeam > 6) {
+            console.log('❌ No current team or invalid team ID');
+            return;
+        }
+        
+        const teamId = state.currentTeam;
+        console.log(`🎯 Team ${teamId} challenge mode requested`);
+        
+        const challengeIcon = document.getElementById('mainCharacterChallenge');
+        const currentlyActive = state.currentChallenge === teamId;
+        
+        console.log(`🔍 Challenge icon found: ${!!challengeIcon}, Currently active: ${currentlyActive}`);
+        
+        // Simple toggle - works on any question (Q1, Q2, Q3, Q4)
+        const newChallengeTeam = currentlyActive ? 0 : teamId;
+        
+        if (window.gameState) {
+            window.gameState.set('currentChallenge', newChallengeTeam);
+        }
+        
+        // Toggle challenge icon visibility
+        if (challengeIcon) {
+            if (newChallengeTeam > 0) {
                 challengeIcon.classList.add('active');
-                console.log(`✅ Challenge mode activated with angel for team ${teamId} on Q${currentQuestion}`);
-            }
-        } else if (newAngelTeam === 0) {
-            if (window.gameState && state.currentChallenge === teamId) {
-                window.gameState.set('currentChallenge', 0);
-            }
-            if (challengeIcon) {
+                console.log(`✅ Challenge mode activated for team ${teamId}`);
+            } else {
                 challengeIcon.classList.remove('active');
                 console.log(`✅ Challenge mode deactivated for team ${teamId}`);
             }
