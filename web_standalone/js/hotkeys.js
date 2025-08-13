@@ -1202,6 +1202,23 @@ class HotkeysManager {
                 console.log(`✅ Challenge mode auto-activated for team ${teamId} on Q${currentQuestion} (angel was active)`);
             }
         }
+        
+        // Update panel visibility after changes
+        this.updateActionPanelVisibility();
+    }
+    
+    // Update action panel visibility based on active icons
+    updateActionPanelVisibility() {
+        const panel = document.getElementById('characterActionPanel');
+        if (!panel) return;
+        
+        const activeIcons = panel.querySelectorAll('.character-action-icon.active');
+        
+        if (activeIcons.length > 0) {
+            panel.classList.remove('empty');
+        } else {
+            panel.classList.add('empty');
+        }
     }
     
     // Handle angel card toggle
@@ -1263,6 +1280,9 @@ class HotkeysManager {
                 console.log(`✅ Challenge mode deactivated for team ${teamId}`);
             }
         }
+        
+        // Update panel visibility after changes
+        this.updateActionPanelVisibility();
         
         // Sync with server (not needed in standalone)
         
@@ -2121,6 +2141,9 @@ class HotkeysManager {
         if (devilIcon) devilIcon.classList.remove('active');
         if (challengeIcon) challengeIcon.classList.remove('active');
         if (crossIcon) crossIcon.classList.remove('active');
+        
+        // Update panel visibility after clearing icons
+        this.updateActionPanelVisibility();
         
         // Reset character to white using character controller
         if (window.characterController) {
