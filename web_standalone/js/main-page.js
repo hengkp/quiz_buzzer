@@ -17,46 +17,46 @@ class MainPageApp {
         ];
         this.completedSteps = 0;
     }
-    
+
     // Initialize the main page application
     async init() {
         if (this.initialized) {
             return;
         }
-        
-        
+
+
         try {
             // Wait for DOM to be ready
             await this.waitForDOM();
-            
+
             // Wait for dependencies to load
             await this.waitForDependencies();
-            
+
             // Initialize systems in order
             await this.initializeSystems();
-            
+
             // Ensure character starts as white (skip on console page)
             if (!window.location.pathname.includes('console.html')) {
                 await this.ensureCharacterStartsWhite();
             }
-            
+
             // Initialize team character colors (skip on console page)
             if (!window.location.pathname.includes('console.html')) {
                 await this.initializeTeamCharacterColors();
-                
+
                 // Start continuous team character random animations (5-20 seconds)
                 await this.startTeamAnimations();
             }
-            
+
             // Setup global functions for backward compatibility
             this.setupBackwardCompatibility();
-            
+
             this.initialized = true;
-            
+
         } catch (error) {
         }
     }
-    
+
     // Wait for DOM to be ready
     waitForDOM() {
         return new Promise((resolve) => {
@@ -67,7 +67,7 @@ class MainPageApp {
             }
         });
     }
-    
+
     // Wait for required dependencies
     waitForDependencies() {
         return new Promise((resolve) => {
@@ -75,20 +75,20 @@ class MainPageApp {
                 const required = [
                     'ProgressWhite' // Character colors
                 ];
-                
+
                 const missing = required.filter(dep => typeof window[dep] === 'undefined');
-                
+
                 if (missing.length === 0) {
                     resolve();
                 } else {
                     setTimeout(checkDependencies, 100);
                 }
             };
-            
+
             checkDependencies();
         });
     }
-    
+
     // Initialize all systems
     async initializeSystems() {
         const systems = [
@@ -99,7 +99,7 @@ class MainPageApp {
             () => this.initializeArduinoConnection(),
             () => this.initializeCloudGroup()
         ];
-        
+
         // Execute all systems in order
         for (let i = 0; i < systems.length; i++) {
             try {
@@ -110,50 +110,50 @@ class MainPageApp {
             }
         }
     }
-    
+
     // Initialize game state
     initializeGameState() {
         if (!window.gameState) {
             throw new Error('Game state not available');
         }
-        
+
         // Load server state and sync with client state
         this.loadServerState();
-        
+
         return Promise.resolve();
     }
-    
+
     // Load server state and sync with client state
     loadServerState() {
         // Server state loading not needed in standalone version
     }
-    
+
     // Request server state
     requestServerState() {
         // Server state not needed in standalone version
     }
-    
+
     // Add event listener for server state response
     setupServerStateListener() {
         // Server state listener not needed in standalone version
     }
-    
+
     // Sync client state with server state
     syncClientStateWithServer(serverState) {
         // Server sync not needed in standalone version
     }
-    
+
     // Initialize character controller
     initializeCharacterController() {
         // Skip character controller initialization on console page
         if (window.location.pathname.includes('console.html')) {
             return Promise.resolve();
         }
-        
+
         if (!window.characterController) {
             throw new Error('Character controller not available');
         }
-        
+
         // Wait a bit for DOM elements to be available
         return new Promise((resolve) => {
             setTimeout(() => {
@@ -166,66 +166,66 @@ class MainPageApp {
             }, 500);
         });
     }
-    
+
     // Initialize buzzing system
     initializeBuzzingSystem() {
         if (!window.buzzingSystem) {
             throw new Error('Buzzing system not available');
         }
-        
+
         const success = window.buzzingSystem.init();
         if (!success) {
             throw new Error('Buzzing system initialization failed');
         }
-        
+
         return Promise.resolve();
     }
-    
+
     // Initialize hotkeys
     initializeHotkeys() {
         // Skip hotkeys initialization on console page
         if (window.location.pathname.includes('console.html')) {
             return Promise.resolve();
         }
-        
+
         if (!window.hotkeysManager) {
             throw new Error('Hotkeys manager not available');
         }
-        
+
         const success = window.hotkeysManager.init();
         if (!success) {
             throw new Error('Hotkeys initialization failed');
         }
-        
+
         return Promise.resolve();
     }
-    
+
     // Initialize team character colors
     async initializeTeamCharacterColors() {
-        
+
         try {
             // Wait for ProgressWhite to be available
             if (window.ProgressWhite?.initializeTeamColors) {
                 // Wait a bit for elements to be ready
                 await new Promise(resolve => setTimeout(resolve, 300));
-                
+
                 // Initialize team colors
                 window.ProgressWhite.initializeTeamColors();
             } else {
-                
+
                 // Fallback: manually set team character colors
                 const teamColors = ['red', 'blue', 'lime', 'orange', 'pink', 'yellow'];
                 for (let i = 1; i <= 6; i++) {
                     const teamCharacter = document.getElementById(`teamCharacter${i}`);
                     if (teamCharacter && window.ProgressWhite?.applyCharacterColor) {
-                        await window.ProgressWhite.applyCharacterColor(`teamCharacter${i}`, teamColors[i-1]);
+                        await window.ProgressWhite.applyCharacterColor(`teamCharacter${i}`, teamColors[i - 1]);
                     }
                 }
             }
         } catch (error) {
         }
     }
-    
+
     // Setup backward compatibility functions
     setupBackwardCompatibility() {
         // Setup global aliases for commonly used functions
@@ -234,26 +234,26 @@ class MainPageApp {
                 return window.characterController.moveToQuestion(setNumber, questionNumber);
             }
         };
-        
+
         window.getGameState = () => {
             return window.gameState?.get();
         };
-        
+
     }
-    
+
     // Ensure character starts as white
     async ensureCharacterStartsWhite() {
         // Skip character initialization on console page
         if (window.location.pathname.includes('console.html')) {
             return;
         }
-        
+
         try {
             const progressCharacter = document.getElementById('progressCharacter');
             if (progressCharacter) {
                 // Wait a moment to ensure the element is fully ready
                 await new Promise(resolve => setTimeout(resolve, 100));
-                
+
                 // Use ProgressWhite system to properly apply white color
                 if (window.ProgressWhite && window.ProgressWhite.applyCharacterColor) {
                     const success = await window.ProgressWhite.applyCharacterColor('progressCharacter', 'white');
@@ -261,29 +261,29 @@ class MainPageApp {
                     // Fallback: direct src assignment
                     progressCharacter.src = 'assets/animations/among_us_idle.json';
                 }
-                
+
                 // Ensure it's visible and playing
                 progressCharacter.style.display = 'block';
-                
+
                 // Wait for it to load
                 await new Promise(resolve => setTimeout(resolve, 200));
             } else {
             }
-            
+
             // Reset game state to ensure no team is selected
             window.gameState.set('currentTeam', 0);
-            
+
         } catch (error) {
         }
     }
-    
+
     // Start continuous team character random animations
     async startTeamAnimations() {
         try {
-            
+
             // Wait a bit for all characters to be properly initialized
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
+
             // Start the continuous animation system
             if (window.ProgressWhite?.teamAnimationSystem) {
                 window.ProgressWhite.teamAnimationSystem.startContinuousAnimations();
@@ -292,71 +292,71 @@ class MainPageApp {
         } catch (error) {
         }
     }
-    
+
     // Initialize cloud group interactions
     initializeCloudGroup() {
         if (window.location.pathname.includes('console.html')) {
             return;
         }
-        
+
         const cloudGroup = document.getElementById('cloudGroup');
         const cloudGroupMain = document.getElementById('cloudGroupMain');
-        
+
         if (!cloudGroup || !cloudGroupMain) {
             return;
         }
-        
-        
+
+
         // Simple toggle with debugging
         cloudGroupMain.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             const isActive = cloudGroup.classList.contains('active');
             cloudGroup.classList.toggle('active');
-            
-            
+
+
             // Debug: Check if cloud options are visible
             const cloudOptions = cloudGroup.querySelectorAll('.cloud-option');
             cloudOptions.forEach((option, index) => {
                 const isVisible = window.getComputedStyle(option).display !== 'none';
             });
         });
-        
+
         // Close when clicking outside
         document.addEventListener('click', (e) => {
             if (!cloudGroup.contains(e.target)) {
                 cloudGroup.classList.remove('active');
             }
         });
-        
+
         // Handle individual cloud button clicks with debugging
         const cloudOptions = cloudGroup.querySelectorAll('.cloud-option');
         cloudOptions.forEach(option => {
             option.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
-                
+
+
                 // Close the cloud group after a short delay
                 setTimeout(() => {
                     cloudGroup.classList.remove('active');
                 }, 200);
             });
         });
-        
-        
+
+
         // Ensure global functions are available
         if (!window.toggleArduinoConnection) {
             window.toggleArduinoConnection = () => {
-                    if (window.arduinoConnected) {
+                if (window.arduinoConnected) {
                     // Arduino disconnect logic (not needed in standalone)
-                    } else {
+                } else {
                     // Arduino connect logic (not needed in standalone)
                 }
             };
         }
-        
+
         if (!window.resetGameFromMain) {
             window.resetGameFromMain = () => {
                 // Use comprehensive reset directly from gameState
@@ -366,8 +366,8 @@ class MainPageApp {
             };
         }
     }
-    
-    
+
+
     // Get initialization status
     getStatus() {
         return {
@@ -377,53 +377,53 @@ class MainPageApp {
             systems: this.systems
         };
     }
-    
+
     initializeArduinoConnection() {
         // Skip Arduino connection on console page
         if (window.location.pathname.includes('console.html')) {
             return Promise.resolve();
         }
-        
-        
+
+
         // Initialize Arduino connection status
         window.arduinoConnected = false;
-        
+
         // Listen for Arduino status changes
         document.addEventListener('arduinoStatusChanged', (event) => {
             const { connected, message } = event.detail;
             window.arduinoConnected = connected;
             this.updateArduinoUI();
         });
-        
+
         // Get initial Arduino status (not needed in standalone)
-        
+
         // Set up global Arduino toggle function
         window.toggleArduinoConnection = () => {
             if (window.arduinoConnected) {
             } else {
             }
         };
-        
+
         // Set initial UI state
         this.updateArduinoUI();
-        
+
         return Promise.resolve();
     }
-    
+
     updateArduinoUI() {
         // Skip Arduino UI update on console page
         if (window.location.pathname.includes('console.html')) {
             return;
         }
-        
+
         const arduinoToggle = document.getElementById('arduinoToggle');
         const arduinoIcon = document.getElementById('arduinoIcon');
-        
+
         if (!arduinoToggle || !arduinoIcon) {
             return;
         }
-        
-        
+
+
         if (window.arduinoConnected) {
             arduinoIcon.className = 'ri-cpu-fill';
             arduinoToggle.title = 'Disconnect Arduino';
@@ -432,18 +432,18 @@ class MainPageApp {
             arduinoToggle.title = 'Connect Arduino';
         }
     }
-    
+
     // Reset game from main page
     resetGameFromMain() {
         // Use the comprehensive reset function directly from gameState
-            if (window.gameState) {
-                window.gameState.reset();
+        if (window.gameState) {
+            window.gameState.reset();
         }
-        
+
         // Show reset confirmation
         this.showResetConfirmation();
     }
-    
+
     // Show reset confirmation
     showResetConfirmation() {
         const resetToggle = document.getElementById('resetToggle');
@@ -452,7 +452,7 @@ class MainPageApp {
             resetToggle.innerHTML = '<i class="ri-check-line"></i>';
             resetToggle.style.background = 'rgba(76, 175, 80, 0.9)';
             resetToggle.style.color = '#000';
-            
+
             setTimeout(() => {
                 resetToggle.innerHTML = originalIcon;
                 resetToggle.style.background = '';
@@ -546,13 +546,13 @@ window.closeThemeModal = () => {
 function initializeTeamsTable() {
     const tableBody = document.getElementById('teamsTableBody');
     if (!tableBody) return;
-    
+
     tableBody.innerHTML = '';
-    
+
     for (let teamId = 1; teamId <= 6; teamId++) {
         const team = window.gameState.state.teams[teamId];
         const row = document.createElement('tr');
-        
+
         row.innerHTML = `
             <td class="team-color-cell">
                 <div class="color-circle" style="background: ${getColorValue(team.color)}" onclick="toggleColorDropdown(${teamId}, event)"></div>
@@ -571,35 +571,35 @@ function initializeTeamsTable() {
                 <div class="team-action-card cross" onclick="toggleActionCard(${teamId}, 'cross')" id="crossCard-${teamId}"></div>
             </td>
         `;
-        
+
         tableBody.appendChild(row);
     }
-    
+
     populateAllColorOptions();
 }
 
 function updateTeamsTable() {
     for (let teamId = 1; teamId <= 6; teamId++) {
         const team = window.gameState.state.teams[teamId];
-        
+
         // Update color circle
         const colorCircle = document.querySelector(`#teamsTableBody tr:nth-child(${teamId}) .color-circle`);
         if (colorCircle) {
             colorCircle.style.background = getColorValue(team.color);
         }
-        
+
         // Update name display
         const nameDisplay = document.getElementById(`teamNameDisplay-${teamId}`);
         if (nameDisplay) {
             nameDisplay.textContent = team.name;
         }
-        
+
         // Update score
         const scoreDisplay = document.getElementById(`teamScoreDisplay-${teamId}`);
         if (scoreDisplay) {
             scoreDisplay.textContent = team.score;
         }
-        
+
         // Update action cards
         updateActionCardDisplay(teamId);
     }
@@ -628,22 +628,22 @@ function populateAllColorOptions() {
 function populateColorOptions(teamId) {
     const colorGrid = document.getElementById(`colorGrid-${teamId}`);
     if (!colorGrid) return;
-    
+
     colorGrid.innerHTML = '';
-    
+
     const availableColors = ['red', 'blue', 'lime', 'orange', 'purple', 'cyan', 'pink', 'yellow'];
-    
+
     availableColors.forEach(color => {
-        const isUsed = Object.values(window.gameState.state.teams).some(team => 
+        const isUsed = Object.values(window.gameState.state.teams).some(team =>
             team.color === color && window.gameState.state.teams[teamId].color !== color
         );
-        
+
         const colorOption = document.createElement('div');
         colorOption.className = `color-option ${isUsed ? 'used' : ''}`;
         colorOption.style.background = getColorValue(color);
         colorOption.onclick = () => !isUsed && changeTeamColor(teamId, color);
         colorOption.title = color.charAt(0).toUpperCase() + color.slice(1) + (isUsed ? ' (Already Used)' : '');
-        
+
         colorGrid.appendChild(colorOption);
     });
 }
@@ -651,18 +651,18 @@ function populateColorOptions(teamId) {
 function toggleColorDropdown(teamId, event) {
     const dropdown = document.getElementById(`colorDropdown-${teamId}`);
     const backdrop = document.getElementById('colorDropdownBackdrop');
-    
+
     if (!dropdown) return;
-    
+
     // Close all other dropdowns first
     document.querySelectorAll('.color-dropdown').forEach(d => {
         if (d !== dropdown) {
             d.classList.remove('active');
         }
     });
-    
+
     const isActive = dropdown.classList.contains('active');
-    
+
     if (!isActive) {
         dropdown.classList.add('active');
         backdrop.classList.add('active');
@@ -684,26 +684,26 @@ window.closeAllColorDropdowns = () => {
 function changeTeamColor(teamId, color) {
     const oldColor = window.gameState.state.teams[teamId].color;
     window.gameState.state.teams[teamId].color = color;
-    
+
     // Update UI
     updateTeamsTable();
-    
+
     // Update main screen and game state
     window.gameState.updateTeamDisplays();
-    
+
     // Close dropdown and backdrop
     window.closeAllColorDropdowns();
-    
+
     // Update all color dropdowns
     populateAllColorOptions();
-    
+
     addLog(`Team ${teamId} color: ${oldColor} → ${color}`, 'info');
 }
 
 function editTeamName(teamId) {
     const nameDisplay = document.getElementById(`teamNameDisplay-${teamId}`);
     const nameInput = document.getElementById(`teamNameInput-${teamId}`);
-    
+
     if (nameDisplay && nameInput) {
         const currentName = window.gameState.state.teams[teamId].name;
         nameInput.value = currentName;
@@ -717,23 +717,23 @@ function editTeamName(teamId) {
 function saveTeamName(teamId) {
     const nameDisplay = document.getElementById(`teamNameDisplay-${teamId}`);
     const nameInput = document.getElementById(`teamNameInput-${teamId}`);
-    
+
     if (!nameDisplay || !nameInput) return;
-    
+
     const newName = nameInput.value.trim();
-    
+
     if (newName) {
         const oldName = window.gameState.state.teams[teamId].name;
         window.gameState.state.teams[teamId].name = newName;
-        
+
         nameDisplay.textContent = newName;
-        
+
         // Update main screen and game state
         window.gameState.updateTeamDisplays();
-        
+
         addLog(`Team ${teamId} name: "${oldName}" → "${newName}"`, 'info');
     }
-    
+
     nameDisplay.classList.remove('hidden');
     nameInput.classList.add('hidden');
 }
@@ -747,7 +747,7 @@ function handleTeamNameKeypress(event, teamId) {
 function editTeamScore(teamId) {
     const scoreDisplay = document.getElementById(`teamScoreDisplay-${teamId}`);
     const scoreInput = document.getElementById(`teamScoreInput-${teamId}`);
-    
+
     if (scoreDisplay && scoreInput) {
         const currentScore = window.gameState.state.teams[teamId].score;
         scoreInput.value = currentScore;
@@ -761,25 +761,25 @@ function editTeamScore(teamId) {
 function saveTeamScore(teamId) {
     const scoreDisplay = document.getElementById(`teamScoreDisplay-${teamId}`);
     const scoreInput = document.getElementById(`teamScoreInput-${teamId}`);
-    
+
     if (!scoreDisplay || !scoreInput) return;
-    
+
     const newScore = parseInt(scoreInput.value) || 0;
     const oldScore = window.gameState.state.teams[teamId].score;
-    
+
     if (newScore !== oldScore) {
         window.gameState.state.teams[teamId].score = newScore;
         scoreDisplay.textContent = newScore;
-        
+
         // Update rankings when score changes
         window.gameState.calculateRankings();
-        
+
         // Update main screen and game state
         window.gameState.updateTeamDisplays();
-        
+
         addLog(`Team ${teamId} score: ${oldScore} → ${newScore}`, 'info');
     }
-    
+
     scoreDisplay.classList.remove('hidden');
     scoreInput.classList.add('hidden');
 }
@@ -792,19 +792,19 @@ function handleTeamScoreKeypress(event, teamId) {
 
 function updateActionCardDisplay(teamId) {
     const actionCards = window.gameState.state.actionCards[teamId];
-    
+
     // Update angel card - active based on actionCards.angel state
     const angelCard = document.getElementById(`angelCard-${teamId}`);
     if (angelCard) {
         angelCard.className = `team-action-card angel ${actionCards.angel ? 'active' : ''}`;
     }
-    
+
     // Update devil card - active based on actionCards.devil state
     const devilCard = document.getElementById(`devilCard-${teamId}`);
     if (devilCard) {
         devilCard.className = `team-action-card devil ${actionCards.devil ? 'active' : ''}`;
     }
-    
+
     // Update cross card - active based on actionCards.cross state
     const crossCard = document.getElementById(`crossCard-${teamId}`);
     if (crossCard) {
@@ -815,18 +815,18 @@ function updateActionCardDisplay(teamId) {
 function toggleActionCard(teamId, cardType) {
     // Simply toggle the action card state in both localStorage and game state
     const actionCards = window.gameState.state.actionCards[teamId];
-    
+
     if (actionCards && actionCards.hasOwnProperty(cardType)) {
         // Toggle the card state
         const newState = !actionCards[cardType];
-        
+
         // Update the game state (this will also update localStorage automatically)
         window.gameState.update(`actionCards.${teamId}.${cardType}`, newState);
-        
+
         // Update both the management table display and main screen display
         updateActionCardDisplay(teamId);
         window.gameState.updateTeamDisplays();
-        
+
         // Log the change
         addLog(`Team ${teamId} ${cardType} card: ${newState ? 'enabled' : 'disabled'}`, 'info');
     }
@@ -837,15 +837,15 @@ function toggleActionCard(teamId, cardType) {
 function initializeQuestionsTable() {
     const tableBody = document.getElementById('questionsTableBody');
     if (!tableBody) return;
-    
+
     tableBody.innerHTML = '';
     const totalSets = window.gameState.state.config.totalSets;
     for (let setNumber = 1; setNumber <= totalSets; setNumber++) {
         const setInfo = window.gameState.state.questionSets[setNumber];
         if (!setInfo) continue;
-        
+
         const row = document.createElement('tr');
-        
+
         row.innerHTML = `
             <td class="question-set-number">Set ${setNumber}</td>
             <td class="question-set-title-cell">
@@ -865,27 +865,27 @@ function initializeQuestionsTable() {
                 <button class="question-btn" onclick="goToQuestion(${setNumber}, 4)">Q4</button>
             </td>
         `;
-        
+
         tableBody.appendChild(row);
     }
-    
+
     updateQuestionsTable();
 }
 
 function updateQuestionsTable() {
     const currentSet = window.gameState.state.currentSet;
     const currentQuestion = window.gameState.state.currentQuestion;
-    
+
     // Update current question button
     document.querySelectorAll('.question-btn').forEach(btn => {
         btn.classList.remove('current');
     });
-    
+
     const currentBtn = document.querySelector(`button[onclick="goToQuestion(${currentSet}, ${currentQuestion})"]`);
     if (currentBtn) {
         currentBtn.classList.add('current');
     }
-    
+
     // Update theme icons
     for (let setNumber = 1; setNumber <= 8; setNumber++) {
         const setInfo = window.gameState.state.questionSets[setNumber];
@@ -902,7 +902,7 @@ function updateQuestionsTable() {
 function editQuestionSetTitle(setNumber) {
     const titleDisplay = document.getElementById(`questionSetTitleDisplay-${setNumber}`);
     const titleInput = document.getElementById(`questionSetTitleInput-${setNumber}`);
-    
+
     if (titleDisplay && titleInput) {
         const currentTitle = window.gameState.state.questionSets[setNumber].title;
         titleInput.value = currentTitle;
@@ -916,23 +916,23 @@ function editQuestionSetTitle(setNumber) {
 function saveQuestionSetTitle(setNumber) {
     const titleDisplay = document.getElementById(`questionSetTitleDisplay-${setNumber}`);
     const titleInput = document.getElementById(`questionSetTitleInput-${setNumber}`);
-    
+
     if (!titleDisplay || !titleInput) return;
-    
+
     const newTitle = titleInput.value.trim();
-    
+
     if (newTitle) {
         const oldTitle = window.gameState.state.questionSets[setNumber].title;
         window.gameState.state.questionSets[setNumber].title = newTitle;
-        
+
         titleDisplay.textContent = newTitle;
-        
+
         // Update main screen and game state
         window.gameState.updateQuestionSetDisplay();
-        
+
         addLog(`Set ${setNumber} title updated: "${oldTitle}" → "${newTitle}"`, 'info');
     }
-    
+
     titleDisplay.classList.remove('hidden');
     titleInput.classList.add('hidden');
 }
@@ -946,11 +946,11 @@ function handleQuestionSetTitleKeypress(event, setNumber) {
 function toggleThemeDropdown(setNumber) {
     // Store the current set number for the modal
     window.currentThemeSetNumber = setNumber;
-    
+
     // Show the theme modal
     const modal = document.getElementById('themeModal');
     modal.classList.add('active');
-    
+
     // Populate theme options
     populateThemeOptions();
 }
@@ -958,9 +958,9 @@ function toggleThemeDropdown(setNumber) {
 function populateThemeOptions() {
     const themeList = document.getElementById('themeList');
     if (!themeList) return;
-    
+
     themeList.innerHTML = '';
-    
+
     // Available themes from assets/themes directory
     const themes = [
         { name: 'Brainstorm', icon: 'brainstorm' },
@@ -977,49 +977,141 @@ function populateThemeOptions() {
         { name: 'Thai', icon: 'thai' },
         { name: 'Vegetable', icon: 'vegetable' }
     ];
-    
+
     themes.forEach(theme => {
         const themeItem = document.createElement('div');
         themeItem.className = 'theme-item';
         themeItem.onclick = () => selectTheme(theme.icon, theme.name);
-        
+
         themeItem.innerHTML = `
             <img src="assets/themes/${theme.icon}.png" alt="${theme.name}" class="theme-item-icon">
             <div class="theme-item-name">${theme.name}</div>
         `;
-        
+
         themeList.appendChild(themeItem);
     });
 }
 
 function selectTheme(icon, name) {
     const setNumber = window.currentThemeSetNumber;
-    
+
     // Update the theme in game state
     window.gameState.state.questionSets[setNumber].theme = icon;
-    
+
     // Update the questions table to reflect the change
     updateQuestionsTable();
-    
+
     // Update main screen and game state
     window.gameState.updateQuestionSetDisplay();
-    
+
     // Close modal
     window.closeThemeModal();
-    
+
     addLog(`Set ${setNumber} theme updated: ${name}`, 'info');
 }
 
 function goToQuestion(setNumber, questionNumber) {
-    window.gameState.moveToQuestion(setNumber, questionNumber);
-    updateQuestionsTable();
-    
-    addLog(`Moved to Set ${setNumber}, Question ${questionNumber}`, 'info');
+    // Validate input parameters
+    if (!setNumber || !questionNumber ||
+        setNumber < 1 || setNumber > 10 ||
+        questionNumber < 1 || questionNumber > 4) {
+        console.warn('Invalid set or question number:', setNumber, questionNumber);
+        if (window.addLog) {
+            addLog(`Invalid parameters: Set ${setNumber}, Question ${questionNumber}`, 'error');
+        }
+        return false;
+    }
+
+    // Get current position from game state
+    const currentState = window.gameState?.get();
+    if (!currentState) {
+        console.warn('Game state not available');
+        if (window.addLog) {
+            addLog('Game state not available for movement', 'error');
+        }
+        return false;
+    }
+
+    const currentSet = currentState.currentSet;
+    const currentQuestion = currentState.currentQuestion;
+
+    // Check if we're already at the target position
+    if (currentSet === setNumber && currentQuestion === questionNumber) {
+        console.log('Already at target position:', setNumber, questionNumber);
+        if (window.addLog) {
+            addLog(`Already at Set ${setNumber}, Question ${questionNumber}`, 'info');
+        }
+        return false;
+    }
+
+    // Calculate current and target planet positions
+    const currentPosition = window.gameState.getCharacterPosition(currentSet, currentQuestion);
+    const targetPosition = window.gameState.getCharacterPosition(setNumber, questionNumber);
+
+    console.log(`Moving from Set ${currentSet} Q${currentQuestion} (${currentPosition}%) to Set ${setNumber} Q${questionNumber} (${targetPosition}%)`);
+
+    // Determine movement direction based on actual planet positions on screen
+    // Q1=34%, Q2=45%, Q3=55%, Q4=66% - moving right is forward, moving left is backward
+    let direction = 'forward';
+
+    if (targetPosition > currentPosition) {
+        // Moving to the right (higher percentage) = forward
+        direction = 'forward';
+    } else if (targetPosition < currentPosition) {
+        // Moving to the left (lower percentage) = backward  
+        direction = 'backward';
+    } else {
+        // Same position (shouldn't happen due to earlier check, but safety fallback)
+        direction = 'forward';
+    }
+
+    console.log(`Animation direction: ${direction}`);
+
+    // Use character controller for animated movement if available
+    if (window.characterController && window.characterController.moveToQuestion) {
+        const success = window.characterController.moveToQuestion(setNumber, questionNumber);
+        if (success) {
+            // Update questions table after successful movement
+            updateQuestionsTable();
+
+            if (window.addLog) {
+                addLog(`Moved to Set ${setNumber}, Question ${questionNumber} with ${direction} animation`, 'info');
+            }
+            return true;
+        } else {
+            console.warn('Character controller movement failed, falling back to direct game state update');
+            if (window.addLog) {
+                addLog('Character animation failed, using fallback movement', 'warning');
+            }
+        }
+    }
+
+    // Fallback: direct game state update without animation
+    const success = window.gameState.moveToQuestion(setNumber, questionNumber);
+    if (success) {
+        updateQuestionsTable();
+
+        // Try to trigger run animation manually if character controller is available
+        if (window.characterController && window.characterController.startRunAnimation) {
+            window.characterController.startRunAnimation(direction);
+        }
+
+        if (window.addLog) {
+            addLog(`Moved to Set ${setNumber}, Question ${questionNumber} (fallback mode)`, 'info');
+        }
+        return true;
+    }
+
+    console.warn('Failed to move to question:', setNumber, questionNumber);
+    if (window.addLog) {
+        addLog(`Failed to move to Set ${setNumber}, Question ${questionNumber}`, 'error');
+    }
+    return false;
 }
 
 // ========== LOGS SYSTEM ==========
 
-window.clearLogs = function() {
+window.clearLogs = function () {
     const logsContent = document.getElementById('logsContentArea');
     if (logsContent) {
         logsContent.innerHTML = `
@@ -1032,10 +1124,10 @@ window.clearLogs = function() {
     }
 };
 
-window.exportLogs = function() {
+window.exportLogs = function () {
     const logsContent = document.getElementById('logsContentArea');
     if (!logsContent) return;
-    
+
     const logs = logsContent.innerText;
     const blob = new Blob([logs], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -1056,19 +1148,19 @@ function addLog(message, type = 'info') {
         minute: '2-digit',
         second: '2-digit'
     });
-    
+
     const logsContent = document.getElementById('logsContentArea');
     if (!logsContent) return;
-    
+
     // Remove empty state if it exists
     const emptyState = logsContent.querySelector('.logs-empty');
     if (emptyState) {
         emptyState.remove();
     }
-    
+
     const logEntry = document.createElement('div');
     logEntry.className = 'log-entry';
-    
+
     logEntry.innerHTML = `
         <div class="log-cell">
             <span class="log-time">${timestamp}</span>
@@ -1080,9 +1172,9 @@ function addLog(message, type = 'info') {
             <span class="log-message">${message}</span>
         </div>
     `;
-    
+
     logsContent.appendChild(logEntry);
-    
+
     // Auto-scroll to bottom
     const wrapper = logsContent.closest('.logs-content-wrapper');
     if (wrapper) {
@@ -1097,14 +1189,14 @@ function initializeXLSXHandling() {
     const uploadBtn = document.getElementById('uploadBtn');
     const uploadFileName = document.getElementById('uploadFileName');
     const uploadFileInfo = document.getElementById('uploadFileInfo');
-    
+
     if (!fileInput || !uploadBtn) {
         addLog('Upload elements not found', 'error');
         return;
     }
-    
+
     // Handle file selection
-    fileInput.addEventListener('change', function(event) {
+    fileInput.addEventListener('change', function (event) {
         const file = event.target.files[0];
         if (file) {
             uploadBtn.disabled = false;
@@ -1117,31 +1209,31 @@ function initializeXLSXHandling() {
             uploadFileInfo.textContent = 'or drag and drop here';
         }
     });
-    
+
     // Handle drag and drop
     const dropZone = document.querySelector('.upload-drop-zone');
     if (!dropZone) {
         addLog('Drop zone not found', 'error');
         return;
     }
-    
-    dropZone.addEventListener('dragover', function(event) {
+
+    dropZone.addEventListener('dragover', function (event) {
         event.preventDefault();
         dropZone.style.borderColor = '#007aff';
         dropZone.style.background = 'rgba(0, 122, 255, 0.1)';
     });
-    
-    dropZone.addEventListener('dragleave', function(event) {
+
+    dropZone.addEventListener('dragleave', function (event) {
         event.preventDefault();
         dropZone.style.borderColor = 'rgba(0, 122, 255, 0.3)';
         dropZone.style.background = 'rgba(0, 122, 255, 0.02)';
     });
-    
-    dropZone.addEventListener('drop', function(event) {
+
+    dropZone.addEventListener('drop', function (event) {
         event.preventDefault();
         dropZone.style.borderColor = 'rgba(0, 122, 255, 0.3)';
         dropZone.style.background = 'rgba(0, 122, 255, 0.02)';
-        
+
         const files = event.dataTransfer.files;
         if (files.length > 0) {
             fileInput.files = files;
@@ -1152,7 +1244,7 @@ function initializeXLSXHandling() {
             addLog(`File dropped: ${file.name} (${file.size} bytes)`, 'info');
         }
     });
-    
+
     addLog('XLSX handling initialized', 'info');
 }
 
@@ -1162,51 +1254,51 @@ function resetFileInput() {
     const uploadBtn = document.getElementById('uploadBtn');
     const uploadFileName = document.getElementById('uploadFileName');
     const uploadFileInfo = document.getElementById('uploadFileInfo');
-    
+
     if (fileInput) {
         fileInput.value = ''; // Clear the file input
     }
-    
+
     if (uploadBtn) {
         uploadBtn.disabled = true; // Disable upload button
     }
-    
+
     if (uploadFileName) {
         uploadFileName.textContent = 'Select XLSX file'; // Reset filename display
     }
-    
+
     if (uploadFileInfo) {
         uploadFileInfo.textContent = 'or drag and drop here'; // Reset file info
     }
 }
 
-window.processUploadedFile = function() {
+window.processUploadedFile = function () {
     const fileInput = document.getElementById('xlsxFileInput');
     const file = fileInput?.files[0];
-    
+
     if (!file) {
         addLog('No file selected', 'error');
         return;
     }
-    
+
     addLog(`Processing file: ${file.name} (${file.size} bytes)`, 'info');
-    
+
     // Check if XLSX library is available
     if (typeof XLSX === 'undefined') {
         addLog('XLSX library not loaded. Please refresh the page.', 'error');
         return;
     }
-    
+
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
         try {
             addLog('File read successfully, processing XLSX data...', 'info');
-            
+
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
-            
+
             addLog(`Workbook loaded. Sheets found: ${workbook.SheetNames.join(', ')}`, 'info');
-            
+
             // Process teams sheet
             if (workbook.SheetNames.includes('teams')) {
                 const teamsSheet = workbook.Sheets['teams'];
@@ -1216,7 +1308,7 @@ window.processUploadedFile = function() {
             } else {
                 addLog('No "teams" sheet found in XLSX file', 'warning');
             }
-            
+
             // Process questions sheet
             if (workbook.SheetNames.includes('questions')) {
                 const questionsSheet = workbook.Sheets['questions'];
@@ -1226,91 +1318,91 @@ window.processUploadedFile = function() {
             } else {
                 addLog('No "questions" sheet found in XLSX file', 'warning');
             }
-            
-                                        addLog(`Successfully processed XLSX file: ${file.name}`, 'success');
-                            
-                            // Reset file input and display
-                            resetFileInput();
-                            
-                            window.closeUploadModal();
-            
+
+            addLog(`Successfully processed XLSX file: ${file.name}`, 'success');
+
+            // Reset file input and display
+            resetFileInput();
+
+            window.closeUploadModal();
+
         } catch (error) {
             addLog(`Error processing XLSX file: ${error.message}`, 'error');
             console.error('XLSX processing error:', error);
         }
     };
-    
-    reader.onerror = function() {
+
+    reader.onerror = function () {
         addLog('Error reading file', 'error');
     };
-    
+
     reader.readAsArrayBuffer(file);
 };
 
-                function processTeamsData(teamsData) {
-                    addLog(`Processing ${teamsData.length} team rows...`, 'info');
+function processTeamsData(teamsData) {
+    addLog(`Processing ${teamsData.length} team rows...`, 'info');
 
-                    teamsData.forEach((row, index) => {
-                        const teamId = parseInt(row.team_id);
-                        addLog(`Row ${index + 1}: team_id=${teamId}, name="${row.team_name}", color="${row.team_color}", score=${row.score}`, 'info');
+    teamsData.forEach((row, index) => {
+        const teamId = parseInt(row.team_id);
+        addLog(`Row ${index + 1}: team_id=${teamId}, name="${row.team_name}", color="${row.team_color}", score=${row.score}`, 'info');
 
-                        if (teamId >= 1 && teamId <= 6) {
-                            // Update team name
-                            if (row.team_name) {
-                                window.gameState.state.teams[teamId].name = row.team_name;
-                                addLog(`Updated team ${teamId} name to: ${row.team_name}`, 'info');
-                            }
+        if (teamId >= 1 && teamId <= 6) {
+            // Update team name
+            if (row.team_name) {
+                window.gameState.state.teams[teamId].name = row.team_name;
+                addLog(`Updated team ${teamId} name to: ${row.team_name}`, 'info');
+            }
 
-                            // Update team color
-                            if (row.team_color) {
-                                const validColors = ['red', 'blue', 'lime', 'orange', 'purple', 'cyan', 'pink', 'yellow'];
-                                if (validColors.includes(row.team_color.toLowerCase())) {
-                                    window.gameState.state.teams[teamId].color = row.team_color.toLowerCase();
-                                    addLog(`Updated team ${teamId} color to: ${row.team_color}`, 'info');
-                                } else {
-                                    addLog(`Invalid color for team ${teamId}: ${row.team_color}`, 'warning');
-                                }
-                            }
-
-                            // Update score
-                            if (row.score !== undefined) {
-                                window.gameState.state.teams[teamId].score = parseInt(row.score) || 0;
-                                addLog(`Updated team ${teamId} score to: ${window.gameState.state.teams[teamId].score}`, 'info');
-                            }
-
-                            // Update action cards
-                            if (row.angel !== undefined) {
-                                window.gameState.state.actionCards[teamId].angel = Boolean(row.angel);
-                                addLog(`Updated team ${teamId} angel card to: ${Boolean(row.angel)}`, 'info');
-                            }
-                            if (row.devil !== undefined) {
-                                window.gameState.state.actionCards[teamId].devil = Boolean(row.devil);
-                                addLog(`Updated team ${teamId} devil card to: ${Boolean(row.devil)}`, 'info');
-                            }
-                            if (row.cross !== undefined) {
-                                window.gameState.state.actionCards[teamId].cross = Boolean(row.cross);
-                                addLog(`Updated team ${teamId} cross card to: ${Boolean(row.cross)}`, 'info');
-                            }
-                        } else {
-                            addLog(`Invalid team_id: ${teamId} (must be 1-6)`, 'warning');
-                        }
-                    });
-
-                    // Update UI components
-                    updateTeamsTable();
-                    
-                    // Update all team displays on main page
-                    if (window.gameState && window.gameState.updateTeamDisplays) {
-                        window.gameState.updateTeamDisplays();
-                    }
-                    
-                    // Update character colors if character controller exists
-                    if (window.characterController && window.characterController.updateCharacterColors) {
-                        window.characterController.updateCharacterColors();
-                    }
-                    
-                    addLog('Teams data updated from XLSX', 'success');
+            // Update team color
+            if (row.team_color) {
+                const validColors = ['red', 'blue', 'lime', 'orange', 'purple', 'cyan', 'pink', 'yellow'];
+                if (validColors.includes(row.team_color.toLowerCase())) {
+                    window.gameState.state.teams[teamId].color = row.team_color.toLowerCase();
+                    addLog(`Updated team ${teamId} color to: ${row.team_color}`, 'info');
+                } else {
+                    addLog(`Invalid color for team ${teamId}: ${row.team_color}`, 'warning');
                 }
+            }
+
+            // Update score
+            if (row.score !== undefined) {
+                window.gameState.state.teams[teamId].score = parseInt(row.score) || 0;
+                addLog(`Updated team ${teamId} score to: ${window.gameState.state.teams[teamId].score}`, 'info');
+            }
+
+            // Update action cards
+            if (row.angel !== undefined) {
+                window.gameState.state.actionCards[teamId].angel = Boolean(row.angel);
+                addLog(`Updated team ${teamId} angel card to: ${Boolean(row.angel)}`, 'info');
+            }
+            if (row.devil !== undefined) {
+                window.gameState.state.actionCards[teamId].devil = Boolean(row.devil);
+                addLog(`Updated team ${teamId} devil card to: ${Boolean(row.devil)}`, 'info');
+            }
+            if (row.cross !== undefined) {
+                window.gameState.state.actionCards[teamId].cross = Boolean(row.cross);
+                addLog(`Updated team ${teamId} cross card to: ${Boolean(row.cross)}`, 'info');
+            }
+        } else {
+            addLog(`Invalid team_id: ${teamId} (must be 1-6)`, 'warning');
+        }
+    });
+
+    // Update UI components
+    updateTeamsTable();
+
+    // Update all team displays on main page
+    if (window.gameState && window.gameState.updateTeamDisplays) {
+        window.gameState.updateTeamDisplays();
+    }
+
+    // Update character colors if character controller exists
+    if (window.characterController && window.characterController.updateCharacterColors) {
+        window.characterController.updateCharacterColors();
+    }
+
+    addLog('Teams data updated from XLSX', 'success');
+}
 
 function processQuestionsData(questionsData) {
     addLog(`Processing ${questionsData.length} question rows...`, 'info');
@@ -1323,7 +1415,7 @@ function processQuestionsData(questionsData) {
                 window.gameState.state.questionSets[setId].title = row.title;
                 addLog(`Updated question set ${setId} title to: ${row.title}`, 'info');
             }
-            
+
             // Update theme
             if (row.theme) {
                 window.gameState.state.questionSets[setId].theme = row.theme.toLowerCase();
@@ -1333,23 +1425,23 @@ function processQuestionsData(questionsData) {
             addLog(`Invalid set_id: ${setId} (must be 1-8)`, 'warning');
         }
     });
-    
-                        // Update UI components
-                    updateQuestionsTable();
-                    
-                    // Update question set display on main page
-                    if (window.gameState && window.gameState.updateQuestionSetDisplay) {
-                        window.gameState.updateQuestionSetDisplay();
-                    }
-    
+
+    // Update UI components
+    updateQuestionsTable();
+
+    // Update question set display on main page
+    if (window.gameState && window.gameState.updateQuestionSetDisplay) {
+        window.gameState.updateQuestionSetDisplay();
+    }
+
     addLog('Questions data updated from XLSX', 'success');
 }
 
-window.downloadXLSX = function() {
+window.downloadXLSX = function () {
     try {
         // Create workbook
         const workbook = XLSX.utils.book_new();
-        
+
         // Create teams data
         const teamsData = [];
         for (let teamId = 1; teamId <= 6; teamId++) {
@@ -1365,7 +1457,7 @@ window.downloadXLSX = function() {
                 cross: cards.cross
             });
         }
-        
+
         // Create questions data
         const questionsData = [];
         for (let setId = 1; setId <= 8; setId++) {
@@ -1376,24 +1468,24 @@ window.downloadXLSX = function() {
                 theme: questionSet.theme
             });
         }
-        
+
         // Create sheets
         const teamsSheet = XLSX.utils.json_to_sheet(teamsData);
         const questionsSheet = XLSX.utils.json_to_sheet(questionsData);
-        
+
         // Add sheets to workbook
         XLSX.utils.book_append_sheet(workbook, teamsSheet, 'teams');
         XLSX.utils.book_append_sheet(workbook, questionsSheet, 'questions');
-        
+
         // Generate filename with timestamp
         const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
         const filename = `quiz_bowl_data_${timestamp}.xlsx`;
-        
+
         // Download file
         XLSX.writeFile(workbook, filename);
-        
+
         addLog(`XLSX file downloaded: ${filename}`, 'success');
-        
+
     } catch (error) {
         addLog(`Error creating XLSX file: ${error.message}`, 'error');
     }
@@ -1423,10 +1515,10 @@ class ArduinoController {
         this.arduinoStatusIcon = document.getElementById('arduinoStatusIcon');
         this.arduinoStatusText = document.getElementById('arduinoStatusText');
         this.arduinoPortText = document.getElementById('arduinoPortText');
-        
+
         // Detect connection mode
         this.detectConnectionMode();
-        
+
         if (this.connectionMode === 'webserial') {
             this.updateConnectionStatus(false, null);
             if (window.addLog) {
@@ -1475,23 +1567,23 @@ class ArduinoController {
         if (typeof io !== 'undefined') {
             this.socketManager = {
                 socket: io(),
-                on: function(event, handler) {
+                on: function (event, handler) {
                     this.socket.on(event, handler);
                 },
-                emit: function(event, data) {
+                emit: function (event, data) {
                     this.socket.emit(event, data);
                 },
-                connectArduino: function(port, baudrate) {
+                connectArduino: function (port, baudrate) {
                     this.emit('connect_arduino', { port, baudrate });
                 },
-                disconnectArduino: function() {
+                disconnectArduino: function () {
                     this.emit('disconnect_arduino');
                 },
-                getArduinoStatus: function() {
+                getArduinoStatus: function () {
                     this.emit('get_arduino_status');
                 }
             };
-            
+
             // Add connection event listeners for debugging
             this.socketManager.socket.on('connect', () => {
                 if (window.addLog) {
@@ -1500,19 +1592,19 @@ class ArduinoController {
                 // Get initial status after connection
                 this.socketManager.getArduinoStatus();
             });
-            
+
             this.socketManager.socket.on('disconnect', () => {
                 if (window.addLog) {
                     addLog('Socket.IO disconnected from server', 'warning');
                 }
             });
-            
+
             this.socketManager.socket.on('connect_error', (error) => {
                 if (window.addLog) {
                     addLog(`Socket.IO connection error: ${error}`, 'error');
                 }
             });
-            
+
             // Listen for Arduino status changes
             this.socketManager.on('arduino_status', (data) => {
                 if (window.addLog) {
@@ -1522,7 +1614,7 @@ class ArduinoController {
                 this.updateConnectionStatus(data.connected, data.message || 'Socket.IO connection');
                 this.showArduinoModal();
             });
-            
+
             // Listen for Arduino buzzer data
             this.socketManager.on('buzzer_data', (data) => {
                 if (window.addLog) {
@@ -1530,7 +1622,7 @@ class ArduinoController {
                 }
                 this.processArduinoData(data);
             });
-            
+
             // Listen for buzzer pressed events (from server)
             this.socketManager.on('buzzer_pressed', (data) => {
                 if (window.addLog) {
@@ -1544,7 +1636,7 @@ class ArduinoController {
                     window.buzzingSystem.simulateBuzzer(data.teamId);
                 }
             });
-            
+
             // Listen for clear buzzers event
             this.socketManager.on('clear_buzzers', () => {
                 if (window.addLog) {
@@ -1559,7 +1651,7 @@ class ArduinoController {
                     window.gameState.set('currentTeam', 0);
                 }
             });
-            
+
             if (window.addLog) {
                 addLog('Socket.IO manager initialized successfully', 'success');
             }
@@ -1574,7 +1666,7 @@ class ArduinoController {
         if (window.addLog) {
             addLog(`Toggle Arduino - Mode: ${this.connectionMode}, Connected: ${this.isConnected}`, 'info');
         }
-        
+
         if (this.connectionMode === 'webserial') {
             if (this.isConnected) {
                 this.disconnect();
@@ -1607,7 +1699,7 @@ class ArduinoController {
         try {
             // Get list of previously approved ports
             const ports = await navigator.serial.getPorts();
-            
+
             if (ports.length === 0) {
                 if (window.addLog) {
                     addLog('No previously connected Arduino found', 'info');
@@ -1624,9 +1716,9 @@ class ArduinoController {
             this.updateConnectionStatus('connecting', 'Auto-connecting...');
 
             this.serialPort = ports[0]; // Use first (most recent) port
-            
+
             // Open the serial port with Arduino-compatible settings
-            await this.serialPort.open({ 
+            await this.serialPort.open({
                 baudRate: 9600,
                 dataBits: 8,
                 stopBits: 1,
@@ -1639,7 +1731,7 @@ class ArduinoController {
             const portName = `USB Serial (${portInfo.usbVendorId ? `VID:${portInfo.usbVendorId.toString(16).toUpperCase()}` : 'Auto'})`;
 
             this.updateConnectionStatus(true, portName);
-            
+
             if (window.addLog) {
                 addLog('Arduino auto-connected successfully!', 'success');
                 addLog(`Port: ${portName}`, 'info');
@@ -1675,7 +1767,7 @@ class ArduinoController {
         try {
             // Show connecting status
             this.updateConnectionStatus('connecting', 'Selecting port...');
-            
+
             if (window.addLog) {
                 addLog('Opening serial port selection dialog...', 'info');
                 addLog('💡 If no Arduino appears in the list:', 'info');
@@ -1694,7 +1786,7 @@ class ArduinoController {
                     { usbVendorId: 0x16C0 }, // Van Ooijen Technische Informatica (Teensy)
                 ]
             });
-            
+
             if (window.addLog) {
                 addLog('Serial port selected, connecting...', 'info');
             }
@@ -1706,7 +1798,7 @@ class ArduinoController {
             }
 
             // Open the serial port with Arduino-compatible settings
-            await this.serialPort.open({ 
+            await this.serialPort.open({
                 baudRate: 9600,
                 dataBits: 8,
                 stopBits: 1,
@@ -1718,7 +1810,7 @@ class ArduinoController {
             const portName = `USB Serial (${portInfo.usbVendorId ? `VID:${portInfo.usbVendorId.toString(16).toUpperCase()}` : 'Unknown'})`;
 
             this.updateConnectionStatus(true, portName);
-            
+
             if (window.addLog) {
                 addLog('Arduino connected successfully via Web Serial API', 'success');
                 addLog(`Port: ${portName}`, 'info');
@@ -1733,7 +1825,7 @@ class ArduinoController {
 
         } catch (error) {
             this.updateConnectionStatus(false, null);
-            
+
             if (error.name === 'NotFoundError') {
                 if (window.addLog) {
                     addLog('No serial port selected - dialog was cancelled', 'warning');
@@ -1771,24 +1863,24 @@ class ArduinoController {
                 await this.reader.releaseLock();
                 this.reader = null;
             }
-            
+
             if (this.writer) {
                 await this.writer.releaseLock();
                 this.writer = null;
             }
-            
+
             // Close the serial port
             if (this.serialPort) {
                 await this.serialPort.close();
                 this.serialPort = null;
             }
-            
+
             this.updateConnectionStatus(false, null);
-            
+
             if (window.addLog) {
                 addLog('Arduino disconnected successfully', 'info');
             }
-            
+
         } catch (error) {
             if (window.addLog) {
                 addLog(`Error disconnecting Arduino: ${error.message}`, 'error');
@@ -1800,19 +1892,19 @@ class ArduinoController {
         try {
             while (this.reader && this.serialPort.readable) {
                 const { value, done } = await this.reader.read();
-                
+
                 if (done) {
                     break;
                 }
-                
+
                 // Convert the received data to string
                 const textDecoder = new TextDecoder();
                 const data = textDecoder.decode(value).trim();
-                
+
                 if (data && window.addLog) {
                     addLog(`Arduino: ${data}`, 'info');
                 }
-                
+
                 // Here you can process the received data
                 this.processArduinoData(data);
             }
@@ -1828,7 +1920,7 @@ class ArduinoController {
         if (window.addLog) {
             addLog(`Processing Arduino data: ${data}`, 'info');
         }
-        
+
         // Handle different message types
         if (data.startsWith('WINNER:')) {
             const teamId = parseInt(data.split(':')[1]);
@@ -1884,11 +1976,11 @@ class ArduinoController {
         try {
             const encoder = new TextEncoder();
             await this.writer.write(encoder.encode(data + '\n'));
-            
+
             if (window.addLog) {
                 addLog(`Sent to Arduino: ${data}`, 'info');
             }
-            
+
             return true;
         } catch (error) {
             if (window.addLog) {
@@ -1906,7 +1998,7 @@ class ArduinoController {
 
         // Update icon classes
         this.arduinoStatusIcon.className = 'ri-cpu-line';
-        
+
         if (status === 'connecting') {
             this.arduinoStatusIcon.parentElement.className = 'arduino-icon connecting';
             this.arduinoStatusText.textContent = 'Connecting...';
@@ -1928,14 +2020,14 @@ class ArduinoController {
 
     showArduinoModal() {
         if (!this.arduinoModal) return;
-        
+
         this.arduinoModal.classList.add('active');
-        
+
         // Clear existing timeout
         if (this.showTimeout) {
             clearTimeout(this.showTimeout);
         }
-        
+
         // Auto hide after 3 seconds
         this.showTimeout = setTimeout(() => {
             this.hideArduinoModal();
@@ -1944,7 +2036,7 @@ class ArduinoController {
 
     hideArduinoModal() {
         if (!this.arduinoModal) return;
-        
+
         this.arduinoModal.classList.remove('active');
         if (this.showTimeout) {
             clearTimeout(this.showTimeout);
@@ -1978,7 +2070,7 @@ class ArduinoController {
     // Debug: Check available ports
     async checkAvailablePorts() {
         if (!('serial' in navigator)) return;
-        
+
         try {
             const ports = await navigator.serial.getPorts();
             if (window.addLog) {
@@ -1987,7 +2079,7 @@ class ArduinoController {
                     const info = port.getInfo();
                     addLog(`Port ${index + 1}: VID=${info.usbVendorId || 'Unknown'}, PID=${info.usbProductId || 'Unknown'}`, 'info');
                 });
-                
+
                 if (ports.length === 0) {
                     addLog('No previously approved serial ports found', 'warning');
                     addLog('This could mean:', 'info');
@@ -2016,30 +2108,30 @@ class VolumeController {
         this.hideTimeout = null;
         this.init();
     }
-    
+
     init() {
         this.audio = document.getElementById('backgroundMusic');
         this.volumeModal = document.getElementById('volumeModal');
         this.volumeFill = document.getElementById('volumeFill');
         this.volumeText = document.getElementById('volumeText');
         this.volumeIcon = document.getElementById('volumeIcon');
-        
+
         if (this.audio) {
             this.audio.volume = this.volume;
             this.updateDisplay();
         }
     }
-    
+
     increaseVolume() {
         this.volume = Math.min(1, this.volume + 0.01);
         this.updateVolume();
     }
-    
+
     decreaseVolume() {
         this.volume = Math.max(0, this.volume - 0.01);
         this.updateVolume();
     }
-    
+
     updateVolume() {
         if (this.audio) {
             this.audio.volume = this.volume;
@@ -2047,7 +2139,7 @@ class VolumeController {
         this.updateDisplay();
         this.showVolumeModal();
     }
-    
+
     updateDisplay() {
         const percentage = Math.round(this.volume * 100);
         if (this.volumeFill) {
@@ -2069,26 +2161,26 @@ class VolumeController {
             }
         }
     }
-    
+
     showVolumeModal() {
         if (this.volumeModal) {
             this.volumeModal.classList.add('active');
-            
+
             // Clear existing timeout
             if (this.hideTimeout) {
                 clearTimeout(this.hideTimeout);
             }
-            
+
             // Hide after 2 seconds
             this.hideTimeout = setTimeout(() => {
                 this.volumeModal.classList.remove('active');
             }, 2000);
         }
     }
-    
+
     togglePlayback() {
         if (!this.audio) return;
-        
+
         if (this.audio.paused) {
             this.audio.play().catch(e => {
                 addLog('Background music requires user interaction to start', 'info');
@@ -2108,7 +2200,7 @@ window.volumeController = new VolumeController();
 window.arduinoController = new ArduinoController();
 
 // Expose debug function globally
-window.checkArduinoPorts = async function() {
+window.checkArduinoPorts = async function () {
     if (window.arduinoController) {
         await window.arduinoController.checkAvailablePorts();
     }
@@ -2130,7 +2222,7 @@ if (window.gameState) {
             updateQuestionsTable();
         }
     });
-    
+
     window.gameState.subscribe('currentQuestion', () => {
         // Update questions table if modal is open
         const questionsModal = document.getElementById('questionsModal');
@@ -2153,7 +2245,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
     }
-    
+
     // Add initial success log after a delay
     setTimeout(() => {
         addLog('Game interface initialized - Ready to play', 'success');
