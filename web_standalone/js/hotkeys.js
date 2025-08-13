@@ -240,6 +240,8 @@ class HotkeysManager {
         } else {
         }
         
+        // Don't auto-activate angel - only manual toggle with 'z' key
+        
         // Show buzzing modal using buzzing system
         if (window.buzzingSystem) {
             window.buzzingSystem.showBuzzing(teamId);
@@ -1092,6 +1094,116 @@ class HotkeysManager {
         }, 2500);
     }
     
+    // Handle smart navigation after correct answer
+    handleSmartNavigationAfterCorrect(currentQuestion, state) {
+        const currentSet = state.currentSet || 1;
+        const teamId = state.currentTeam;
+        
+        if (currentQuestion === 1) {
+            // Q1 correct: Move to Q2 on same set (no buzzer reset)
+            if (window.characterController) {
+                if (!window.characterController.initialized) {
+                    window.characterController.init();
+                }
+                window.characterController.moveToQuestion(currentSet, 2);
+            }
+            
+            // After moving to Q2, auto-activate challenge if angel is active
+            setTimeout(() => {
+                this.autoActivateChallengeIfAngelActive();
+            }, 100);
+            
+        } else if (currentQuestion === 2) {
+            // Q2 correct: Move to Q3 on same set
+            if (window.characterController) {
+                if (!window.characterController.initialized) {
+                    window.characterController.init();
+                }
+                window.characterController.moveToQuestion(currentSet, 3);
+            }
+            
+            // After moving to Q3, auto-activate challenge if angel is active
+            setTimeout(() => {
+                this.autoActivateChallengeIfAngelActive();
+            }, 100);
+            
+        } else if (currentQuestion === 3) {
+            // Q3 correct: Move to Q4 on same set
+            if (window.characterController) {
+                if (!window.characterController.initialized) {
+                    window.characterController.init();
+                }
+                window.characterController.moveToQuestion(currentSet, 4);
+            }
+            
+            // After moving to Q4, auto-activate challenge if angel is active
+            setTimeout(() => {
+                this.autoActivateChallengeIfAngelActive();
+            }, 100);
+            
+        } else if (currentQuestion === 4) {
+            // Q4 correct: Reset buzzer and move to Q1 next set
+            const nextSet = Math.min(currentSet + 1, state.config.totalSets);
+            
+            // Reset buzzer state first
+            this.handleResetBuzzers();
+            
+            // Ensure character controller is initialized before moving
+            if (window.characterController && !window.characterController.initialized) {
+                window.characterController.init();
+            }
+            
+            // Force update game state to current position before moving
+            if (window.gameState) {
+                window.gameState.set('currentSet', currentSet);
+                window.gameState.set('currentQuestion', 4);
+            }
+            
+            // Small delay to ensure buzzer reset is complete before animation
+            setTimeout(() => {
+                // Then move to next set Q1 with animation
+                if (window.characterController) {
+                    if (window.addLog) {
+                        addLog(`Moving from Q4 (Set ${currentSet}) to Q1 (Set ${nextSet})`, 'info');
+                    }
+                    const success = window.characterController.moveToQuestion(nextSet, 1);
+                    if (!success && window.addLog) {
+                        addLog('Character animation failed for Q4→Q1 transition', 'warning');
+                    }
+                }
+            }, 100); // Small delay to ensure state is stable
+            
+            // Clear failed teams tracking and reset graying for next set
+            this.clearQ1FailedTeams(currentSet);
+            this.resetTeamGraying();
+            
+            // Don't hide chance display - Q1 always shows it
+        }
+    }
+
+    // Auto-activate challenge mode after navigation if angel is active
+    autoActivateChallengeIfAngelActive() {
+        const state = window.gameState?.get();
+        if (!state || !state.currentTeam || state.currentTeam < 1 || state.currentTeam > 6) {
+            return;
+        }
+        
+        const teamId = state.currentTeam;
+        const currentQuestion = state.currentQuestion || 1;
+        const challengeIcon = document.getElementById('mainCharacterChallenge');
+        
+        // Auto-activate challenge mode for Q2-Q4 ONLY if angel is already active
+        if (currentQuestion > 1 && state.angelTeam === teamId) {
+            if (window.gameState) {
+                window.gameState.set('currentChallenge', teamId);
+            }
+            if (challengeIcon) {
+                challengeIcon.classList.add('active');
+                console.log(`✅ Challenge mode auto-activated for team ${teamId} on Q${currentQuestion} (angel was active)`);
+            }
+        }
+    }
+    
     // Handle angel card toggle
     handleAngelCard() {
         console.log('🔔 Angel card hotkey pressed');
@@ -1124,23 +1236,32 @@ class HotkeysManager {
             window.gameState.set('angelTeam', newAngelTeam);
         }
         
-        // Update main character icon
+        // Toggle angel icon visibility based on activation state
         if (angelIcon) {
-            angelIcon.classList.toggle('active', newAngelTeam > 0);
-            console.log(`✅ Angel icon ${newAngelTeam > 0 ? 'activated' : 'deactivated'}`);
-        } else {
-            console.log('❌ Angel icon element not found');
+            if (newAngelTeam > 0) {
+                angelIcon.classList.add('active');
+                console.log(`✅ Angel icon activated for team ${teamId}`);
+            } else {
+                angelIcon.classList.remove('active');
+                console.log(`✅ Angel icon deactivated for team ${teamId}`);
+            }
         }
         
         // Couple angel with challenge for Q2–Q4; decouple when turning off
         if (newAngelTeam > 0 && currentQuestion > 1) {
             if (window.gameState) window.gameState.set('currentChallenge', teamId);
-            if (challengeIcon) challengeIcon.classList.add('active');
+            if (challengeIcon) {
+                challengeIcon.classList.add('active');
+                console.log(`✅ Challenge mode activated with angel for team ${teamId} on Q${currentQuestion}`);
+            }
         } else if (newAngelTeam === 0) {
             if (window.gameState && state.currentChallenge === teamId) {
                 window.gameState.set('currentChallenge', 0);
             }
-            if (challengeIcon) challengeIcon.classList.remove('active');
+            if (challengeIcon) {
+                challengeIcon.classList.remove('active');
+                console.log(`✅ Challenge mode deactivated for team ${teamId}`);
+            }
         }
         
         // Sync with server (not needed in standalone)
