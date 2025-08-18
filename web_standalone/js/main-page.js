@@ -1409,7 +1409,7 @@ function processQuestionsData(questionsData) {
     questionsData.forEach((row, index) => {
         const setId = parseInt(row.set_id);
         addLog(`Row ${index + 1}: set_id=${setId}, title="${row.title}", theme="${row.theme}"`, 'info');
-        if (setId >= 1 && setId <= 8) {
+        if (setId >= 1 && setId <= 10) {
             // Update question set title
             if (row.title) {
                 window.gameState.state.questionSets[setId].title = row.title;
