@@ -27,7 +27,11 @@ class GameState {
                 5: { title: 'Sports & Entertainment', theme: 'brainstorm' },
                 6: { title: 'Mathematics', theme: 'brainstorm' },
                 7: { title: 'Current Events', theme: 'brainstorm' },
-                8: { title: 'Mystery & Logic', theme: 'brainstorm' }
+                8: { title: 'Mystery & Logic', theme: 'brainstorm' },
+                9: { title: 'Science Fiction', theme: 'brainstorm' },
+                10: { title: 'Ecology & Environment', theme: 'brainstorm' },
+                11: { title: 'Philosophy & Ethics', theme: 'brainstorm' },
+                12: { title: 'Culture & Traditions', theme: 'brainstorm' }
             },
             
             teams: {
@@ -58,9 +62,9 @@ class GameState {
             },
             
             config: {
-                totalSets: 10,
+                totalSets: 12,
                 questionsPerSet: 4,
-                regularSets: 8,
+                regularSets: 12,
                 timerDuration: 15,
                 
                 // Character positioning configuration
@@ -209,7 +213,7 @@ class GameState {
         });
         
         // Subscribe to question set changes
-        for (let setNumber = 1; setNumber <= 8; setNumber++) {
+        for (let setNumber = 1; setNumber <= 12; setNumber++) {
             this.subscribe(`questionSets.${setNumber}.title`, () => {
                 this.updateQuestionSetDisplay();
             });

@@ -30,7 +30,9 @@ class GameState {
                 7: { title: 'Current Events', theme: 'brainstorm' },
                 8: { title: 'Mystery & Logic', theme: 'brainstorm' },
                 9: { title: 'Science Fiction', theme: 'brainstorm' },
-                10: { title: 'Ecology & Environment', theme: 'brainstorm' }
+                10: { title: 'Ecology & Environment', theme: 'brainstorm' },
+                11: { title: 'Philosophy & Ethics', theme: 'brainstorm' },
+                12: { title: 'Culture & Traditions', theme: 'brainstorm' }
             },
 
             teams: {
@@ -61,9 +63,9 @@ class GameState {
             },
 
             config: {
-                totalSets: 10,
+                totalSets: 12,
                 questionsPerSet: 4,
-                regularSets: 8,
+                regularSets: 12,
                 timerDuration: 15,
 
                 // Character positioning configuration
@@ -214,7 +216,7 @@ class GameState {
         });
 
         // Subscribe to question set changes
-        for (let setNumber = 1; setNumber <= 8; setNumber++) {
+        for (let setNumber = 1; setNumber <= 12; setNumber++) {
             this.subscribe(`questionSets.${setNumber}.title`, () => {
                 this.updateQuestionSetDisplay();
             });
@@ -892,7 +894,7 @@ class GameState {
         this.resetQuestionBlockToDefault();
 
         // Clear all Q1 failure tracking states for all sets
-        for (let setNumber = 1; setNumber <= 10; setNumber++) {
+        for (let setNumber = 1; setNumber <= 12; setNumber++) {
             const failedTeamsKey = `q1FailedTeams_${setNumber}`;
             const attemptsKey = `q1Attempts_${setNumber}`;
             this.state[failedTeamsKey] = [];

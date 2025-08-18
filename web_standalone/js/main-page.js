@@ -887,7 +887,7 @@ function updateQuestionsTable() {
     }
 
     // Update theme icons
-    for (let setNumber = 1; setNumber <= 8; setNumber++) {
+    for (let setNumber = 1; setNumber <= 12; setNumber++) {
         const setInfo = window.gameState.state.questionSets[setNumber];
         if (setInfo) {
             const themeIcon = document.getElementById(`themeIcon-${setNumber}`);
@@ -1013,7 +1013,7 @@ function selectTheme(icon, name) {
 function goToQuestion(setNumber, questionNumber) {
     // Validate input parameters
     if (!setNumber || !questionNumber ||
-        setNumber < 1 || setNumber > 10 ||
+        setNumber < 1 || setNumber > 12 ||
         questionNumber < 1 || questionNumber > 4) {
         console.warn('Invalid set or question number:', setNumber, questionNumber);
         if (window.addLog) {
@@ -1409,7 +1409,7 @@ function processQuestionsData(questionsData) {
     questionsData.forEach((row, index) => {
         const setId = parseInt(row.set_id);
         addLog(`Row ${index + 1}: set_id=${setId}, title="${row.title}", theme="${row.theme}"`, 'info');
-        if (setId >= 1 && setId <= 10) {
+        if (setId >= 1 && setId <= 12) {
             // Update question set title
             if (row.title) {
                 window.gameState.state.questionSets[setId].title = row.title;
@@ -1422,7 +1422,7 @@ function processQuestionsData(questionsData) {
                 addLog(`Updated question set ${setId} theme to: ${row.theme}`, 'info');
             }
         } else {
-            addLog(`Invalid set_id: ${setId} (must be 1-8)`, 'warning');
+            addLog(`Invalid set_id: ${setId} (must be 1-12)`, 'warning');
         }
     });
 
@@ -1460,7 +1460,7 @@ window.downloadXLSX = function () {
 
         // Create questions data
         const questionsData = [];
-        for (let setId = 1; setId <= 8; setId++) {
+        for (let setId = 1; setId <= 12; setId++) {
             const questionSet = window.gameState.state.questionSets[setId];
             questionsData.push({
                 set_id: setId,

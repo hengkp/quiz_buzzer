@@ -429,7 +429,7 @@ function initializeQuestionsTable() {
     const tableBody = document.getElementById('questionsTableBody');
     tableBody.innerHTML = '';
     
-    for (let setNumber = 1; setNumber <= 8; setNumber++) {
+    for (let setNumber = 1; setNumber <= 12; setNumber++) {
         const setInfo = gameState.state.questionSets[setNumber];
         if (!setInfo) continue;
         
@@ -476,7 +476,7 @@ function updateQuestionsTable() {
     }
     
     // Update theme icons
-    for (let setNumber = 1; setNumber <= 8; setNumber++) {
+    for (let setNumber = 1; setNumber <= 12; setNumber++) {
         const setInfo = gameState.state.questionSets[setNumber];
         if (setInfo) {
             const themeIcon = document.getElementById(`themeIcon-${setNumber}`);
@@ -1039,7 +1039,7 @@ function processTeamsData(teamsData) {
 function processQuestionsData(questionsData) {
     questionsData.forEach(row => {
         const setId = parseInt(row.set_id);
-        if (setId >= 1 && setId <= 8) {
+        if (setId >= 1 && setId <= 12) {
             // Update question set title
             if (row.title) {
                 gameState.state.questionSets[setId].title = row.title;
@@ -1079,7 +1079,7 @@ window.downloadXLSX = function() {
         
         // Create questions data
         const questionsData = [];
-        for (let setId = 1; setId <= 8; setId++) {
+        for (let setId = 1; setId <= 12; setId++) {
             const questionSet = gameState.state.questionSets[setId];
             questionsData.push({
                 set_id: setId,
