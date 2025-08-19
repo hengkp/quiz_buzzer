@@ -28,8 +28,29 @@ class HotkeysManager {
         
         this.setupDefaultBindings();
         this.startListening();
+        this.initializeTeamNameUpdates();
         this.initialized = true;
         return true;
+    }
+    
+    // Initialize team name update listeners
+    initializeTeamNameUpdates() {
+        if (!window.gameState) {
+            // If gameState isn't ready yet, wait for it
+            setTimeout(() => this.initializeTeamNameUpdates(), 100);
+            return;
+        }
+        
+        // Subscribe to team name changes to update the devil attack modal
+        for (let teamId = 1; teamId <= 6; teamId++) {
+            window.gameState.subscribe(`teams.${teamId}.name`, () => {
+                // Update the devil attack modal if it's currently open
+                const modal = document.getElementById('devilAttackModal');
+                if (modal && modal.classList.contains('active')) {
+                    this.updateDevilAttackModalTeamNames(window.gameState.get());
+                }
+            });
+        }
     }
     
     // Setup default key bindings
@@ -202,6 +223,12 @@ class HotkeysManager {
             event.preventDefault();
             this.testEmergencyMeeting();
         }, 'Test emergency meeting');
+        
+        // Round start sound effect
+        this.bind('y', (event) => {
+            event.preventDefault();
+            this.playRoundStartSound();
+        }, 'Play round start sound effect');
         
         // Development hotkeys (only in debug mode)
         if (this.isDebugMode()) {
@@ -387,9 +414,8 @@ class HotkeysManager {
         const state = window.gameState?.get();
         if (!state) return;
         
-        // Mark angel card as permanently used
+        // Deactivate angel protection but keep card available for reuse
         if (window.gameState) {
-            window.gameState.update(`actionCards.${teamId}.angel`, false);
             window.gameState.set('angelTeam', 0);
         }
         
@@ -422,9 +448,8 @@ class HotkeysManager {
         // Check if victim team has angel protection
         const hasAngel = state.angelTeam === victimTeamId;
         
-        // If victim has angel protection, mark it as used immediately
+        // If victim has angel protection, deactivate it but keep card available
         if (hasAngel && window.gameState) {
-            window.gameState.update(`actionCards.${victimTeamId}.angel`, false);
             window.gameState.set('angelTeam', 0);
             
             // Update main character icon
@@ -528,10 +553,9 @@ class HotkeysManager {
             this.trackQ1Failure(teamId, currentSet);
         }
         
-        // Permanently disable angel card if it was active
+        // Deactivate angel card if it was active but keep it available for reuse
         if (state.angelTeam === teamId) {
             if (window.gameState) {
-                window.gameState.update(`actionCards.${teamId}.angel`, false);
                 window.gameState.set('angelTeam', 0);
                 
                 // Update main character icon
@@ -598,10 +622,9 @@ class HotkeysManager {
             this.trackQ1Failure(teamId, currentSet);
         }
         
-        // Permanently disable angel card if it was active
+        // Deactivate angel card if it was active but keep it available for reuse
         if (state.angelTeam === teamId) {
             if (window.gameState) {
-                window.gameState.update(`actionCards.${teamId}.angel`, false);
                 window.gameState.set('angelTeam', 0);
                 
                 // Update main character icon
@@ -668,10 +691,9 @@ class HotkeysManager {
             this.trackQ1Failure(teamId, currentSet);
         }
         
-        // Permanently disable angel card if it was active
+        // Deactivate angel card if it was active but keep it available for reuse
         if (state.angelTeam === teamId) {
             if (window.gameState) {
-                window.gameState.update(`actionCards.${teamId}.angel`, false);
                 window.gameState.set('angelTeam', 0);
                 
                 // Update main character icon
@@ -1234,10 +1256,10 @@ class HotkeysManager {
         const teamId = state.currentTeam;
         console.log(`🎯 Team ${teamId} angel card requested`);
         
-        // Check if angel card is available (true in actionCards)
-        if (!state.actionCards[teamId].angel) {
-            console.log('❌ Angel card not available for this team');
-            return;
+        // Angel cards are always available - no permanent usage restriction
+        // Ensure angel card is marked as available in actionCards
+        if (window.gameState && !state.actionCards[teamId].angel) {
+            window.gameState.update(`actionCards.${teamId}.angel`, true);
         }
         
         const angelIcon = document.getElementById('mainCharacterAngel');
@@ -1484,6 +1506,9 @@ class HotkeysManager {
         // Get current game state for filtering
         const state = window.gameState?.get();
         
+        // Update team names from game state
+        this.updateDevilAttackModalTeamNames(state);
+        
         // Clear previous selections and filter available targets
         modal.querySelectorAll('.attack-team-option').forEach(option => {
             const targetTeamId = parseInt(option.getAttribute('data-team-id'));
@@ -1522,6 +1547,23 @@ class HotkeysManager {
         // Store attacking team for confirmation
         modal.dataset.attackingTeam = attackingTeamId;
         modal.dataset.targetTeam = null;
+    }
+    
+    // Update team names in devil attack modal from game state
+    updateDevilAttackModalTeamNames(state) {
+        if (!state?.teams) {
+            return;
+        }
+        
+        // Update each team name in the attack modal
+        for (let teamId = 1; teamId <= 6; teamId++) {
+            const teamOption = document.querySelector(`[data-team-id="${teamId}"] .attack-team-name`);
+            const teamData = state.teams[teamId];
+            
+            if (teamOption && teamData?.name) {
+                teamOption.textContent = teamData.name;
+            }
+        }
     }
     
     // Check if a team can attack another team
@@ -2309,6 +2351,19 @@ class HotkeysManager {
             if (window.gameState) {
                 window.gameState.resetTimerToDefault();
             }
+        }
+    }
+    
+    // Play round start sound effect
+    playRoundStartSound() {
+        try {
+            const audio = new Audio('assets/audio/among-us-roundstart.mp3');
+            audio.volume = 0.8; // Good volume for sound effect
+            audio.play().catch((error) => {
+                // Silently handle audio play errors
+            });
+        } catch (error) {
+            // Silently handle audio creation errors
         }
     }
     
