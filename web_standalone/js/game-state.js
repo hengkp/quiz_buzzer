@@ -149,9 +149,6 @@ class GameState {
 
     // Initialize UI elements
     initializeUI() {
-        // Ensure angel cards are available for all teams (fix for permanent disabling bug)
-        this.ensureAngelCardsAvailable();
-
         // Initialize planet blocks
         this.updatePlanetBlocks();
 
@@ -621,6 +618,12 @@ class GameState {
             // Add running animation class
             timerElement.classList.toggle('timer-running', this.state.timerRunning);
 
+            // Check if timer reached zero and trigger emergency meeting
+            if (this.state.timerValue === 0 && this.state.timerRunning) {
+                this.set('timerRunning', false);
+                this.triggerEmergencyMeeting();
+            }
+
         } else {
         }
     }
@@ -631,22 +634,11 @@ class GameState {
             clearInterval(this.timerInterval);
         }
 
-        // Play the first beep immediately when timer starts (no delay)
-        if (this.state.timerRunning && this.state.timerValue > 0) {
-            this.playReactorMeltdownBeep();
-        }
-
         this.timerInterval = setInterval(() => {
             if (this.state.timerRunning && this.state.timerValue > 0) {
+                // Play reactor meltdown beep sound BEFORE decrementing for perfect sync
+                this.playReactorMeltdownBeep();
                 this.set('timerValue', this.state.timerValue - 1);
-                // Check if timer just reached 0 and trigger emergency meeting
-                if (this.state.timerValue === 0) {
-                    this.set('timerRunning', false);
-                    this.playEmergencyMeetingSound();
-                } else {
-                    // Play beep for the new timer value (only when > 0)
-                    this.playReactorMeltdownBeep();
-                }
             } else if (this.state.timerValue <= 0) {
                 this.stopTimerCountdown();
             }
@@ -722,7 +714,7 @@ class GameState {
     playReactorMeltdownBeep() {
         try {
             const audio = new Audio('assets/audio/among-us-reactor-meldown.mp3');
-            audio.volume = 0.4; // Lower volume so timeout sound is louder and more prominent
+            audio.volume = 0.7; // Slightly lower volume than emergency meeting
             audio.play().catch((error) => {
                 // Silently handle audio play errors
             });
@@ -1112,16 +1104,6 @@ class GameState {
         }
 
         document.head.appendChild(style);
-    }
-
-    // Ensure angel cards are available for all teams (fix for permanent disabling bug)
-    ensureAngelCardsAvailable() {
-        for (let teamId = 1; teamId <= 6; teamId++) {
-            if (!this.state.actionCards[teamId].angel) {
-                this.state.actionCards[teamId].angel = true;
-            }
-        }
-        this.saveToLocalStorage();
     }
 
     // Reset action cards for new game (complete reset including permanent usage)

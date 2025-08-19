@@ -249,7 +249,7 @@
     /* smaller font for chance under question set*/
     .question-set-chance {
         position: absolute;
-        bottom: -25%;
+        bottom: -35%;
         left: 50%;
         transform: translateX(-50%);
         z-index: 10;
@@ -704,20 +704,21 @@
     }
 
     .character-action-icon {
-        width: clamp(40px, 6vw, 60px);
+        width: 0;
         height: clamp(40px, 6vw, 60px);
         background-size: cover;
         background-repeat: no-repeat;
         background-position: center;
-        display: none;
         opacity: 0;
         transform: scale(0.8);
         transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
         filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+        overflow: hidden;
+        flex-shrink: 0;
     }
 
     .character-action-icon.active {
-        display: block;
+        width: clamp(40px, 6vw, 60px);
         opacity: 1;
         transform: scale(1);
         animation: actionGlow 2s infinite;
@@ -908,19 +909,18 @@
     .attack-modal-content {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border-radius: 24px;
-        padding: 40px;
+        padding: 48px;
         max-width: 1200px;
-        max-height: 95vh;
+        max-height: 90vh;
         overflow-y: auto;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
         border: 2px solid rgba(255, 255, 255, 0.2);
         animation: modalSlideIn 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
-        min-width: 800px;
     }
 
     .attack-modal-header {
         text-align: center;
-        margin-bottom: 32px;
+        margin-bottom: 24px;
         color: white;
     }
 
@@ -959,11 +959,6 @@
         transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
-        min-height: 140px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
     }
 
     .attack-team-option:hover {
@@ -1002,22 +997,21 @@
 
     .attack-modal-actions {
         display: flex;
-        gap: 20px;
+        gap: 16px;
         justify-content: center;
     }
 
     .attack-confirm-btn,
     .attack-cancel-btn {
-        padding: 16px 32px;
+        padding: 12px 24px;
         border: none;
-        border-radius: 14px;
-        font-size: 1.1rem;
+        border-radius: 12px;
+        font-size: 1rem;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.3s ease;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        min-width: 140px;
     }
 
     .attack-confirm-btn {

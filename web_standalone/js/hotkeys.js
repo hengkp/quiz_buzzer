@@ -28,29 +28,8 @@ class HotkeysManager {
         
         this.setupDefaultBindings();
         this.startListening();
-        this.initializeTeamNameUpdates();
         this.initialized = true;
         return true;
-    }
-    
-    // Initialize team name update listeners
-    initializeTeamNameUpdates() {
-        if (!window.gameState) {
-            // If gameState isn't ready yet, wait for it
-            setTimeout(() => this.initializeTeamNameUpdates(), 100);
-            return;
-        }
-        
-        // Subscribe to team name changes to update the devil attack modal
-        for (let teamId = 1; teamId <= 6; teamId++) {
-            window.gameState.subscribe(`teams.${teamId}.name`, () => {
-                // Update the devil attack modal if it's currently open
-                const modal = document.getElementById('devilAttackModal');
-                if (modal && modal.classList.contains('active')) {
-                    this.updateDevilAttackModalTeamNames(window.gameState.get());
-                }
-            });
-        }
     }
     
     // Setup default key bindings
@@ -414,9 +393,12 @@ class HotkeysManager {
         const state = window.gameState?.get();
         if (!state) return;
         
-        // Deactivate angel protection but keep card available for reuse
+        // IMPORTANT: Disable angel card permanently when used to prevent penalty
         if (window.gameState) {
             window.gameState.set('angelTeam', 0);
+            // Mark angel card as used (disabled) for this team
+            window.gameState.update(`actionCards.${teamId}.angel`, false);
+            console.log(`🔒 Angel card permanently disabled for team ${teamId} (used for protection)`);
         }
         
         // Update main character icon
@@ -448,9 +430,12 @@ class HotkeysManager {
         // Check if victim team has angel protection
         const hasAngel = state.angelTeam === victimTeamId;
         
-        // If victim has angel protection, deactivate it but keep card available
+        // If victim has angel protection, deactivate it and disable card permanently
         if (hasAngel && window.gameState) {
             window.gameState.set('angelTeam', 0);
+            // Mark angel card as used (disabled) for the victim team
+            window.gameState.update(`actionCards.${victimTeamId}.angel`, false);
+            console.log(`🔒 Angel card permanently disabled for team ${victimTeamId} (used for devil attack protection)`);
             
             // Update main character icon
             const angelIcon = document.getElementById('mainCharacterAngel');
@@ -946,7 +931,7 @@ class HotkeysManager {
         if (chanceElement) {
             const remainingChances = 3 - attemptNumber;
             if (remainingChances > 0) {
-                chanceElement.textContent = remainingChances === 1 ? '(last chance)' : `(${remainingChances} chances left)`;
+                chanceElement.textContent = remainingChances === 1 ? '(last chance)' : `(chance: ${remainingChances}/3)`;
                 chanceElement.style.display = 'block';
             } else {
                 chanceElement.style.display = 'none';
@@ -1131,9 +1116,10 @@ class HotkeysManager {
             }
             
             // After moving to Q2, auto-activate challenge if angel is active
+            // Use longer delay to ensure cross removal completes first
             setTimeout(() => {
                 this.autoActivateChallengeIfAngelActive();
-            }, 100);
+            }, 200);
             
         } else if (currentQuestion === 2) {
             // Q2 correct: Move to Q3 on same set
@@ -1145,9 +1131,10 @@ class HotkeysManager {
             }
             
             // After moving to Q3, auto-activate challenge if angel is active
+            // Use longer delay to ensure cross removal completes first
             setTimeout(() => {
                 this.autoActivateChallengeIfAngelActive();
-            }, 100);
+            }, 200);
             
         } else if (currentQuestion === 3) {
             // Q3 correct: Move to Q4 on same set
@@ -1159,13 +1146,20 @@ class HotkeysManager {
             }
             
             // After moving to Q4, auto-activate challenge if angel is active
+            // Use longer delay to ensure cross removal completes first
             setTimeout(() => {
                 this.autoActivateChallengeIfAngelActive();
-            }, 100);
+            }, 200);
             
         } else if (currentQuestion === 4) {
             // Q4 correct: Reset buzzer and move to Q1 next set
             const nextSet = Math.min(currentSet + 1, state.config.totalSets);
+            
+            // If team completed Q4 with angel card active, disable the angel card permanently
+            if (state.angelTeam === teamId) {
+                window.gameState.update(`actionCards.${teamId}.angel`, false);
+                console.log(`🔒 Angel card permanently disabled for team ${teamId} (completed Q4 with angel active)`);
+            }
             
             // Reset buzzer state first
             this.handleResetBuzzers();
@@ -1224,10 +1218,25 @@ class HotkeysManager {
                 challengeIcon.classList.add('active');
                 console.log(`✅ Challenge mode auto-activated for team ${teamId} on Q${currentQuestion} (angel was active)`);
             }
+            
+            // Force aggressive layout recalculation for auto-challenge activation
+            // This ensures proper rearrangement after cross removal + challenge addition
+            requestAnimationFrame(() => {
+                this.updateActionPanelVisibility();
+                
+                // Additional forced reflow to handle timing issues
+                const panel = document.getElementById('characterActionPanel');
+                if (panel) {
+                    // Double-force the layout recalculation
+                    panel.style.transform = 'translateZ(0)'; // Force GPU layer
+                    panel.offsetHeight; // Force reflow
+                    panel.style.transform = ''; // Reset
+                }
+            });
+        } else {
+            // Update panel visibility even if challenge wasn't activated
+            this.updateActionPanelVisibility();
         }
-        
-        // Update panel visibility after changes
-        this.updateActionPanelVisibility();
     }
     
     // Update action panel visibility based on active icons
@@ -1242,6 +1251,23 @@ class HotkeysManager {
         } else {
             panel.classList.add('empty');
         }
+        
+        // Debug: Log current icon states for troubleshooting
+        const allIcons = panel.querySelectorAll('.character-action-icon');
+        const iconStates = Array.from(allIcons).map(icon => {
+            const classes = Array.from(icon.classList);
+            const isActive = classes.includes('active');
+            const type = classes.find(c => ['angel', 'devil', 'cross', 'challenge'].includes(c));
+            return `${type}:${isActive ? 'ON' : 'OFF'}`;
+        });
+        console.log('🔄 Icon states:', iconStates.join(', '));
+        
+        // With the new CSS approach (width: 0 instead of display: none),
+        // flexbox should handle layout automatically without forcing recalculation
+        // Just trigger a simple reflow to ensure smooth transitions
+        panel.offsetHeight;
+        
+        console.log('✅ Layout updated with width-based approach');
     }
     
     // Handle angel card toggle - Simple independent toggle
@@ -1256,10 +1282,10 @@ class HotkeysManager {
         const teamId = state.currentTeam;
         console.log(`🎯 Team ${teamId} angel card requested`);
         
-        // Angel cards are always available - no permanent usage restriction
-        // Ensure angel card is marked as available in actionCards
-        if (window.gameState && !state.actionCards[teamId].angel) {
-            window.gameState.update(`actionCards.${teamId}.angel`, true);
+        // Check if angel card is available for this team
+        if (!state.actionCards[teamId].angel) {
+            console.log(`❌ Angel card not available for team ${teamId} (already used)`);
+            return;
         }
         
         const angelIcon = document.getElementById('mainCharacterAngel');
@@ -1274,19 +1300,41 @@ class HotkeysManager {
             window.gameState.set('angelTeam', newAngelTeam);
         }
         
-        // Toggle angel icon visibility
+        // Toggle angel icon visibility with additional debugging and force refresh
         if (angelIcon) {
+            // Force remove any conflicting classes first
+            angelIcon.classList.remove('active');
+            
             if (newAngelTeam > 0) {
-                angelIcon.classList.add('active');
-                console.log(`✅ Angel icon activated for team ${teamId}`);
+                // Use requestAnimationFrame to ensure DOM update happens after state change
+                requestAnimationFrame(() => {
+                    angelIcon.classList.add('active');
+                    // Verify the class was actually added
+                    const hasActiveClass = angelIcon.classList.contains('active');
+                    console.log(`✅ Angel icon activated for team ${teamId}, class added: ${hasActiveClass}`);
+                    
+                    // Force a style recalculation to ensure visibility
+                    angelIcon.style.display = 'block';
+                    angelIcon.offsetHeight; // Force reflow
+                    angelIcon.style.display = ''; // Reset to CSS default
+                });
             } else {
                 angelIcon.classList.remove('active');
                 console.log(`✅ Angel icon deactivated for team ${teamId}`);
             }
+        } else {
+            console.warn('❌ Angel icon element not found in DOM');
         }
         
-        // Update panel visibility after changes
-        this.updateActionPanelVisibility();
+        // Update panel visibility after changes with a small delay to ensure DOM updates
+        requestAnimationFrame(() => {
+            this.updateActionPanelVisibility();
+        });
+        
+        // Save game state to ensure persistence
+        if (window.gameState) {
+            window.gameState.saveToLocalStorage();
+        }
         
         // Sync with server (not needed in standalone)
         
@@ -1507,7 +1555,15 @@ class HotkeysManager {
         const state = window.gameState?.get();
         
         // Update team names from game state
-        this.updateDevilAttackModalTeamNames(state);
+        modal.querySelectorAll('.attack-team-option').forEach(option => {
+            const targetTeamId = parseInt(option.getAttribute('data-team-id'));
+            const teamNameElement = option.querySelector('.attack-team-name');
+            
+            // Update team name from game state
+            if (teamNameElement && state?.teams?.[targetTeamId]?.name) {
+                teamNameElement.textContent = state.teams[targetTeamId].name;
+            }
+        });
         
         // Clear previous selections and filter available targets
         modal.querySelectorAll('.attack-team-option').forEach(option => {
@@ -1547,23 +1603,6 @@ class HotkeysManager {
         // Store attacking team for confirmation
         modal.dataset.attackingTeam = attackingTeamId;
         modal.dataset.targetTeam = null;
-    }
-    
-    // Update team names in devil attack modal from game state
-    updateDevilAttackModalTeamNames(state) {
-        if (!state?.teams) {
-            return;
-        }
-        
-        // Update each team name in the attack modal
-        for (let teamId = 1; teamId <= 6; teamId++) {
-            const teamOption = document.querySelector(`[data-team-id="${teamId}"] .attack-team-name`);
-            const teamData = state.teams[teamId];
-            
-            if (teamOption && teamData?.name) {
-                teamOption.textContent = teamData.name;
-            }
-        }
     }
     
     // Check if a team can attack another team
@@ -1859,6 +1898,9 @@ class HotkeysManager {
             crossIcon.classList.add('active');
             }
             
+            // Update panel layout to ensure proper icon arrangement
+            this.updateActionPanelVisibility();
+            
         } catch (error) {
         }
     }
@@ -1892,6 +1934,13 @@ class HotkeysManager {
         if (crossIcon) {
             crossIcon.classList.remove('active');
         }
+        
+        // Update panel layout to ensure proper icon arrangement after removing cross
+        // Use requestAnimationFrame to ensure this completes before auto-challenge activation
+        requestAnimationFrame(() => {
+            this.updateActionPanelVisibility();
+            console.log('🔄 Cross protection removed and layout updated');
+        });
         
         // Force update team displays to ensure cross protection is removed
         if (window.gameState) {
@@ -2008,6 +2057,9 @@ class HotkeysManager {
             } else {
                 console.log('❌ Challenge icon element not found');
             }
+            
+            // Update panel layout to ensure proper icon arrangement
+            this.updateActionPanelVisibility();
             
             // Sync with server (not needed in standalone)
         }
@@ -2244,6 +2296,9 @@ class HotkeysManager {
                 if (crossStatus) {
                 }
             }
+            
+            // Save current game state to local storage to preserve changes
+            window.gameState.saveToLocalStorage();
         }
         
     }
