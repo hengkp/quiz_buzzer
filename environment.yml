@@ -1,13 +1,52 @@
 name: quiz_buzzer
 channels:
   - conda-forge
-  - defaults
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.com/pkgs/r
 dependencies:
-  - python=3.11
-  - pip
+  - bzip2=1.0.8=h99b78c6_7
+  - ca-certificates=2025.8.3=hbd8a1cb_0
+  - libexpat=2.7.0=h286801f_0
+  - libffi=3.4.6=h1da3d7d_1
+  - liblzma=5.8.1=h39f12f2_2
+  - libsqlite=3.50.2=h6fb428d_0
+  - libzlib=1.3.1=h8359307_2
+  - ncurses=6.5=h5e97a16_3
+  - openssl=3.5.2=he92f556_0
+  - pip=25.2=pyh8b19718_0
+  - python=3.11.13=hc22306f_0_cpython
+  - readline=8.2=h1d1bf99_2
+  - setuptools=80.9.0=pyhff2d567_0
+  - tk=8.6.13=h892fb3f_2
+  - wheel=0.45.1=pyhd8ed1ab_1
   - pip:
-    - Flask==2.3.3
-    - Flask-SocketIO==5.3.6
-    - python-socketio==5.8.0
-    - eventlet==0.33.3
-    - pyserial==3.5
+      - bidict==0.23.1
+      - blinker==1.6.2
+      - cffi==1.17.1
+      - click==8.1.7
+      - cryptography==45.0.5
+      - dnspython==2.7.0
+      - et-xmlfile==1.1.0
+      - eventlet==0.33.3
+      - flask==2.3.3
+      - flask-cors==6.0.1
+      - flask-socketio==5.3.6
+      - greenlet==3.2.3
+      - h11==0.16.0
+      - itsdangerous==2.2.0
+      - jinja2==3.1.4
+      - markupsafe==2.1.3
+      - numpy==1.26.4
+      - openpyxl==3.1.5
+      - pandas==2.2.2
+      - pycparser==2.22
+      - pyserial==3.5
+      - python-dateutil==2.9.0.post0
+      - python-engineio==4.12.2
+      - python-socketio==5.8.0
+      - pytz==2024.1
+      - simple-websocket==1.1.0
+      - six==1.16.0
+      - tzdata==2023.3
+      - werkzeug==3.0.3
+      - wsproto==1.2.0
