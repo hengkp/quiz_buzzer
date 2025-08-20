@@ -97,7 +97,8 @@ class MainPageApp {
             () => this.initializeBuzzingSystem(),
             () => this.initializeHotkeys(),
             () => this.initializeArduinoConnection(),
-            () => this.initializeCloudGroup()
+            () => this.initializeCloudGroup(),
+            () => this.initializeStoryModal()
         ];
 
         // Execute all systems in order
@@ -367,6 +368,16 @@ class MainPageApp {
         }
     }
 
+    // Initialize Story Modal
+    initializeStoryModal() {
+        // Skip story modal on console page
+        if (window.location.pathname.includes('console.html')) {
+            return Promise.resolve();
+        }
+
+        initializeStoryModal();
+        return Promise.resolve();
+    }
 
     // Get initialization status
     getStatus() {
@@ -510,6 +521,224 @@ window.openQuestionsModal = () => {
 window.closeQuestionsModal = () => {
     document.getElementById('questionsModal').classList.remove('active');
 };
+
+// Story Modal Functions
+window.openStoryModal = () => {
+    const modal = document.getElementById('storyModal');
+    if (modal) {
+        updateStoryModalContent();
+        modal.classList.add('active');
+    }
+};
+
+window.closeStoryModal = () => {
+    const modal = document.getElementById('storyModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+};
+
+// Update Story Modal Content
+function updateStoryModalContent() {
+    if (!window.gameState) return;
+    
+    const currentSet = window.gameState.state.currentSet;
+    const currentQuestion = window.gameState.state.currentQuestion;
+    const questionSetData = window.gameState.state.questionSets[currentSet];
+    
+    if (!questionSetData) return;
+    
+    // Update modal elements
+    const iconElement = document.getElementById('storyQuestionIcon');
+    const titleElement = document.getElementById('storyQuestionTitle');
+    const textElement = document.getElementById('storyQuestionText');
+    
+    if (iconElement) {
+        iconElement.src = `assets/themes/${questionSetData.theme}.png`;
+        iconElement.alt = `${questionSetData.title} Icon`;
+    }
+    
+    if (titleElement) {
+        const titleText = `Q${currentQuestion} of ${questionSetData.title}`;
+        titleElement.textContent = titleText;
+        adaptTitleFontSize(titleElement, titleText);
+    }
+    
+    if (textElement) {
+        const questionKey = `q${currentQuestion}`;
+        const storyText = questionSetData[questionKey] || 'No story available for this question.';
+        textElement.textContent = storyText;
+        adaptStoryFontSize(textElement, storyText);
+    }
+}
+
+// Dynamic font size adaptation for title
+function adaptTitleFontSize(element, text) {
+    // Base font sizes for different screen sizes (reduced for smaller header)
+    const screenWidth = window.innerWidth;
+    let baseFontSize;
+    
+    if (screenWidth > 1200) {
+        baseFontSize = 64;  // was 96, reduced by ~33%
+    } else if (screenWidth > 768) {
+        baseFontSize = 48;  // was 72, reduced by ~33%
+    } else if (screenWidth > 480) {
+        baseFontSize = 36;  // was 54, reduced by ~33%
+    } else {
+        baseFontSize = 28;  // was 42, reduced by ~33%
+    }
+    
+    // Calculate adaptive font size based on text length
+    let fontSize = baseFontSize;
+    const textLength = text.length;
+    
+    // Adjust font size based on text length
+    if (textLength > 50) {
+        fontSize = Math.max(baseFontSize * 0.6, baseFontSize * 0.4);
+    } else if (textLength > 40) {
+        fontSize = Math.max(baseFontSize * 0.7, baseFontSize * 0.5);
+    } else if (textLength > 30) {
+        fontSize = Math.max(baseFontSize * 0.8, baseFontSize * 0.6);
+    } else if (textLength > 20) {
+        fontSize = Math.max(baseFontSize * 0.9, baseFontSize * 0.7);
+    }
+    
+    // Apply the calculated font size
+    element.style.fontSize = `${fontSize}px`;
+    
+    // Also adjust line-height for better readability
+    if (textLength > 30) {
+        element.style.lineHeight = '1.1';
+        element.style.whiteSpace = 'normal';
+    } else {
+        element.style.lineHeight = '1.2';
+        element.style.whiteSpace = 'nowrap';
+    }
+}
+
+// Dynamic font size adaptation for story text
+function adaptStoryFontSize(element, text) {
+    // Base font sizes for different screen sizes (doubled for maximum readability)
+    const screenWidth = window.innerWidth;
+    let baseFontSize;
+    
+    if (screenWidth > 1200) {
+        baseFontSize = 144;  // was 72, doubled
+    } else if (screenWidth > 768) {
+        baseFontSize = 108;  // was 54, doubled
+    } else if (screenWidth > 480) {
+        baseFontSize = 80;   // was 40, doubled
+    } else {
+        baseFontSize = 64;   // was 32, doubled
+    }
+    
+    // Calculate adaptive font size based on text length with better scaling
+    let fontSize = baseFontSize;
+    const textLength = text.length;
+    
+    // More aggressive scaling for very long text, moderate scaling for short text
+    if (textLength > 400) {
+        fontSize = baseFontSize * 0.25; // Very long text (like the Thai example)
+    } else if (textLength > 300) {
+        fontSize = baseFontSize * 0.35; // Extra long text
+    } else if (textLength > 250) {
+        fontSize = baseFontSize * 0.4;  // Long text
+    } else if (textLength > 200) {
+        fontSize = baseFontSize * 0.5;  // Medium-long text
+    } else if (textLength > 150) {
+        fontSize = baseFontSize * 0.6;  // Medium text
+    } else if (textLength > 120) {
+        fontSize = baseFontSize * 0.7;  // Medium-short text
+    } else if (textLength > 90) {
+        fontSize = baseFontSize * 0.8;  // Short text
+    } else if (textLength > 60) {
+        fontSize = baseFontSize * 0.85; // Very short text
+    } else if (textLength > 30) {
+        fontSize = baseFontSize * 0.9;  // Extra short text
+    } else {
+        fontSize = baseFontSize * 0.8;  // Prevent tiny text from being too big
+    }
+    
+    // Apply the calculated font size
+    element.style.fontSize = `${fontSize}px`;
+    
+    // Adjust line-height based on font size and text length for better readability
+    if (textLength > 300) {
+        element.style.lineHeight = '1.2'; // Tighter line height for very long text
+    } else if (fontSize < baseFontSize * 0.6) {
+        element.style.lineHeight = '1.25'; // Slightly tighter for smaller fonts
+    } else if (fontSize < baseFontSize * 0.8) {
+        element.style.lineHeight = '1.3';  // Medium line height
+    } else {
+        element.style.lineHeight = '1.4';  // Standard line height for larger fonts
+    }
+}
+
+// Initialize Story Modal Event Listeners
+function initializeStoryModal() {
+    const modal = document.getElementById('storyModal');
+    if (modal) {
+        // Close modal when clicking outside of content
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                window.closeStoryModal();
+            }
+        });
+        
+        // Add resize listener to recalculate font sizes
+        window.addEventListener('resize', () => {
+            if (modal.classList.contains('active')) {
+                const titleElement = document.getElementById('storyQuestionTitle');
+                const textElement = document.getElementById('storyQuestionText');
+                
+                if (titleElement && titleElement.textContent) {
+                    adaptTitleFontSize(titleElement, titleElement.textContent);
+                }
+                
+                if (textElement && textElement.textContent) {
+                    adaptStoryFontSize(textElement, textElement.textContent);
+                }
+            }
+        });
+    }
+}
+
+// View specific question story from questions modal
+function viewQuestionStory(setNumber, questionNumber) {
+    if (!window.gameState) return;
+    
+    const questionSetData = window.gameState.state.questionSets[setNumber];
+    if (!questionSetData) return;
+    
+    // Update modal elements with specific question data
+    const iconElement = document.getElementById('storyQuestionIcon');
+    const titleElement = document.getElementById('storyQuestionTitle');
+    const textElement = document.getElementById('storyQuestionText');
+    
+    if (iconElement) {
+        iconElement.src = `assets/themes/${questionSetData.theme}.png`;
+        iconElement.alt = `${questionSetData.title} Icon`;
+    }
+    
+    if (titleElement) {
+        const titleText = `Q${questionNumber} of ${questionSetData.title}`;
+        titleElement.textContent = titleText;
+        adaptTitleFontSize(titleElement, titleText);
+    }
+    
+    if (textElement) {
+        const questionKey = `q${questionNumber}`;
+        const storyText = questionSetData[questionKey] || 'No story available for this question.';
+        textElement.textContent = storyText;
+        adaptStoryFontSize(textElement, storyText);
+    }
+    
+    // Open the story modal
+    const modal = document.getElementById('storyModal');
+    if (modal) {
+        modal.classList.add('active');
+    }
+}
 
 // Logs Modal Functions
 window.openLogsModal = () => {
@@ -846,6 +1075,12 @@ function initializeQuestionsTable() {
 
         const row = document.createElement('tr');
 
+        // Generate story previews for each question
+        const q1Preview = setInfo.q1 ? (setInfo.q1.length > 50 ? setInfo.q1.substring(0, 50) + '...' : setInfo.q1) : 'No story';
+        const q2Preview = setInfo.q2 ? (setInfo.q2.length > 50 ? setInfo.q2.substring(0, 50) + '...' : setInfo.q2) : 'No story';
+        const q3Preview = setInfo.q3 ? (setInfo.q3.length > 50 ? setInfo.q3.substring(0, 50) + '...' : setInfo.q3) : 'No story';
+        const q4Preview = setInfo.q4 ? (setInfo.q4.length > 50 ? setInfo.q4.substring(0, 50) + '...' : setInfo.q4) : 'No story';
+
         row.innerHTML = `
             <td class="question-set-number">Set ${setNumber}</td>
             <td class="question-set-title-cell">
@@ -859,10 +1094,26 @@ function initializeQuestionsTable() {
                 <img src="assets/themes/${setInfo.theme}.png" alt="${setInfo.theme}" class="theme-icon clickable" id="themeIcon-${setNumber}" onclick="toggleThemeDropdown(${setNumber})" title="Click to change theme">
             </td>
             <td class="question-buttons">
-                <button class="question-btn" onclick="goToQuestion(${setNumber}, 1)">Q1</button>
-                <button class="question-btn" onclick="goToQuestion(${setNumber}, 2)">Q2</button>
-                <button class="question-btn" onclick="goToQuestion(${setNumber}, 3)">Q3</button>
-                <button class="question-btn" onclick="goToQuestion(${setNumber}, 4)">Q4</button>
+                <button class="question-btn" onclick="goToQuestion(${setNumber}, 1)" title="${q1Preview}">Q1</button>
+                <button class="question-btn" onclick="goToQuestion(${setNumber}, 2)" title="${q2Preview}">Q2</button>
+                <button class="question-btn" onclick="goToQuestion(${setNumber}, 3)" title="${q3Preview}">Q3</button>
+                <button class="question-btn" onclick="goToQuestion(${setNumber}, 4)" title="${q4Preview}">Q4</button>
+            </td>
+            <td class="question-stories">
+                <div class="story-previews">
+                    <div class="story-preview" onclick="viewQuestionStory(${setNumber}, 1)" title="Click to view full story">
+                        <strong>Q1:</strong> ${q1Preview}
+                    </div>
+                    <div class="story-preview" onclick="viewQuestionStory(${setNumber}, 2)" title="Click to view full story">
+                        <strong>Q2:</strong> ${q2Preview}
+                    </div>
+                    <div class="story-preview" onclick="viewQuestionStory(${setNumber}, 3)" title="Click to view full story">
+                        <strong>Q3:</strong> ${q3Preview}
+                    </div>
+                    <div class="story-preview" onclick="viewQuestionStory(${setNumber}, 4)" title="Click to view full story">
+                        <strong>Q4:</strong> ${q4Preview}
+                    </div>
+                </div>
             </td>
         `;
 
@@ -1321,6 +1572,12 @@ window.processUploadedFile = function () {
 
             addLog(`Successfully processed XLSX file: ${file.name}`, 'success');
 
+            // Save updated game state to localStorage
+            if (window.gameState && window.gameState.saveToLocalStorage) {
+                window.gameState.saveToLocalStorage();
+                addLog('Game state saved to local storage', 'info');
+            }
+
             // Reset file input and display
             resetFileInput();
 
@@ -1421,6 +1678,14 @@ function processQuestionsData(questionsData) {
                 window.gameState.state.questionSets[setId].theme = row.theme.toLowerCase();
                 addLog(`Updated question set ${setId} theme to: ${row.theme}`, 'info');
             }
+
+            // Update story paragraphs for each question
+            ['q1', 'q2', 'q3', 'q4'].forEach(questionKey => {
+                if (row[questionKey]) {
+                    window.gameState.state.questionSets[setId][questionKey] = row[questionKey];
+                    addLog(`Updated question set ${setId} ${questionKey} story`, 'info');
+                }
+            });
         } else {
             addLog(`Invalid set_id: ${setId} (must be 1-12)`, 'warning');
         }
@@ -1465,7 +1730,11 @@ window.downloadXLSX = function () {
             questionsData.push({
                 set_id: setId,
                 title: questionSet.title,
-                theme: questionSet.theme
+                theme: questionSet.theme,
+                q1: questionSet.q1 || '',
+                q2: questionSet.q2 || '',
+                q3: questionSet.q3 || '',
+                q4: questionSet.q4 || ''
             });
         }
 

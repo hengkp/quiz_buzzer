@@ -2114,6 +2114,204 @@
         font-family: 'SF Mono', Monaco, 'Roboto Mono', monospace;
     }
 
+    /* ========== STORY MODAL STYLES ========== */
+    .story-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(20px);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 3000;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    .story-modal.active {
+        display: flex;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .story-modal-content {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(30px);
+        border-radius: 32px;
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+        max-width: 1400px;
+        width: 98%;
+        max-height: 95vh;
+        overflow: hidden;
+        animation: slideInUp 0.4s ease-out;
+        text-align: center;
+        color: #fff;
+        font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .story-modal-body {
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.6) 100%);
+        padding: 40px 30px 40px 30px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        min-height: 600px;
+        gap: 30px;
+    }
+
+    .story-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        margin-bottom: 0;
+        flex-shrink: 0;
+    }
+
+    .story-question-icon {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        flex-shrink: 0;
+    }
+
+    .story-modal-header h2 {
+        font-weight: 700;
+        color: #fff;
+        margin: 0;
+        text-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+        letter-spacing: -1.5px;
+        white-space: nowrap;
+        /* Font size will be set dynamically by JavaScript */
+    }
+
+    .story-modal-body p {
+        color: #fff;
+        margin: 0;
+        text-shadow: 0 2px 15px rgba(0, 0, 0, 0.6);
+        font-weight: 400;
+        max-width: 1300px;
+        width: 100%;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        /* Font size and line-height will be set dynamically by JavaScript */
+    }
+
+    @keyframes slideInUp {
+        from {
+            transform: translateY(50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    /* ========== QUESTIONS MODAL STORY STYLES ========== */
+    .question-stories {
+        max-width: 300px;
+        padding: 8px;
+    }
+
+    .story-previews {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .story-preview {
+        font-size: 12px;
+        color: #666;
+        background: rgba(0, 0, 0, 0.02);
+        padding: 6px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-left: 3px solid transparent;
+    }
+
+    .story-preview:hover {
+        background: rgba(0, 122, 255, 0.1);
+        border-left-color: #007AFF;
+        color: #333;
+    }
+
+    .story-preview strong {
+        color: #007AFF;
+        font-weight: 600;
+    }
+
+    /* ========== STORY MODAL RESPONSIVE STYLES ========== */
+    @media (max-width: 1200px) {
+        .story-modal-content {
+            max-width: 95%;
+            width: 95%;
+        }
+        
+        .story-modal-body {
+            padding: 35px 25px 35px 25px;
+            gap: 25px;
+            min-height: 550px;
+        }
+        
+        .story-question-icon {
+            width: 100px;
+            height: 100px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .story-modal-content {
+            max-width: 95%;
+            width: 95%;
+        }
+        
+        .story-modal-body {
+            padding: 30px 20px 30px 20px;
+            gap: 20px;
+            min-height: 450px;
+        }
+        
+        .story-modal-header {
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .story-question-icon {
+            width: 80px;
+            height: 80px;
+        }
+        
+        .story-modal-header h2 {
+            white-space: normal;
+            text-align: center;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .story-modal-body {
+            padding: 25px 15px 25px 15px;
+            gap: 15px;
+            min-height: 350px;
+        }
+        
+        .story-question-icon {
+            width: 70px;
+            height: 70px;
+        }
+    }
+
     @keyframes pulse {
 
         0%,

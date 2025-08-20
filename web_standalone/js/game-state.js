@@ -19,20 +19,104 @@ class GameState {
             timerRunning: false,
             emergencyMeetingActive: false,
 
-            // Question sets with titles and themes
+            // Question sets with titles, themes, and story paragraphs
             questionSets: {
-                1: { title: 'General Knowledge', theme: 'brainstorm' },
-                2: { title: 'Science & Technology', theme: 'brainstorm' },
-                3: { title: 'History & Geography', theme: 'brainstorm' },
-                4: { title: 'Arts & Literature', theme: 'brainstorm' },
-                5: { title: 'Sports & Entertainment', theme: 'brainstorm' },
-                6: { title: 'Mathematics', theme: 'brainstorm' },
-                7: { title: 'Current Events', theme: 'brainstorm' },
-                8: { title: 'Mystery & Logic', theme: 'brainstorm' },
-                9: { title: 'Science Fiction', theme: 'brainstorm' },
-                10: { title: 'Ecology & Environment', theme: 'brainstorm' },
-                11: { title: 'Philosophy & Ethics', theme: 'brainstorm' },
-                12: { title: 'Culture & Traditions', theme: 'brainstorm' }
+                1: { 
+                    title: 'General Knowledge', 
+                    theme: 'brainstorm',
+                    q1: 'Embark on a journey through diverse topics that challenge your understanding of the world around us, testing your breadth of knowledge.',
+                    q2: 'Dive deeper into fundamental concepts that shape our daily lives and common understanding of basic principles.',
+                    q3: 'Explore interconnected ideas that bridge different fields of study and reveal surprising connections between various subjects.',
+                    q4: 'Master complex relationships between multiple disciplines and demonstrate comprehensive understanding of integrated knowledge systems.'
+                },
+                2: { 
+                    title: 'Science & Technology', 
+                    theme: 'brainstorm',
+                    q1: 'Enter the fascinating realm of scientific discovery where innovation meets understanding and technology transforms our reality.',
+                    q2: 'Investigate the fundamental principles that govern natural phenomena and drive technological advancement in our modern world.',
+                    q3: 'Analyze cutting-edge developments that push the boundaries of human knowledge and reshape our technological landscape.',
+                    q4: 'Synthesize complex scientific concepts with emerging technologies to understand their profound impact on future possibilities.'
+                },
+                3: { 
+                    title: 'History & Geography', 
+                    theme: 'brainstorm',
+                    q1: 'Journey through time and space to understand how human civilizations have shaped and been shaped by their environments.',
+                    q2: 'Examine pivotal moments in history that have defined cultures and influenced the geographical development of nations.',
+                    q3: 'Explore the intricate relationships between historical events and geographical factors that continue to influence modern society.',
+                    q4: 'Connect historical patterns with geographical realities to understand the complex tapestry of human civilization and natural landscapes.'
+                },
+                4: { 
+                    title: 'Arts & Literature', 
+                    theme: 'brainstorm',
+                    q1: 'Immerse yourself in the creative expressions that define human culture and showcase the beauty of artistic achievement.',
+                    q2: 'Discover the profound meanings behind literary masterpieces and artistic movements that have influenced generations of creators.',
+                    q3: 'Analyze the cultural significance of artistic works and their role in reflecting and shaping societal values.',
+                    q4: 'Synthesize artistic traditions across cultures and time periods to understand the universal language of human creativity.'
+                },
+                5: { 
+                    title: 'Sports & Entertainment', 
+                    theme: 'brainstorm',
+                    q1: 'Step into the exciting world of competitive sports and entertainment that brings people together across all boundaries.',
+                    q2: 'Explore the strategies, skills, and dedication required to excel in various sporting disciplines and entertainment fields.',
+                    q3: 'Understand the cultural impact of sports and entertainment on society and their role in shaping popular culture.',
+                    q4: 'Examine the evolution of sports and entertainment industries and their influence on global communities and economies.'
+                },
+                6: { 
+                    title: 'Mathematics', 
+                    theme: 'brainstorm',
+                    q1: 'Enter the logical realm of numbers, patterns, and relationships that form the foundation of scientific understanding.',
+                    q2: 'Apply mathematical principles to solve complex problems and understand the elegant beauty of numerical relationships.',
+                    q3: 'Explore advanced mathematical concepts that reveal the underlying structure and order in seemingly chaotic systems.',
+                    q4: 'Master sophisticated mathematical reasoning to unlock the secrets of quantitative analysis and theoretical frameworks.'
+                },
+                7: { 
+                    title: 'Current Events', 
+                    theme: 'brainstorm',
+                    q1: 'Stay informed about the rapidly changing world and understand the significance of contemporary global developments.',
+                    q2: 'Analyze recent events and their immediate impact on local communities and international relations.',
+                    q3: 'Examine the underlying trends and patterns that shape current affairs and influence future developments.',
+                    q4: 'Synthesize current information with historical context to predict and understand emerging global challenges and opportunities.'
+                },
+                8: { 
+                    title: 'Mystery & Logic', 
+                    theme: 'brainstorm',
+                    q1: 'Challenge your deductive reasoning skills with puzzles and mysteries that require careful analysis and logical thinking.',
+                    q2: 'Apply systematic problem-solving approaches to unravel complex scenarios and identify hidden patterns.',
+                    q3: 'Develop advanced analytical skills to solve intricate logical puzzles that test your reasoning capabilities.',
+                    q4: 'Master sophisticated logical frameworks to tackle the most challenging mysteries and demonstrate superior analytical thinking.'
+                },
+                9: { 
+                    title: 'Science Fiction', 
+                    theme: 'brainstorm',
+                    q1: 'Explore imaginative futures and alternate realities that challenge our understanding of what is possible.',
+                    q2: 'Investigate the scientific principles behind fictional technologies and their potential real-world applications.',
+                    q3: 'Analyze the social and philosophical implications of futuristic scenarios presented in science fiction.',
+                    q4: 'Connect speculative fiction with current scientific research to understand the boundaries between imagination and possibility.'
+                },
+                10: { 
+                    title: 'Ecology & Environment', 
+                    theme: 'brainstorm',
+                    q1: 'Discover the intricate web of relationships that sustain life on Earth and the importance of environmental balance.',
+                    q2: 'Examine the impact of human activities on natural ecosystems and the urgent need for sustainable practices.',
+                    q3: 'Explore innovative solutions to environmental challenges and the role of conservation in protecting biodiversity.',
+                    q4: 'Understand complex ecological systems and their resilience in the face of climate change and environmental pressures.'
+                },
+                11: { 
+                    title: 'Philosophy & Ethics', 
+                    theme: 'brainstorm',
+                    q1: 'Contemplate fundamental questions about existence, knowledge, and the nature of reality that have puzzled humanity for centuries.',
+                    q2: 'Examine ethical dilemmas and moral principles that guide human behavior and decision-making processes.',
+                    q3: 'Explore different philosophical traditions and their approaches to understanding truth, justice, and the meaning of life.',
+                    q4: 'Synthesize philosophical concepts with practical applications to develop a comprehensive worldview and ethical framework.'
+                },
+                12: { 
+                    title: 'Culture & Traditions', 
+                    theme: 'brainstorm',
+                    q1: 'Celebrate the rich diversity of human cultures and the traditions that define different societies around the world.',
+                    q2: 'Understand the historical origins and significance of cultural practices that have been passed down through generations.',
+                    q3: 'Explore how cultural traditions adapt and evolve in response to globalization and modernization.',
+                    q4: 'Appreciate the universal themes that connect all cultures while respecting the unique characteristics of each tradition.'
+                }
             },
 
             teams: {

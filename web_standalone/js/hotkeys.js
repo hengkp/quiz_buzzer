@@ -175,6 +175,11 @@ class HotkeysManager {
             
             this.bind('u', (event) => {
                 event.preventDefault();
+                this.handleToggleStoryModal();
+            }, 'Toggle story modal');
+            
+            this.bind('w', (event) => {
+                event.preventDefault();
                 this.handleToggleUploadModal();
             }, 'Toggle upload/download modal');
             
@@ -2574,6 +2579,17 @@ class HotkeysManager {
         }
     }
     
+    handleToggleStoryModal() {
+        const modal = document.getElementById('storyModal');
+        if (modal) {
+            if (modal.classList.contains('active')) {
+                window.closeStoryModal();
+            } else {
+                window.openStoryModal();
+            }
+        }
+    }
+    
     handleToggleUploadModal() {
         const modal = document.getElementById('uploadModal');
         if (modal) {
@@ -2799,7 +2815,7 @@ class HotkeysManager {
         if (this.pageType === 'console') {
             categories['Console Tabs'] = ['g', 'l'];
         } else if (this.pageType === 'main') {
-            categories['Modal Controls'] = ['t', 's', 'u', 'l'];
+            categories['Modal Controls'] = ['t', 's', 'u', 'w', 'l'];
         }
         
         let html = `
